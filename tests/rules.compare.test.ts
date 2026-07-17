@@ -215,10 +215,12 @@ describe("variante Hi/Low — spareggi con valore e seme (cuori > quadri > fiori
     const mediaQ = ["QD", "JC", "10S", "9D", "8H"];
     expect(cmp(massima, mediaK, "hilow")).toBeGreaterThan(0);
     expect(cmp(mediaK, mediaQ, "hilow")).toBeGreaterThan(0);
-    // Stessa scala: decide il seme migliore presente.
-    const conCuori = ["KH", "QS", "JD", "10C", "9S"];
-    const senzaCuori = ["KD", "QC", "JS", "10D", "9C"];
-    expect(cmp(conCuori, senzaCuori, "hilow")).toBeGreaterThan(0);
+    // Stessa scala K-alta: conta SOLO il seme della carta più alta (il K), non il
+    // seme migliore presente nella mano. Qui A ha un cuori (Q♥) più in basso ma il
+    // suo K è di picche; B ha il K di fiori. Fiori > picche → vince B.
+    const kPicche = ["KS", "QH", "JS", "10S", "9S"]; // K di picche, ma Q di cuori in mano
+    const kFiori = ["KC", "QS", "JC", "10C", "9C"]; // K di fiori
+    expect(cmp(kFiori, kPicche, "hilow")).toBeGreaterThan(0);
   });
 
   it("tris di assi batte tris di K; a parità decide il seme", () => {
@@ -245,6 +247,25 @@ describe("variante Hi/Low — spareggi con valore e seme (cuori > quadri > fiori
     const coppiaConCuori = ["AH", "AD", "KS", "QC", "9S"];
     const coppiaSenzaCuori = ["AS", "AC", "KD", "QD", "9C"];
     expect(cmp(coppiaConCuori, coppiaSenzaCuori, "hilow")).toBeGreaterThan(0);
+  });
+
+  it("coppia uguale: decide il seme della coppia, NON quello del kicker", () => {
+    // Entrambi coppia di 9. A ha il kicker più alto in cuori (A♥), ma la sua
+    // coppia è di semi bassi (9♣ 9♠); B ha la coppia in cuori (9♥ 9♦). I kicker
+    // non contano: vince B grazie al seme della coppia.
+    const coppiaBassaKickerCuori = ["9C", "9S", "AH", "KS", "QS"];
+    const coppiaCuoriKickerBasso = ["9H", "9D", "AS", "KC", "QC"];
+    expect(
+      cmp(coppiaCuoriKickerBasso, coppiaBassaKickerCuori, "hilow")
+    ).toBeGreaterThan(0);
+  });
+
+  it("doppia coppia uguale: decide il seme della coppia più alta", () => {
+    // Entrambi doppia coppia K-Q. Conta il seme della coppia più alta (i K):
+    // A ha K di cuori/quadri, B di fiori/picche → vince A.
+    const kkCuori = ["KH", "KD", "QC", "QS", "9S"];
+    const kkPicche = ["KC", "KS", "QH", "QD", "9H"];
+    expect(cmp(kkCuori, kkPicche, "hilow")).toBeGreaterThan(0);
   });
 
   it("carta alta resta una non-combinazione anche in Hi/Low: parità", () => {
