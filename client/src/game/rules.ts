@@ -150,10 +150,12 @@ export function compareHands(a: HandEvaluation, b: HandEvaluation, variant: Vari
   const hiLow = variant === "hilow";
   switch (a.category) {
     case CATS.STRAIGHT_FLUSH:
+      // Standard: massima, media e minima hanno lo stesso valore e dividono.
+      // Hi/Low: vince la scala di valore maggiore; a parità di valore decide il seme.
       if (!hiLow) return 0;
       if (a.level !== b.level) return (a.level ?? 0) - (b.level ?? 0);
-      if (SUIT_PRIORITY[a.suit!] !== SUIT_PRIORITY[b.suit!]) return SUIT_PRIORITY[a.suit!] - SUIT_PRIORITY[b.suit!];
-      return (a.high ?? 0) - (b.high ?? 0);
+      if ((a.high ?? 0) !== (b.high ?? 0)) return (a.high ?? 0) - (b.high ?? 0);
+      return SUIT_PRIORITY[a.suit!] - SUIT_PRIORITY[b.suit!];
     case CATS.QUADS:
       return (a.rank ?? 0) - (b.rank ?? 0);
     case CATS.FLUSH:
@@ -180,10 +182,9 @@ export function compareHands(a: HandEvaluation, b: HandEvaluation, variant: Vari
       if (a.lo !== b.lo) return (a.lo ?? 0) - (b.lo ?? 0);
       return hiLow ? SUIT_PRIORITY[a.suit!] - SUIT_PRIORITY[b.suit!] : 0;
     default:
-      for (let index = 0; index < 5; index += 1) {
-        if (a.ranks![index] !== b.ranks![index]) return a.ranks![index] - b.ranks![index];
-      }
-      return hiLow ? SUIT_PRIORITY[a.suit!] - SUIT_PRIORITY[b.suit!] : 0;
+      // Carta alta: il regolamento non la elenca tra le combinazioni valide
+      // ("nessuno crea una combinazione"): nessuno spareggio, in entrambe le varianti.
+      return 0;
   }
 }
 
@@ -219,5 +220,91 @@ export function bestPot2Hand(personal: CardCode[], board: CardCode[], variant: V
   }
   if (!best) throw new Error("Impossibile comporre la mano del Piatto 2.");
   return best;
+}
+
+export type ShowdownPlayer = { id: string; cards: CardCode[] };
+
+export type Settlement = {
+  pot1Winners: string[];
+  pot2Winners: string[];
+  bestPot1: HandEvaluation;
+  bestPot2: HandEvaluation;
+  payouts: Record<string, number>;
+  splitRule: "solo" | "50/50" | "75/25";
+};
+
+/**
+ * Regolamento §6 — divisione dei due piatti. Il totale vale 100: Piatto 1 = 50,
+ * Piatto 2 = 50. Vincitore assoluto di entrambi → 100%. Un piatto vinto da un
+ * solo giocatore mentre l'altro è in parità → 75% al vincitore assoluto e 25%
+ * diviso tra i giocatori in parità. Altrimenti ogni piatto vale il 50% ripartito
+ * tra i suoi vincitori. La distribuzione è esatta in gettoni interi: i resti
+ * vengono assegnati con il metodo del resto maggiore, in ordine di posto.
+ */
+export function settleShowdown(
+  players: ShowdownPlayer[],
+  board1: CardCode[],
+  board2: CardCode[],
+  potTotal: number,
+  variant: Variant,
+): Settlement {
+  if (players.length < 1) throw new Error("Serve almeno un giocatore allo showdown.");
+  if (!Number.isInteger(potTotal) || potTotal < 0) throw new Error("Il piatto deve essere un intero non negativo.");
+  const hands = players.map((player) => ({
+    id: player.id,
+    pot1: bestPot1Hand(player.cards, board1, variant),
+    pot2: bestPot2Hand(player.cards, board2, variant),
+  }));
+  const bestPot1 = bestOf(hands.map((entry) => entry.pot1), variant);
+  const bestPot2 = bestOf(hands.map((entry) => entry.pot2), variant);
+  const pot1Winners = hands.filter((entry) => compareHands(entry.pot1, bestPot1, variant) === 0).map((entry) => entry.id);
+  const pot2Winners = hands.filter((entry) => compareHands(entry.pot2, bestPot2, variant) === 0).map((entry) => entry.id);
+
+  // Quote espresse come frazioni num/den del piatto totale, per ciascun giocatore.
+  const weights = new Map<string, { num: number; den: number }>();
+  const addShare = (id: string, num: number, den: number) => {
+    const current = weights.get(id) ?? { num: 0, den: 1 };
+    weights.set(id, { num: current.num * den + num * current.den, den: current.den * den });
+  };
+
+  let splitRule: Settlement["splitRule"];
+  if (pot1Winners.length === 1 && pot2Winners.length === 1 && pot1Winners[0] === pot2Winners[0]) {
+    splitRule = "solo";
+    addShare(pot1Winners[0], 1, 1);
+  } else if (pot1Winners.length === 1 && pot2Winners.length > 1) {
+    splitRule = "75/25";
+    addShare(pot1Winners[0], 3, 4);
+    pot2Winners.forEach((id) => addShare(id, 1, 4 * pot2Winners.length));
+  } else if (pot2Winners.length === 1 && pot1Winners.length > 1) {
+    splitRule = "75/25";
+    addShare(pot2Winners[0], 3, 4);
+    pot1Winners.forEach((id) => addShare(id, 1, 4 * pot1Winners.length));
+  } else {
+    splitRule = "50/50";
+    pot1Winners.forEach((id) => addShare(id, 1, 2 * pot1Winners.length));
+    pot2Winners.forEach((id) => addShare(id, 1, 2 * pot2Winners.length));
+  }
+
+  // Resto maggiore: pagamenti interi la cui somma è esattamente potTotal.
+  const entries = players
+    .filter((player) => weights.has(player.id))
+    .map((player, order) => {
+      const { num, den } = weights.get(player.id)!;
+      const exact = potTotal * num;
+      return { id: player.id, order, base: Math.floor(exact / den), remainder: (exact % den) / den };
+    });
+  let leftover = potTotal - entries.reduce((sum, entry) => sum + entry.base, 0);
+  const byRemainder = entries.slice().sort((a, b) => b.remainder - a.remainder || a.order - b.order);
+  for (const entry of byRemainder) {
+    if (leftover <= 0) break;
+    entry.base += 1;
+    leftover -= 1;
+  }
+  const payouts: Record<string, number> = {};
+  entries.forEach((entry) => {
+    payouts[entry.id] = entry.base;
+  });
+
+  return { pot1Winners, pot2Winners, bestPot1, bestPot2, payouts, splitRule };
 }
 

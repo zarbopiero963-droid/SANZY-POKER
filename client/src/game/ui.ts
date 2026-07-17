@@ -802,27 +802,27 @@ export class PokerUI {
     const phases = rect("mobile-phases", 404, 52, "#171C23F5", 8);
     placeTopLeft(phases, 8, 64);
     this.root.addControl(phases);
-    const phaseKeys = ["blinds", "discard", "flop", "turn", "river", "pot2"];
-    const phaseLabels = ["BUI", "SCARTO", "FLOP", "TURN", "RIVER", "P2"];
+    const phaseKeys = ["blinds", "discard", "preflop", "flop", "turn", "river", "pot2"];
+    const phaseLabels = ["BUI", "SCARTO", "PRE", "FLOP", "TURN", "RIVER", "P2"];
     phaseLabels.forEach((label, index) => {
       const active = table.phase === phaseKeys[index];
       const done = phaseKeys.indexOf(table.phase) > index || table.phase === "showdown" || table.status === "waiting" && table.handNumber > 0;
-      const step = rect(`mobile-phase-${index}`, index === 1 ? 74 : 62, 38, active ? "#3B352B" : "transparent", 5);
+      const step = rect(`mobile-phase-${index}`, index === 1 ? 60 : 54, 38, active ? "#3B352B" : "transparent", 5);
       step.thickness = active ? 1 : 0;
       step.color = active ? "#F49A3566" : "transparent";
-      placeTopLeft(step, 7 + index * 65, 7);
+      placeTopLeft(step, 6 + index * 56, 7);
       phases.addControl(step);
       const marker = text(`mobile-phase-marker-${index}`, done ? "✓" : String(index + 1), 8, active ? "#17191D" : done ? GREEN : MUTED, 900);
-      marker.width = "18px";
+      marker.width = "16px";
       marker.height = "18px";
       marker.color = active ? ORANGE : done ? GREEN : MUTED;
       marker.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-      placeTopLeft(marker, 3, 12);
+      placeTopLeft(marker, 2, 12);
       step.addControl(marker);
-      const copy = text(`mobile-phase-label-${index}`, label, index === 1 ? 8 : 9, active ? TEXT : done ? "#C0CCC7" : MUTED, 900);
-      copy.width = index === 1 ? "50px" : "40px";
+      const copy = text(`mobile-phase-label-${index}`, label, index === 1 ? 7 : 8, active ? TEXT : done ? "#C0CCC7" : MUTED, 900);
+      copy.width = index === 1 ? "42px" : "36px";
       copy.height = "38px";
-      placeTopLeft(copy, 22, 0);
+      placeTopLeft(copy, 18, 0);
       copy.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       step.addControl(copy);
     });
@@ -1016,8 +1016,8 @@ export class PokerUI {
     phaseTitle.height = "38px";
     placeTopLeft(phaseTitle, 16, 8);
     phasePanel.addControl(phaseTitle);
-    const phaseKeys = ["blinds", "discard", "flop", "turn", "river", "pot2"];
-    const phaseLabels = ["Bui", "Scarto", "Flop", "Turn", "River", "Piatto 2"];
+    const phaseKeys = ["blinds", "discard", "preflop", "flop", "turn", "river", "pot2"];
+    const phaseLabels = ["Bui", "Scarto", "Pre-board", "Flop", "Turn", "River", "Piatto 2"];
     phaseLabels.forEach((label, index) => {
       const active = table.phase === phaseKeys[index];
       const done = phaseKeys.indexOf(table.phase) > index || table.phase === "showdown" || table.status === "waiting" && table.handNumber > 0;

@@ -5,19 +5,9 @@
  */
 
 import { createBot, botChooseDiscard, botDecision } from "./bots";
-import {
-  bestOf,
-  bestPot1Hand,
-  bestPot2Hand,
-  compareHands,
-  freshDeck,
-  shuffle,
-  type CardCode,
-  type HandEvaluation,
-  type Variant,
-} from "./rules";
+import { freshDeck, settleShowdown, shuffle, type CardCode, type HandEvaluation, type Variant } from "./rules";
 
-export type Phase = "waiting" | "blinds" | "discard" | "flop" | "turn" | "river" | "pot2" | "showdown";
+export type Phase = "waiting" | "blinds" | "discard" | "preflop" | "flop" | "turn" | "river" | "pot2" | "showdown";
 export type PokerAction = "fold" | "check" | "call" | "raise" | "allin";
 
 export type PlayerState = {
@@ -133,7 +123,7 @@ export class GameController {
   screen: "lobby" | "table" = "table";
   readonly demo: boolean;
   private listeners = new Set<Listener>();
-  private timer: number | null = null;
+  private timer: ReturnType<typeof setTimeout> | null = null;
   private disposed = false;
 
   constructor(demo = false) {
@@ -156,7 +146,7 @@ export class GameController {
 
   private later(callback: () => void, milliseconds: number) {
     if (this.disposed || this.timer !== null) return;
-    this.timer = window.setTimeout(() => {
+    this.timer = setTimeout(() => {
       this.timer = null;
       if (!this.disposed) callback();
     }, milliseconds);
@@ -168,7 +158,7 @@ export class GameController {
   }
 
   openTable(botCount = 3, variant: Variant = "standard") {
-    if (this.timer !== null) window.clearTimeout(this.timer);
+    if (this.timer !== null) clearTimeout(this.timer);
     this.timer = null;
     this.table = freshTable(Math.max(1, Math.min(3, botCount)), variant);
     this.screen = "table";
@@ -177,7 +167,7 @@ export class GameController {
   }
 
   goToLobby() {
-    if (this.timer !== null) window.clearTimeout(this.timer);
+    if (this.timer !== null) clearTimeout(this.timer);
     this.timer = null;
     this.screen = "lobby";
     this.emit("enter-lobby");
@@ -273,14 +263,14 @@ export class GameController {
     player.lastAction = "Carta scartata";
     this.log(`${player.name} ha completato lo scarto.`);
     if (this.table.players.every((entry) => entry.cards.length === 5)) {
-      this.table.phase = "flop";
-      this.table.board1Revealed = 3;
+      // Regolamento: il primo giro di puntata avviene prima di scoprire il flop.
+      this.table.phase = "preflop";
       this.table.roundMaxBet = 0;
       this.table.roundRaises = 0;
       this.table.turnIndex = -1;
-      this.log("Flop scoperto. Si apre il primo giro di puntate.");
-      this.emit("reveal-flop");
-      this.openBettingAfterReveal(760);
+      this.log("Scarto completato. Puntata pre-board.");
+      this.emit("preflop-open");
+      this.openBettingAfterReveal(600);
     } else {
       this.emit("card-discarded");
     }
@@ -399,9 +389,14 @@ export class GameController {
     this.table.roundMaxBet = 0;
     this.table.roundRaises = 0;
     this.table.turnIndex = -1;
-    const order: Phase[] = ["flop", "turn", "river", "pot2", "showdown"];
+    const order: Phase[] = ["preflop", "flop", "turn", "river", "pot2", "showdown"];
     this.table.phase = order[order.indexOf(this.table.phase) + 1];
-    if (this.table.phase === "turn") {
+    if (this.table.phase === "flop") {
+      this.table.board1Revealed = 3;
+      this.log("Flop scoperto. Secondo giro di puntate.");
+      this.emit("reveal-flop");
+      this.openBettingAfterReveal(760);
+    } else if (this.table.phase === "turn") {
       this.table.board1Revealed = 5;
       this.log("Turn scoperto: cinque carte sul Piatto 1.");
       this.emit("reveal-turn");
@@ -424,54 +419,32 @@ export class GameController {
 
   private showdown() {
     const alive = this.table.players.filter((player) => !player.folded);
-    const results: ShowdownEntry[] = alive.map((player) => ({
-      id: player.id,
-      name: player.name,
-      pot1: bestPot1Hand(player.cards, this.table.board1, this.table.variant),
-      pot2: bestPot2Hand(player.cards, this.table.board2, this.table.variant),
-    }));
-    const bestPot1 = bestOf(results.map((entry) => entry.pot1), this.table.variant);
-    const bestPot2 = bestOf(results.map((entry) => entry.pot2), this.table.variant);
-    const pot1Winners = results.filter((entry) => compareHands(entry.pot1, bestPot1, this.table.variant) === 0);
-    const pot2Winners = results.filter((entry) => compareHands(entry.pot2, bestPot2, this.table.variant) === 0);
     const potTotal = this.table.pot;
-    const payouts: Record<string, number> = {};
-    let share1: number;
-    let share2: number;
-    let splitRule: LastResult["splitRule"] = "50/50";
-
-    if (pot1Winners.length === 1 && pot2Winners.length > 1) {
-      share1 = potTotal * 0.75;
-      share2 = (potTotal * 0.25) / pot2Winners.length;
-      splitRule = "75/25";
-    } else if (pot2Winners.length === 1 && pot1Winners.length > 1) {
-      share2 = potTotal * 0.75;
-      share1 = (potTotal * 0.25) / pot1Winners.length;
-      splitRule = "75/25";
-    } else {
-      share1 = potTotal * 0.5 / pot1Winners.length;
-      share2 = potTotal * 0.5 / pot2Winners.length;
-    }
-    pot1Winners.forEach((winner) => {
-      payouts[winner.id] = (payouts[winner.id] || 0) + share1;
-    });
-    pot2Winners.forEach((winner) => {
-      payouts[winner.id] = (payouts[winner.id] || 0) + share2;
-    });
+    const settlement = settleShowdown(
+      alive.map((player) => ({ id: player.id, cards: player.cards })),
+      this.table.board1,
+      this.table.board2,
+      potTotal,
+      this.table.variant,
+    );
+    const nameOf = (id: string) => this.table.players.find((player) => player.id === id)?.name ?? id;
     this.table.players.forEach((player) => {
-      const amount = Math.round((payouts[player.id] || 0) * 100) / 100;
+      const amount = settlement.payouts[player.id] || 0;
       player.chips += amount;
       if (amount) player.lastAction = `Vince ${amount}`;
     });
     this.table.lastResult = {
       potTotal,
-      pot1Winners: pot1Winners.map((entry) => entry.name),
-      pot2Winners: pot2Winners.map((entry) => entry.name),
-      bestPot1: bestPot1.label,
-      bestPot2: bestPot2.label,
-      payouts,
-      splitRule,
+      pot1Winners: settlement.pot1Winners.map(nameOf),
+      pot2Winners: settlement.pot2Winners.map(nameOf),
+      bestPot1: settlement.bestPot1.label,
+      bestPot2: settlement.bestPot2.label,
+      payouts: settlement.payouts,
+      splitRule: settlement.splitRule,
     };
+    const bestPot1 = settlement.bestPot1;
+    const bestPot2 = settlement.bestPot2;
+    const splitRule = settlement.splitRule;
     this.table.pot = 0;
     this.table.status = "waiting";
     this.table.phase = "waiting";
@@ -504,7 +477,7 @@ export class GameController {
       }
       return;
     }
-    if (!["flop", "turn", "river", "pot2"].includes(this.table.phase)) return;
+    if (!["preflop", "flop", "turn", "river", "pot2"].includes(this.table.phase)) return;
     const player = this.table.players[this.table.turnIndex];
     if (!player) return;
     if (player.isBot || this.demo) {
@@ -518,7 +491,7 @@ export class GameController {
 
   dispose() {
     this.disposed = true;
-    if (this.timer !== null) window.clearTimeout(this.timer);
+    if (this.timer !== null) clearTimeout(this.timer);
     this.timer = null;
     this.listeners.clear();
   }
