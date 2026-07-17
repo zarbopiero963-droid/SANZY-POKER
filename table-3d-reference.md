@@ -8,11 +8,11 @@ Per Sanzy Poker la composizione centrale non replica la board Texas Hold’em de
 
 ## Criteri visivi
 
-| Elemento | Requisito verificabile |
-|---|---|
-| Camera | Prospettiva dall’alto, tavolo interamente visibile e sedute leggibili |
-| Sala | Pavimento, luce ambientale e profondità percepibile oltre il tavolo |
-| Tavolo | Piano verde ovale, rail imbottito, base e materiali tridimensionali |
-| Giocatori | Quattro figure sedute e orientate verso il centro, con variazioni di colore e postura |
-| Postazioni | Carte coperte, stack di fiches, nome, saldo e stato vicino a ogni figura |
-| Board Sanzy | Piatto 1 orizzontale e Piatto 2 verticale a destra, senza reinterpretazioni |
+| Elemento    | Requisito verificabile                                                                |
+| ----------- | ------------------------------------------------------------------------------------- |
+| Camera      | Prospettiva dall’alto, tavolo interamente visibile e sedute leggibili                 |
+| Sala        | Pavimento, luce ambientale e profondità percepibile oltre il tavolo                   |
+| Tavolo      | Piano verde ovale, rail imbottito, base e materiali tridimensionali                   |
+| Giocatori   | Quattro figure sedute e orientate verso il centro, con variazioni di colore e postura |
+| Postazioni  | Carte coperte, stack di fiches, nome, saldo e stato vicino a ogni figura              |
+| Board Sanzy | Piatto 1 orizzontale e Piatto 2 verticale a destra, senza reinterpretazioni           |

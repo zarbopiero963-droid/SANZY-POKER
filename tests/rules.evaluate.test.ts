@@ -4,7 +4,12 @@
  * (Nel Sanzy il colore batte il full, al contrario del poker classico.)
  */
 import { describe, expect, it } from "vitest";
-import { CATS, compareHands, evaluateHand, type Variant } from "../client/src/game/rules";
+import {
+  CATS,
+  compareHands,
+  evaluateHand,
+  type Variant,
+} from "../client/src/game/rules";
 
 const VARIANTS: Variant[] = ["standard", "hilow"];
 
@@ -44,21 +49,43 @@ describe("evaluateHand — riconoscimento combinazioni", () => {
   });
 
   it("A-K-Q-J-9 e simili NON sono scale", () => {
-    expect(evaluateHand(["AH", "KS", "QD", "JC", "9H"]).category).toBe(CATS.HIGH);
-    expect(evaluateHand(["KH", "QS", "JD", "9C", "8H"]).category).toBe(CATS.HIGH);
+    expect(evaluateHand(["AH", "KS", "QD", "JC", "9H"]).category).toBe(
+      CATS.HIGH
+    );
+    expect(evaluateHand(["KH", "QS", "JD", "9C", "8H"]).category).toBe(
+      CATS.HIGH
+    );
     // L'Asso non fa da ponte: Q-K-A-7-8 non è una scala.
-    expect(evaluateHand(["QH", "KS", "AD", "7C", "8H"]).category).toBe(CATS.HIGH);
+    expect(evaluateHand(["QH", "KS", "AD", "7C", "8H"]).category).toBe(
+      CATS.HIGH
+    );
   });
 
   it("poker, colore, full, tris, doppia coppia, coppia, carta alta", () => {
-    expect(evaluateHand(["AH", "AS", "AD", "AC", "KH"]).category).toBe(CATS.QUADS);
-    expect(evaluateHand(["AH", "KH", "9H", "8H", "7H"]).category).toBe(CATS.FLUSH);
-    expect(evaluateHand(["KH", "KS", "KD", "QH", "QS"]).category).toBe(CATS.FULL_HOUSE);
-    expect(evaluateHand(["KH", "QS", "JD", "10C", "9H"]).category).toBe(CATS.STRAIGHT);
-    expect(evaluateHand(["KH", "KS", "KD", "QH", "JS"]).category).toBe(CATS.TRIPS);
-    expect(evaluateHand(["KH", "KS", "QD", "QH", "JS"]).category).toBe(CATS.TWO_PAIR);
-    expect(evaluateHand(["KH", "KS", "QD", "JH", "10S"]).category).toBe(CATS.PAIR);
-    expect(evaluateHand(["KH", "QS", "10D", "9H", "7S"]).category).toBe(CATS.HIGH);
+    expect(evaluateHand(["AH", "AS", "AD", "AC", "KH"]).category).toBe(
+      CATS.QUADS
+    );
+    expect(evaluateHand(["AH", "KH", "9H", "8H", "7H"]).category).toBe(
+      CATS.FLUSH
+    );
+    expect(evaluateHand(["KH", "KS", "KD", "QH", "QS"]).category).toBe(
+      CATS.FULL_HOUSE
+    );
+    expect(evaluateHand(["KH", "QS", "JD", "10C", "9H"]).category).toBe(
+      CATS.STRAIGHT
+    );
+    expect(evaluateHand(["KH", "KS", "KD", "QH", "JS"]).category).toBe(
+      CATS.TRIPS
+    );
+    expect(evaluateHand(["KH", "KS", "QD", "QH", "JS"]).category).toBe(
+      CATS.TWO_PAIR
+    );
+    expect(evaluateHand(["KH", "KS", "QD", "JH", "10S"]).category).toBe(
+      CATS.PAIR
+    );
+    expect(evaluateHand(["KH", "QS", "10D", "9H", "7S"]).category).toBe(
+      CATS.HIGH
+    );
   });
 });
 
@@ -78,12 +105,12 @@ describe("gerarchia §5 — ogni categoria batte la successiva, in entrambe le v
 
   for (const variant of VARIANTS) {
     it(`variante ${variant}: la gerarchia completa è rispettata`, () => {
-      const evaluations = ladder.map((entry) => evaluateHand(entry.cards));
+      const evaluations = ladder.map(entry => evaluateHand(entry.cards));
       for (let strong = 0; strong < evaluations.length; strong += 1) {
         for (let weak = strong + 1; weak < evaluations.length; weak += 1) {
           expect(
             compareHands(evaluations[strong], evaluations[weak], variant),
-            `${ladder[strong].name} deve battere ${ladder[weak].name} (${variant})`,
+            `${ladder[strong].name} deve battere ${ladder[weak].name} (${variant})`
           ).toBeGreaterThan(0);
         }
       }

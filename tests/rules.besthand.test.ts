@@ -6,7 +6,12 @@
  * I due piatti non si mischiano mai.
  */
 import { describe, expect, it } from "vitest";
-import { CATS, bestPot1Hand, bestPot2Hand, type Variant } from "../client/src/game/rules";
+import {
+  CATS,
+  bestPot1Hand,
+  bestPot2Hand,
+  type Variant,
+} from "../client/src/game/rules";
 
 const VARIANTS: Variant[] = ["standard", "hilow"];
 

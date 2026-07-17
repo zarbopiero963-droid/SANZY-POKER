@@ -11,7 +11,11 @@
  * Hi/Low: le parità si spareggiano con valore e poi seme (cuori > quadri > fiori > picche).
  */
 import { describe, expect, it } from "vitest";
-import { compareHands, evaluateHand, type CardCode } from "../client/src/game/rules";
+import {
+  compareHands,
+  evaluateHand,
+  type CardCode,
+} from "../client/src/game/rules";
 
 const cmp = (a: CardCode[], b: CardCode[], variant: "standard" | "hilow") =>
   compareHands(evaluateHand(a), evaluateHand(b), variant);
@@ -39,7 +43,13 @@ describe("variante Standard — le parità dividono", () => {
   });
 
   it("full AAAJJ batte full KKKQQ (conta il tris)", () => {
-    expect(cmp(["AH", "AD", "AC", "JH", "JD"], ["KH", "KD", "KC", "QH", "QD"], "standard")).toBeGreaterThan(0);
+    expect(
+      cmp(
+        ["AH", "AD", "AC", "JH", "JD"],
+        ["KH", "KD", "KC", "QH", "QD"],
+        "standard"
+      )
+    ).toBeGreaterThan(0);
   });
 
   it("full con lo stesso tris: la coppia non conta, si divide", () => {
@@ -64,25 +74,79 @@ describe("variante Standard — le parità dividono", () => {
   });
 
   it("tris di assi batte tris di K; tris uguali dividono", () => {
-    expect(cmp(["AH", "AD", "AC", "9S", "8C"], ["KH", "KD", "KC", "QS", "JC"], "standard")).toBeGreaterThan(0);
+    expect(
+      cmp(
+        ["AH", "AD", "AC", "9S", "8C"],
+        ["KH", "KD", "KC", "QS", "JC"],
+        "standard"
+      )
+    ).toBeGreaterThan(0);
     // Stesso tris (condiviso dal tavolo), kicker diversi: parità.
-    expect(cmp(["KH", "KD", "KC", "QS", "JC"], ["KH", "KD", "KC", "10S", "9C"], "standard")).toBe(0);
+    expect(
+      cmp(
+        ["KH", "KD", "KC", "QS", "JC"],
+        ["KH", "KD", "KC", "10S", "9C"],
+        "standard"
+      )
+    ).toBe(0);
   });
 
   it("doppie coppie: conta la coppia più alta, poi la seconda; uguali dividono senza kicker", () => {
-    expect(cmp(["AH", "AD", "KS", "KC", "7H"], ["QH", "QD", "JS", "JC", "AS"], "standard")).toBeGreaterThan(0);
-    expect(cmp(["AH", "AD", "KS", "KC", "7H"], ["AS", "AC", "QS", "QC", "KH"], "standard")).toBeGreaterThan(0);
-    expect(cmp(["AH", "AD", "KS", "KC", "QH"], ["AS", "AC", "KD", "KH", "7C"], "standard")).toBe(0);
+    expect(
+      cmp(
+        ["AH", "AD", "KS", "KC", "7H"],
+        ["QH", "QD", "JS", "JC", "AS"],
+        "standard"
+      )
+    ).toBeGreaterThan(0);
+    expect(
+      cmp(
+        ["AH", "AD", "KS", "KC", "7H"],
+        ["AS", "AC", "QS", "QC", "KH"],
+        "standard"
+      )
+    ).toBeGreaterThan(0);
+    expect(
+      cmp(
+        ["AH", "AD", "KS", "KC", "QH"],
+        ["AS", "AC", "KD", "KH", "7C"],
+        "standard"
+      )
+    ).toBe(0);
   });
 
   it("coppie: conta il valore della coppia; coppie uguali dividono senza kicker", () => {
-    expect(cmp(["AH", "AD", "9S", "8C", "7H"], ["KH", "KD", "QS", "JC", "10H"], "standard")).toBeGreaterThan(0);
-    expect(cmp(["AH", "AD", "KS", "QC", "JH"], ["AS", "AC", "9D", "8H", "7C"], "standard")).toBe(0);
+    expect(
+      cmp(
+        ["AH", "AD", "9S", "8C", "7H"],
+        ["KH", "KD", "QS", "JC", "10H"],
+        "standard"
+      )
+    ).toBeGreaterThan(0);
+    expect(
+      cmp(
+        ["AH", "AD", "KS", "QC", "JH"],
+        ["AS", "AC", "9D", "8H", "7C"],
+        "standard"
+      )
+    ).toBe(0);
   });
 
   it("poker: conta il valore; poker uguale (dal tavolo) divide", () => {
-    expect(cmp(["AH", "AD", "AC", "AS", "7H"], ["KH", "KD", "KC", "KS", "QH"], "standard")).toBeGreaterThan(0);
-    expect(cmp(["AH", "AD", "AC", "AS", "KH"], ["AH", "AD", "AC", "AS", "7D"], "standard")).toBe(0);
+    expect(
+      cmp(
+        ["AH", "AD", "AC", "AS", "7H"],
+        ["KH", "KD", "KC", "KS", "QH"],
+        "standard"
+      )
+    ).toBeGreaterThan(0);
+    expect(
+      cmp(
+        ["AH", "AD", "AC", "AS", "KH"],
+        ["AH", "AD", "AC", "AS", "7D"],
+        "standard"
+      )
+    ).toBe(0);
   });
 
   it("carta alta non è una combinazione: qualsiasi carta alta divide con qualsiasi altra", () => {
@@ -111,9 +175,16 @@ describe("variante Hi/Low — spareggi con valore e seme (cuori > quadri > fiori
     const suits = ["H", "D", "C", "S"];
     for (let strong = 0; strong < suits.length; strong += 1) {
       for (let weak = strong + 1; weak < suits.length; weak += 1) {
-        const a = ["A", "K", "Q", "J", "10"].map((rank) => `${rank}${suits[strong]}`);
-        const b = ["A", "K", "Q", "J", "10"].map((rank) => `${rank}${suits[weak]}`);
-        expect(cmp(a, b, "hilow"), `${suits[strong]} deve battere ${suits[weak]}`).toBeGreaterThan(0);
+        const a = ["A", "K", "Q", "J", "10"].map(
+          rank => `${rank}${suits[strong]}`
+        );
+        const b = ["A", "K", "Q", "J", "10"].map(
+          rank => `${rank}${suits[weak]}`
+        );
+        expect(
+          cmp(a, b, "hilow"),
+          `${suits[strong]} deve battere ${suits[weak]}`
+        ).toBeGreaterThan(0);
       }
     }
   });
@@ -125,7 +196,13 @@ describe("variante Hi/Low — spareggi con valore e seme (cuori > quadri > fiori
   });
 
   it("full: conta il tris (AAAJJ batte KKKQQ), a parità di tris decide il seme", () => {
-    expect(cmp(["AH", "AD", "AC", "JH", "JD"], ["KH", "KD", "KC", "QH", "QD"], "hilow")).toBeGreaterThan(0);
+    expect(
+      cmp(
+        ["AH", "AD", "AC", "JH", "JD"],
+        ["KH", "KD", "KC", "QH", "QD"],
+        "hilow"
+      )
+    ).toBeGreaterThan(0);
     // Stesso valore di tris: la mano che contiene cuori prevale su quella senza.
     const conCuori = ["KH", "KD", "KC", "QH", "QD"];
     const senzaCuori = ["KD", "KC", "KS", "JS", "JC"];
@@ -145,14 +222,26 @@ describe("variante Hi/Low — spareggi con valore e seme (cuori > quadri > fiori
   });
 
   it("tris di assi batte tris di K; a parità decide il seme", () => {
-    expect(cmp(["AH", "AD", "AC", "9S", "8C"], ["KH", "KD", "KC", "QS", "JC"], "hilow")).toBeGreaterThan(0);
+    expect(
+      cmp(
+        ["AH", "AD", "AC", "9S", "8C"],
+        ["KH", "KD", "KC", "QS", "JC"],
+        "hilow"
+      )
+    ).toBeGreaterThan(0);
     const conCuori = ["KH", "KD", "KC", "QH", "JC"];
     const senzaCuori = ["KD", "KC", "KS", "QS", "JS"];
     expect(cmp(conCuori, senzaCuori, "hilow")).toBeGreaterThan(0);
   });
 
   it("coppie e doppie coppie: valore, poi seme", () => {
-    expect(cmp(["AH", "AD", "9S", "8C", "7H"], ["KH", "KD", "QS", "JC", "10H"], "hilow")).toBeGreaterThan(0);
+    expect(
+      cmp(
+        ["AH", "AD", "9S", "8C", "7H"],
+        ["KH", "KD", "QS", "JC", "10H"],
+        "hilow"
+      )
+    ).toBeGreaterThan(0);
     const coppiaConCuori = ["AH", "AD", "KS", "QC", "9S"];
     const coppiaSenzaCuori = ["AS", "AC", "KD", "QD", "9C"];
     expect(cmp(coppiaConCuori, coppiaSenzaCuori, "hilow")).toBeGreaterThan(0);

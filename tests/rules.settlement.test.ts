@@ -12,7 +12,14 @@
  * essere SEMPRE uguale al piatto, in gettoni interi.
  */
 import { describe, expect, it } from "vitest";
-import { CATS, freshDeck, settleShowdown, shuffle, type CardCode, type Settlement } from "../client/src/game/rules";
+import {
+  CATS,
+  freshDeck,
+  settleShowdown,
+  shuffle,
+  type CardCode,
+  type Settlement,
+} from "../client/src/game/rules";
 
 type Scenario = {
   players: { id: string; cards: CardCode[] }[];
@@ -21,20 +28,41 @@ type Scenario = {
 };
 
 function assertNoDuplicates(scenario: Scenario) {
-  const all = [...scenario.players.flatMap((player) => player.cards), ...scenario.board1, ...scenario.board2];
-  expect(new Set(all).size, "lo scenario non deve riusare carte").toBe(all.length);
+  const all = [
+    ...scenario.players.flatMap(player => player.cards),
+    ...scenario.board1,
+    ...scenario.board2,
+  ];
+  expect(new Set(all).size, "lo scenario non deve riusare carte").toBe(
+    all.length
+  );
   expect(scenario.board1).toHaveLength(6);
   expect(scenario.board2).toHaveLength(2);
-  scenario.players.forEach((player) => expect(player.cards).toHaveLength(5));
+  scenario.players.forEach(player => expect(player.cards).toHaveLength(5));
 }
 
-function settle(scenario: Scenario, pot: number, variant: "standard" | "hilow"): Settlement {
+function settle(
+  scenario: Scenario,
+  pot: number,
+  variant: "standard" | "hilow"
+): Settlement {
   assertNoDuplicates(scenario);
-  const result = settleShowdown(scenario.players, scenario.board1, scenario.board2, pot, variant);
-  const paid = Object.values(result.payouts).reduce((sum, value) => sum + value, 0);
+  const result = settleShowdown(
+    scenario.players,
+    scenario.board1,
+    scenario.board2,
+    pot,
+    variant
+  );
+  const paid = Object.values(result.payouts).reduce(
+    (sum, value) => sum + value,
+    0
+  );
   expect(paid, "la somma dei pagamenti deve essere il piatto esatto").toBe(pot);
-  Object.values(result.payouts).forEach((value) => {
-    expect(Number.isInteger(value), "ogni pagamento è in gettoni interi").toBe(true);
+  Object.values(result.payouts).forEach(value => {
+    expect(Number.isInteger(value), "ogni pagamento è in gettoni interi").toBe(
+      true
+    );
     expect(value).toBeGreaterThanOrEqual(0);
   });
   return result;
@@ -431,7 +459,9 @@ describe("proprietà matematiche su mani casuali (fuzzing deterministico)", () =
   for (const variant of ["standard", "hilow"] as const) {
     for (const playerCount of [2, 3, 4]) {
       it(`(${variant}, ${playerCount} giocatori) 250 mani casuali: conservazione e coerenza`, () => {
-        const random = lcg(playerCount * 1000 + (variant === "hilow" ? 1 : 0) + 7);
+        const random = lcg(
+          playerCount * 1000 + (variant === "hilow" ? 1 : 0) + 7
+        );
         for (let round = 0; round < 250; round += 1) {
           const deck = shuffle(freshDeck(), random);
           const players = Array.from({ length: playerCount }, (_, index) => ({
@@ -443,9 +473,12 @@ describe("proprietà matematiche su mani casuali (fuzzing deterministico)", () =
           const pot = 25 * playerCount + Math.floor(random() * 400) * 25;
           const result = settleShowdown(players, board1, board2, pot, variant);
 
-          const paid = Object.values(result.payouts).reduce((sum, value) => sum + value, 0);
+          const paid = Object.values(result.payouts).reduce(
+            (sum, value) => sum + value,
+            0
+          );
           expect(paid).toBe(pot); // nessun gettone creato o distrutto
-          Object.values(result.payouts).forEach((value) => {
+          Object.values(result.payouts).forEach(value => {
             expect(Number.isInteger(value)).toBe(true);
             expect(value).toBeGreaterThanOrEqual(0);
           });
@@ -453,12 +486,16 @@ describe("proprietà matematiche su mani casuali (fuzzing deterministico)", () =
           // I vincitori sono sempre giocatori reali e non vuoti.
           expect(result.pot1Winners.length).toBeGreaterThan(0);
           expect(result.pot2Winners.length).toBeGreaterThan(0);
-          const ids = new Set(players.map((player) => player.id));
-          [...result.pot1Winners, ...result.pot2Winners].forEach((id) => expect(ids.has(id)).toBe(true));
+          const ids = new Set(players.map(player => player.id));
+          [...result.pot1Winners, ...result.pot2Winners].forEach(id =>
+            expect(ids.has(id)).toBe(true)
+          );
 
           // Chi non vince alcun piatto non riceve nulla.
           for (const player of players) {
-            const isWinner = result.pot1Winners.includes(player.id) || result.pot2Winners.includes(player.id);
+            const isWinner =
+              result.pot1Winners.includes(player.id) ||
+              result.pot2Winners.includes(player.id);
             if (!isWinner) expect(result.payouts[player.id] ?? 0).toBe(0);
           }
 
@@ -472,11 +509,18 @@ describe("proprietà matematiche su mani casuali (fuzzing deterministico)", () =
             expect(result.payouts[result.pot1Winners[0]]).toBe(pot);
           } else if (result.splitRule === "75/25") {
             expect((n1 === 1 && n2 > 1) || (n2 === 1 && n1 > 1)).toBe(true);
-            const soloId = n1 === 1 ? result.pot1Winners[0] : result.pot2Winners[0];
+            const soloId =
+              n1 === 1 ? result.pot1Winners[0] : result.pot2Winners[0];
             // Il vincitore assoluto prende almeno il 75% (a meno di resti interi).
-            expect(result.payouts[soloId]).toBeGreaterThanOrEqual(Math.floor(pot * 0.75));
+            expect(result.payouts[soloId]).toBeGreaterThanOrEqual(
+              Math.floor(pot * 0.75)
+            );
           } else {
-            expect(n1 === 1 && n2 === 1 && result.pot1Winners[0] === result.pot2Winners[0]).toBe(false);
+            expect(
+              n1 === 1 &&
+                n2 === 1 &&
+                result.pot1Winners[0] === result.pot2Winners[0]
+            ).toBe(false);
           }
 
           // Fatto matematico Sanzy: sul Piatto 1 esiste sempre almeno una coppia.

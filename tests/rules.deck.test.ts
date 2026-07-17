@@ -2,7 +2,13 @@
  * Regolamento §1-§2 — il mazzo Sanzy: 32 carte, 8 valori (7…A) × 4 semi.
  */
 import { describe, expect, it } from "vitest";
-import { RANKS, SUITS, cardParts, freshDeck, shuffle } from "../client/src/game/rules";
+import {
+  RANKS,
+  SUITS,
+  cardParts,
+  freshDeck,
+  shuffle,
+} from "../client/src/game/rules";
 
 describe("mazzo Sanzy (32 carte)", () => {
   it("contiene esattamente 32 carte tutte diverse", () => {
@@ -21,7 +27,7 @@ describe("mazzo Sanzy (32 carte)", () => {
   });
 
   it("ordina i valori 7 < 8 < 9 < 10 < J < Q < K < A", () => {
-    const values = RANKS.map((rank) => cardParts(`${rank}H`).value);
+    const values = RANKS.map(rank => cardParts(`${rank}H`).value);
     for (let index = 1; index < values.length; index += 1) {
       expect(values[index]).toBeGreaterThan(values[index - 1]);
     }

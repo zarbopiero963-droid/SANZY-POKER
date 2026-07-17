@@ -4,4 +4,3 @@
 - La versione richiesta conserva la fase extra di scarto già presente nel prototipo.
 - In presenza di un vincitore unico in un piatto e pareggio nell’altro, la distribuzione richiesta è 75% al vincitore unico e 25% diviso tra i pari merito.
 - La lobby deve mostrare bot effettivamente attivi e tavoli con stato di gioco percepibile.
-

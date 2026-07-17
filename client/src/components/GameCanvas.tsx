@@ -24,7 +24,7 @@ export default function GameCanvas() {
     });
     let handle: GameHandle | null = null;
     let cancelled = false;
-    createGameScene(engine, canvas).then((game) => {
+    createGameScene(engine, canvas).then(game => {
       if (cancelled) {
         game.dispose();
         return;
@@ -38,8 +38,14 @@ export default function GameCanvas() {
       const viewport = window.visualViewport;
       const visibleHeight = Math.round(viewport?.height ?? window.innerHeight);
       const visibleWidth = Math.round(viewport?.width ?? window.innerWidth);
-      document.documentElement.style.setProperty("--sanzy-viewport-height", `${visibleHeight}px`);
-      document.documentElement.style.setProperty("--sanzy-viewport-width", `${visibleWidth}px`);
+      document.documentElement.style.setProperty(
+        "--sanzy-viewport-height",
+        `${visibleHeight}px`
+      );
+      document.documentElement.style.setProperty(
+        "--sanzy-viewport-width",
+        `${visibleWidth}px`
+      );
       cancelAnimationFrame(resizeFrame);
       resizeFrame = requestAnimationFrame(() => engine.resize());
     };

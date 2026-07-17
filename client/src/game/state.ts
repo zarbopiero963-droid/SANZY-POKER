@@ -5,9 +5,25 @@
  */
 
 import { createBot, botChooseDiscard, botDecision } from "./bots";
-import { freshDeck, settleShowdown, shuffle, type CardCode, type HandEvaluation, type Variant } from "./rules";
+import {
+  freshDeck,
+  settleShowdown,
+  shuffle,
+  type CardCode,
+  type HandEvaluation,
+  type Variant,
+} from "./rules";
 
-export type Phase = "waiting" | "blinds" | "discard" | "preflop" | "flop" | "turn" | "river" | "pot2" | "showdown";
+export type Phase =
+  | "waiting"
+  | "blinds"
+  | "discard"
+  | "preflop"
+  | "flop"
+  | "turn"
+  | "river"
+  | "pot2"
+  | "showdown";
 export type PokerAction = "fold" | "check" | "call" | "raise" | "allin";
 
 export type PlayerState = {
@@ -93,10 +109,16 @@ function humanPlayer(chips: number): PlayerState {
 function freshTable(botCount: number, variant: Variant): TableState {
   const startChips = 5000;
   return {
-    name: variant === "hilow" ? "Sala Aurora · Hi/Low" : "Sala Smeraldo · Standard",
+    name:
+      variant === "hilow" ? "Sala Aurora · Hi/Low" : "Sala Smeraldo · Standard",
     variant,
     status: "waiting",
-    players: [humanPlayer(startChips), ...Array.from({ length: botCount }, (_, index) => createBot(index, startChips))],
+    players: [
+      humanPlayer(startChips),
+      ...Array.from({ length: botCount }, (_, index) =>
+        createBot(index, startChips)
+      ),
+    ],
     dealerIndex: -1,
     phase: "waiting",
     board1: [],
@@ -141,7 +163,7 @@ export class GameController {
       this.table.lastEvent = event;
       this.table.eventSerial += 1;
     }
-    this.listeners.forEach((listener) => listener(this.table, this.screen));
+    this.listeners.forEach(listener => listener(this.table, this.screen));
   }
 
   private later(callback: () => void, milliseconds: number) {
@@ -176,8 +198,9 @@ export class GameController {
   startHand() {
     if (this.table.players.length < 2) return;
     const deck = shuffle(freshDeck());
-    this.table.dealerIndex = (this.table.dealerIndex + 1) % this.table.players.length;
-    this.table.players.forEach((player) => {
+    this.table.dealerIndex =
+      (this.table.dealerIndex + 1) % this.table.players.length;
+    this.table.players.forEach(player => {
       if (player.chips < this.table.bigBlind) player.chips = 5000;
       player.folded = false;
       player.allIn = false;
@@ -200,7 +223,9 @@ export class GameController {
     this.table.lastResult = null;
     this.table.revealAll = false;
     this.table.turnIndex = -1;
-    this.table.log = [`Mano ${this.table.handNumber}. Bottone a ${this.table.players[this.table.dealerIndex].name}.`];
+    this.table.log = [
+      `Mano ${this.table.handNumber}. Bottone a ${this.table.players[this.table.dealerIndex].name}.`,
+    ];
     this.emit("deal");
     this.continueAutomation();
   }
@@ -216,8 +241,12 @@ export class GameController {
 
   private roundComplete() {
     return this.table.players
-      .filter((player) => !player.folded)
-      .every((player) => player.allIn || (player.acted && player.roundBet === this.table.roundMaxBet));
+      .filter(player => !player.folded)
+      .every(
+        player =>
+          player.allIn ||
+          (player.acted && player.roundBet === this.table.roundMaxBet)
+      );
   }
 
   private openBettingAfterReveal(delay: number) {
@@ -235,7 +264,7 @@ export class GameController {
   }
 
   private stepBlind() {
-    const player = this.table.players.find((entry) => !entry.paidBlind);
+    const player = this.table.players.find(entry => !entry.paidBlind);
     if (!player) {
       this.table.phase = "discard";
       this.log("Buio completato. Ogni giocatore scarta una carta.");
@@ -262,7 +291,7 @@ export class GameController {
     player.cards.splice(position, 1);
     player.lastAction = "Carta scartata";
     this.log(`${player.name} ha completato lo scarto.`);
-    if (this.table.players.every((entry) => entry.cards.length === 5)) {
+    if (this.table.players.every(entry => entry.cards.length === 5)) {
       // Regolamento: il primo giro di puntata avviene prima di scoprire il flop.
       this.table.phase = "preflop";
       this.table.roundMaxBet = 0;
@@ -282,9 +311,14 @@ export class GameController {
     this.continueAutomation();
   }
 
-  private performAction(playerIndex: number, action: PokerAction, raiseTo?: number) {
+  private performAction(
+    playerIndex: number,
+    action: PokerAction,
+    raiseTo?: number
+  ) {
     const player = this.table.players[playerIndex];
-    if (!player || player.folded || playerIndex !== this.table.turnIndex) return;
+    if (!player || player.folded || playerIndex !== this.table.turnIndex)
+      return;
     if (action === "fold") {
       player.folded = true;
       player.acted = true;
@@ -299,18 +333,26 @@ export class GameController {
       player.lastAction = "Check";
       this.log(`${player.name} fa check.`);
     } else if (action === "call") {
-      const amount = Math.min(this.table.roundMaxBet - player.roundBet, player.chips);
+      const amount = Math.min(
+        this.table.roundMaxBet - player.roundBet,
+        player.chips
+      );
       player.chips -= amount;
       player.roundBet += amount;
       this.table.pot += amount;
       player.allIn = player.chips === 0;
       player.acted = true;
       player.lastAction = amount ? `Call ${amount}` : "Check";
-      this.log(amount ? `${player.name} chiama ${amount}.` : `${player.name} fa check.`);
+      this.log(
+        amount ? `${player.name} chiama ${amount}.` : `${player.name} fa check.`
+      );
     } else if (action === "raise") {
       const previousMax = this.table.roundMaxBet;
       const available = player.chips + player.roundBet;
-      const target = Math.min(available, Math.max(raiseTo ?? 0, previousMax + this.table.bigBlind));
+      const target = Math.min(
+        available,
+        Math.max(raiseTo ?? 0, previousMax + this.table.bigBlind)
+      );
       const amount = Math.min(target - player.roundBet, player.chips);
       player.chips -= amount;
       player.roundBet += amount;
@@ -320,13 +362,20 @@ export class GameController {
       this.table.roundMaxBet = Math.max(previousMax, player.roundBet);
       if (isFullRaise) {
         this.table.roundRaises += 1;
-        this.table.players.forEach((entry) => {
-          if (entry.id !== player.id && !entry.folded && !entry.allIn) entry.acted = false;
+        this.table.players.forEach(entry => {
+          if (entry.id !== player.id && !entry.folded && !entry.allIn)
+            entry.acted = false;
         });
       }
       player.acted = true;
-      player.lastAction = isFullRaise ? `Raise ${player.roundBet}` : `Call ${amount}`;
-      this.log(isFullRaise ? `${player.name} rilancia a ${player.roundBet}.` : `${player.name} chiama ${amount} ed è all-in.`);
+      player.lastAction = isFullRaise
+        ? `Raise ${player.roundBet}`
+        : `Call ${amount}`;
+      this.log(
+        isFullRaise
+          ? `${player.name} rilancia a ${player.roundBet}.`
+          : `${player.name} chiama ${amount} ed è all-in.`
+      );
     } else {
       const amount = player.chips;
       player.roundBet += amount;
@@ -336,8 +385,9 @@ export class GameController {
       if (player.roundBet > this.table.roundMaxBet) {
         this.table.roundMaxBet = player.roundBet;
         this.table.roundRaises += 1;
-        this.table.players.forEach((entry) => {
-          if (entry.id !== player.id && !entry.folded && !entry.allIn) entry.acted = false;
+        this.table.players.forEach(entry => {
+          if (entry.id !== player.id && !entry.folded && !entry.allIn)
+            entry.acted = false;
         });
       }
       player.acted = true;
@@ -345,7 +395,7 @@ export class GameController {
       this.log(`${player.name} va all-in.`);
     }
 
-    const survivors = this.table.players.filter((entry) => !entry.folded);
+    const survivors = this.table.players.filter(entry => !entry.folded);
     if (survivors.length === 1) {
       const potTotal = this.table.pot;
       survivors[0].chips += potTotal;
@@ -382,14 +432,21 @@ export class GameController {
   }
 
   private advancePhase() {
-    this.table.players.forEach((player) => {
+    this.table.players.forEach(player => {
       player.roundBet = 0;
       player.acted = player.folded || player.allIn;
     });
     this.table.roundMaxBet = 0;
     this.table.roundRaises = 0;
     this.table.turnIndex = -1;
-    const order: Phase[] = ["preflop", "flop", "turn", "river", "pot2", "showdown"];
+    const order: Phase[] = [
+      "preflop",
+      "flop",
+      "turn",
+      "river",
+      "pot2",
+      "showdown",
+    ];
     this.table.phase = order[order.indexOf(this.table.phase) + 1];
     if (this.table.phase === "flop") {
       this.table.board1Revealed = 3;
@@ -418,17 +475,18 @@ export class GameController {
   }
 
   private showdown() {
-    const alive = this.table.players.filter((player) => !player.folded);
+    const alive = this.table.players.filter(player => !player.folded);
     const potTotal = this.table.pot;
     const settlement = settleShowdown(
-      alive.map((player) => ({ id: player.id, cards: player.cards })),
+      alive.map(player => ({ id: player.id, cards: player.cards })),
       this.table.board1,
       this.table.board2,
       potTotal,
-      this.table.variant,
+      this.table.variant
     );
-    const nameOf = (id: string) => this.table.players.find((player) => player.id === id)?.name ?? id;
-    this.table.players.forEach((player) => {
+    const nameOf = (id: string) =>
+      this.table.players.find(player => player.id === id)?.name ?? id;
+    this.table.players.forEach(player => {
       const amount = settlement.payouts[player.id] || 0;
       player.chips += amount;
       if (amount) player.lastAction = `Vince ${amount}`;
@@ -450,7 +508,9 @@ export class GameController {
     this.table.phase = "waiting";
     this.table.turnIndex = -1;
     this.table.revealAll = true;
-    this.log(`Showdown: ${bestPot1.label} / ${bestPot2.label}. Divisione ${splitRule}.`);
+    this.log(
+      `Showdown: ${bestPot1.label} / ${bestPot2.label}. Divisione ${splitRule}.`
+    );
     this.emit("showdown");
   }
 
@@ -461,13 +521,21 @@ export class GameController {
       return;
     }
     if (this.table.phase === "discard") {
-      const botIndex = this.table.players.findIndex((player) => player.isBot && player.cards.length === 6);
+      const botIndex = this.table.players.findIndex(
+        player => player.isBot && player.cards.length === 6
+      );
       if (botIndex >= 0) {
-        this.later(() => {
-          const bot = this.table.players[botIndex];
-          this.discard(botIndex, botChooseDiscard(bot.cards, this.table.variant));
-          this.continueAutomation();
-        }, 520 + Math.random() * 260);
+        this.later(
+          () => {
+            const bot = this.table.players[botIndex];
+            this.discard(
+              botIndex,
+              botChooseDiscard(bot.cards, this.table.variant)
+            );
+            this.continueAutomation();
+          },
+          520 + Math.random() * 260
+        );
       } else if (this.demo && this.table.players[0].cards.length === 6) {
         this.later(() => {
           const human = this.table.players[0];
@@ -477,15 +545,25 @@ export class GameController {
       }
       return;
     }
-    if (!["preflop", "flop", "turn", "river", "pot2"].includes(this.table.phase)) return;
+    if (
+      !["preflop", "flop", "turn", "river", "pot2"].includes(this.table.phase)
+    )
+      return;
     const player = this.table.players[this.table.turnIndex];
     if (!player) return;
     if (player.isBot || this.demo) {
-      this.later(() => {
-        const decision = botDecision(this.table, this.table.turnIndex);
-        this.performAction(this.table.turnIndex, decision.action, decision.raiseTo);
-        this.continueAutomation();
-      }, 720 + Math.random() * 520);
+      this.later(
+        () => {
+          const decision = botDecision(this.table, this.table.turnIndex);
+          this.performAction(
+            this.table.turnIndex,
+            decision.action,
+            decision.raiseTo
+          );
+          this.continueAutomation();
+        },
+        720 + Math.random() * 520
+      );
     }
   }
 

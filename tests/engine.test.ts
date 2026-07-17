@@ -16,29 +16,45 @@ function lcg(seed: number) {
 }
 
 function totalChips(table: TableState) {
-  return table.players.reduce((sum, player) => sum + player.chips, 0) + table.pot;
+  return (
+    table.players.reduce((sum, player) => sum + player.chips, 0) + table.pot
+  );
 }
 
 function allCards(table: TableState) {
-  return [...table.players.flatMap((player) => player.cards), ...table.board1, ...table.board2];
+  return [
+    ...table.players.flatMap(player => player.cards),
+    ...table.board1,
+    ...table.board2,
+  ];
 }
 
 /** Avanza i timer finché la mano corrente non è conclusa (status "waiting"). */
 function runHandToEnd(controller: GameController, maxSteps = 5000) {
   for (let step = 0; step < maxSteps; step += 1) {
-    if (controller.table.status === "waiting" && controller.table.handNumber > 0) return;
+    if (
+      controller.table.status === "waiting" &&
+      controller.table.handNumber > 0
+    )
+      return;
     vi.advanceTimersByTime(250);
   }
   throw new Error(`La mano non si è conclusa: fase ${controller.table.phase}`);
 }
 
 /** Avanza i timer finché la condizione non è vera. */
-function advanceUntil(controller: GameController, predicate: (table: TableState) => boolean, maxSteps = 2000) {
+function advanceUntil(
+  controller: GameController,
+  predicate: (table: TableState) => boolean,
+  maxSteps = 2000
+) {
   for (let step = 0; step < maxSteps; step += 1) {
     if (predicate(controller.table)) return;
     vi.advanceTimersByTime(150);
   }
-  throw new Error(`Condizione mai raggiunta: fase ${controller.table.phase}, turno ${controller.table.turnIndex}`);
+  throw new Error(
+    `Condizione mai raggiunta: fase ${controller.table.phase}, turno ${controller.table.turnIndex}`
+  );
 }
 
 beforeEach(() => {
@@ -56,17 +72,21 @@ describe("distribuzione e struttura della mano", () => {
       vi.spyOn(Math, "random").mockImplementation(lcg(11 + botCount));
       const controller = new GameController(true);
       controller.openTable(botCount, "standard");
-      advanceUntil(controller, (table) => table.phase === "discard");
+      advanceUntil(controller, table => table.phase === "discard");
 
       expect(controller.table.players).toHaveLength(botCount + 1);
-      controller.table.players.forEach((player) => expect(player.cards).toHaveLength(6));
+      controller.table.players.forEach(player =>
+        expect(player.cards).toHaveLength(6)
+      );
       expect(controller.table.board1).toHaveLength(6);
       expect(controller.table.board2).toHaveLength(2);
       const dealt = allCards(controller.table);
       expect(new Set(dealt).size).toBe(dealt.length);
       expect(dealt.length).toBe((botCount + 1) * 6 + 8);
 
-      advanceUntil(controller, (table) => table.players.every((player) => player.cards.length === 5));
+      advanceUntil(controller, table =>
+        table.players.every(player => player.cards.length === 5)
+      );
       const afterDiscard = allCards(controller.table);
       expect(new Set(afterDiscard).size).toBe(afterDiscard.length);
       controller.dispose();
@@ -78,33 +98,51 @@ describe("distribuzione e struttura della mano", () => {
       vi.spyOn(Math, "random").mockImplementation(lcg(23 + botCount));
       const controller = new GameController(true);
       controller.openTable(botCount, "standard");
-      advanceUntil(controller, (table) => table.phase === "discard");
+      advanceUntil(controller, table => table.phase === "discard");
       const players = botCount + 1;
       expect(controller.table.pot).toBe(players * controller.table.smallBlind);
-      controller.table.players.forEach((player) => expect(player.chips).toBe(5000 - controller.table.smallBlind));
+      controller.table.players.forEach(player =>
+        expect(player.chips).toBe(5000 - controller.table.smallBlind)
+      );
       controller.dispose();
     });
   }
 });
 
 describe("sequenza delle fasi (§3: cinque giri di puntata)", () => {
-  const EXPECTED_ORDER = ["blinds", "discard", "preflop", "flop", "turn", "river", "pot2"];
+  const EXPECTED_ORDER = [
+    "blinds",
+    "discard",
+    "preflop",
+    "flop",
+    "turn",
+    "river",
+    "pot2",
+  ];
 
   for (const variant of ["standard", "hilow"] as Variant[]) {
     it(`(${variant}) le fasi seguono l'ordine bui → scarto → pre-board → flop → turn → river → piatto2`, () => {
-      vi.spyOn(Math, "random").mockImplementation(lcg(variant === "hilow" ? 101 : 100));
+      vi.spyOn(Math, "random").mockImplementation(
+        lcg(variant === "hilow" ? 101 : 100)
+      );
       const controller = new GameController(true);
       const phasesSeen: string[] = [];
-      controller.subscribe((table) => {
-        if (phasesSeen[phasesSeen.length - 1] !== table.phase) phasesSeen.push(table.phase);
+      controller.subscribe(table => {
+        if (phasesSeen[phasesSeen.length - 1] !== table.phase)
+          phasesSeen.push(table.phase);
       });
       controller.openTable(3, variant);
       runHandToEnd(controller);
 
-      const relevant = phasesSeen.filter((phase) => EXPECTED_ORDER.includes(phase));
-      const indexes = relevant.map((phase) => EXPECTED_ORDER.indexOf(phase));
+      const relevant = phasesSeen.filter(phase =>
+        EXPECTED_ORDER.includes(phase)
+      );
+      const indexes = relevant.map(phase => EXPECTED_ORDER.indexOf(phase));
       for (let index = 1; index < indexes.length; index += 1) {
-        expect(indexes[index], `ordine fasi violato: ${relevant.join(" → ")}`).toBeGreaterThanOrEqual(indexes[index - 1]);
+        expect(
+          indexes[index],
+          `ordine fasi violato: ${relevant.join(" → ")}`
+        ).toBeGreaterThanOrEqual(indexes[index - 1]);
       }
       // Il primo giro di puntata avviene PRIMA del flop (pre-board).
       expect(relevant).toContain("preflop");
@@ -116,10 +154,19 @@ describe("sequenza delle fasi (§3: cinque giri di puntata)", () => {
     vi.spyOn(Math, "random").mockImplementation(lcg(77));
     const controller = new GameController(true);
     const reveals: { phase: string; board1: number; board2: boolean }[] = [];
-    controller.subscribe((table) => {
+    controller.subscribe(table => {
       const last = reveals[reveals.length - 1];
-      if (!last || last.phase !== table.phase || last.board1 !== table.board1Revealed || last.board2 !== table.board2Revealed) {
-        reveals.push({ phase: table.phase, board1: table.board1Revealed, board2: table.board2Revealed });
+      if (
+        !last ||
+        last.phase !== table.phase ||
+        last.board1 !== table.board1Revealed ||
+        last.board2 !== table.board2Revealed
+      ) {
+        reveals.push({
+          phase: table.phase,
+          board1: table.board1Revealed,
+          board2: table.board2Revealed,
+        });
       }
     });
     controller.openTable(2, "standard");
@@ -146,22 +193,26 @@ describe("integrità delle puntate e dei gettoni", () => {
   for (const variant of ["standard", "hilow"] as Variant[]) {
     for (const botCount of [1, 2, 3]) {
       it(`(${variant}, ${botCount + 1} giocatori) 8 mani complete: gettoni conservati e pagamenti esatti`, () => {
-        vi.spyOn(Math, "random").mockImplementation(lcg(botCount * 31 + (variant === "hilow" ? 500 : 0) + 3));
+        vi.spyOn(Math, "random").mockImplementation(
+          lcg(botCount * 31 + (variant === "hilow" ? 500 : 0) + 3)
+        );
         const controller = new GameController(true);
 
         let baseline = -1;
-        controller.subscribe((table) => {
+        controller.subscribe(table => {
           if (table.status !== "playing") return;
           if (baseline === -1) baseline = totalChips(table);
           // Invariante: durante la mano nessun gettone appare o sparisce.
           expect(totalChips(table)).toBe(baseline);
-          table.players.forEach((player) => {
+          table.players.forEach(player => {
             expect(player.chips).toBeGreaterThanOrEqual(0);
             expect(player.roundBet).toBeGreaterThanOrEqual(0);
           });
           expect(table.pot).toBeGreaterThanOrEqual(0);
           if (table.turnIndex >= 0) {
-            const maxBet = Math.max(...table.players.map((player) => player.roundBet));
+            const maxBet = Math.max(
+              ...table.players.map(player => player.roundBet)
+            );
             expect(table.roundMaxBet).toBe(maxBet);
           }
         });
@@ -173,11 +224,17 @@ describe("integrità delle puntate e dei gettoni", () => {
           runHandToEnd(controller);
           const result = controller.table.lastResult;
           expect(result).not.toBeNull();
-          const paid = Object.values(result!.payouts).reduce((sum, value) => sum + value, 0);
+          const paid = Object.values(result!.payouts).reduce(
+            (sum, value) => sum + value,
+            0
+          );
           expect(paid).toBe(result!.potTotal);
           expect(controller.table.pot).toBe(0);
           expect(totalChips(controller.table)).toBe(baseline);
-          if (result!.splitRule !== "solo" || result!.bestPot1 !== "Vittoria per fold") {
+          if (
+            result!.splitRule !== "solo" ||
+            result!.bestPot1 !== "Vittoria per fold"
+          ) {
             expect(result!.pot1Winners.length).toBeGreaterThan(0);
             expect(result!.pot2Winners.length).toBeGreaterThan(0);
           }
@@ -191,9 +248,12 @@ describe("integrità delle puntate e dei gettoni", () => {
     vi.spyOn(Math, "random").mockImplementation(lcg(999));
     const controller = new GameController(false); // umano manuale
     controller.openTable(1, "standard"); // testa a testa
-    advanceUntil(controller, (table) => table.phase === "discard");
+    advanceUntil(controller, table => table.phase === "discard");
     controller.humanDiscard(controller.table.players[0].cards[0]);
-    advanceUntil(controller, (table) => table.phase === "preflop" && table.turnIndex === 0);
+    advanceUntil(
+      controller,
+      table => table.phase === "preflop" && table.turnIndex === 0
+    );
 
     const potBefore = controller.table.pot;
     const botChipsBefore = controller.table.players[1].chips;
@@ -211,16 +271,21 @@ describe("integrità delle puntate e dei gettoni", () => {
     vi.spyOn(Math, "random").mockImplementation(lcg(424242));
     const controller = new GameController(false);
     controller.openTable(1, "standard");
-    advanceUntil(controller, (table) => table.phase === "discard");
+    advanceUntil(controller, table => table.phase === "discard");
     controller.humanDiscard(controller.table.players[0].cards[0]);
-    advanceUntil(controller, (table) => table.phase === "preflop" && table.turnIndex === 0);
+    advanceUntil(
+      controller,
+      table => table.phase === "preflop" && table.turnIndex === 0
+    );
 
     const human = controller.table.players[0];
     const before = human.chips;
     const previousMax = controller.table.roundMaxBet;
     controller.humanAction("raise", 1); // richiesta sotto il minimo: viene alzata al minimo legale
     expect(human.roundBet).toBe(previousMax + controller.table.bigBlind);
-    expect(controller.table.roundMaxBet).toBe(previousMax + controller.table.bigBlind);
+    expect(controller.table.roundMaxBet).toBe(
+      previousMax + controller.table.bigBlind
+    );
     expect(human.chips).toBe(before - human.roundBet);
     controller.dispose();
   });
@@ -229,19 +294,29 @@ describe("integrità delle puntate e dei gettoni", () => {
     vi.spyOn(Math, "random").mockImplementation(lcg(1717));
     const controller = new GameController(false);
     controller.openTable(1, "standard");
-    advanceUntil(controller, (table) => table.phase === "discard");
+    advanceUntil(controller, table => table.phase === "discard");
     controller.humanDiscard(controller.table.players[0].cards[0]);
-    advanceUntil(controller, (table) => table.phase === "preflop" && table.turnIndex === 0);
+    advanceUntil(
+      controller,
+      table => table.phase === "preflop" && table.turnIndex === 0
+    );
 
     controller.humanAction("raise", 200);
     const bot = controller.table.players[1];
     expect(controller.table.phase).toBe("preflop"); // il giro non può chiudersi: il bot deve rispondere
     expect(bot.acted).toBe(false);
-    advanceUntil(controller, (table) => table.phase !== "preflop" || table.turnIndex === 0);
+    advanceUntil(
+      controller,
+      table => table.phase !== "preflop" || table.turnIndex === 0
+    );
     if (controller.table.phase !== "preflop") {
       // Il bot ha chiamato (fase avanzata) oppure ha foldato (mano chiusa).
       if (controller.table.status === "playing") {
-        expect(controller.table.players.filter((p) => !p.folded).every((p) => p.roundBet === 0)).toBe(true);
+        expect(
+          controller.table.players
+            .filter(p => !p.folded)
+            .every(p => p.roundBet === 0)
+        ).toBe(true);
       }
     }
     controller.dispose();
@@ -251,9 +326,12 @@ describe("integrità delle puntate e dei gettoni", () => {
     vi.spyOn(Math, "random").mockImplementation(lcg(31337));
     const controller = new GameController(false);
     controller.openTable(1, "standard");
-    advanceUntil(controller, (table) => table.phase === "discard");
+    advanceUntil(controller, table => table.phase === "discard");
     controller.humanDiscard(controller.table.players[0].cards[0]);
-    advanceUntil(controller, (table) => table.phase === "preflop" && table.turnIndex === 0);
+    advanceUntil(
+      controller,
+      table => table.phase === "preflop" && table.turnIndex === 0
+    );
 
     const potBefore = controller.table.pot;
     const chipsBefore = controller.table.players[0].chips;
@@ -272,7 +350,7 @@ describe("dealer e ordine di parola (§2-§3)", () => {
     const controller = new GameController(true);
     const firstActors: { dealer: number; actor: number }[] = [];
     let captured = false;
-    controller.subscribe((table) => {
+    controller.subscribe(table => {
       if (table.phase === "preflop" && table.turnIndex >= 0 && !captured) {
         firstActors.push({ dealer: table.dealerIndex, actor: table.turnIndex });
         captured = true;

@@ -2,10 +2,10 @@
 
 ## Fonti
 
-| Fonte | URL | Ruolo nella revisione |
-|---|---|---|
-| Poker Game UI — Sumanth Patnala | https://share.google/8ghqhvSlcQrySoMvK | Riferimento principale per il tavolo di gioco |
-| Poker Lobby — Sharia Dev | https://share.google/bY2jKYt1czqFEcsW9 | Riferimento principale per la lobby |
+| Fonte                                | URL                                                                                    | Ruolo nella revisione                         |
+| ------------------------------------ | -------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Poker Game UI — Sumanth Patnala      | https://share.google/8ghqhvSlcQrySoMvK                                                 | Riferimento principale per il tavolo di gioco |
+| Poker Lobby — Sharia Dev             | https://share.google/bY2jKYt1czqFEcsW9                                                 | Riferimento principale per la lobby           |
 | Screenshot Sanzy fornito dall’utente | `/home/ubuntu/upload/Screenshot_20260715_002114_com_anthropic_claude_MainActivity.jpg` | Specifica vincolante per l’ordine delle board |
 
 ## Tavolo di gioco
