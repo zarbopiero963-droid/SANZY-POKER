@@ -23,6 +23,22 @@ jobs:
       - name: Test del regolamento (Standard e Hi/Low, 2-4 giocatori)
         run: pnpm test
 
+  format:
+    name: Controllo formato (informativo, non bloccante)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Installa dipendenze
+        run: pnpm install --frozen-lockfile
+      - name: Prettier
+        run: pnpm exec prettier --check .
+
   build:
     name: Build di produzione
     runs-on: ubuntu-latest
