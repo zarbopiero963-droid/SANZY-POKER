@@ -26,7 +26,7 @@
 - [x] Disporre **Piatto 2** verticalmente a destra, separato dal Piatto 1.
 - [x] Collocare le carte personali in basso davanti alla postazione del giocatore.
 - [x] Ridisegnare la lobby come un vero client di poker online con tavoli, posti, bui e attività dei bot.
-- [x] Conservare motore di gioco, fase di scarto, modalità Standard/Hi-Low e regola 75/25.
+- [x] Conservare motore di gioco, fase di scarto, modalità Standard/Hi-Low e regola di divisione dei piatti (poi definita come 50/50 per piatto).
 - [x] Verificare TypeScript, build, lobby, tavolo e ciclo automatico dei bot.
 - [x] Salvare un nuovo checkpoint e consegnare la revisione.
 

@@ -24,7 +24,7 @@ Le carte entrano dal dealer verso la destinazione; le fiches convergono al centr
 
 ## Vincoli funzionali
 
-Il ridisegno conserva il mazzo da 32 carte, sei carte personali, fase di scarto, modalità Standard e Hi/Low, bot automatici e divisione 75/25. La grafica segue lo stato reale del motore: il Flop rivela tre carte del Piatto 1, le fasi successive completano le altre posizioni e infine vengono rivelate le due carte verticali del Piatto 2.
+Il ridisegno conserva il mazzo da 32 carte, sei carte personali, fase di scarto, modalità Standard e Hi/Low, bot automatici e divisione 50/50 per piatto. La grafica segue lo stato reale del motore: il Flop rivela tre carte del Piatto 1, le fasi successive completano le altre posizioni e infine vengono rivelate le due carte verticali del Piatto 2.
 
 ## Style Decisions
 
