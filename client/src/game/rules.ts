@@ -324,16 +324,18 @@ export type Settlement = {
   bestPot1: HandEvaluation;
   bestPot2: HandEvaluation;
   payouts: Record<string, number>;
-  splitRule: "solo" | "50/50" | "75/25";
+  splitRule: "solo" | "50/50";
 };
 
 /**
  * Regolamento §6 — divisione dei due piatti. Il totale vale 100: Piatto 1 = 50,
- * Piatto 2 = 50. Vincitore assoluto di entrambi → 100%. Un piatto vinto da un
- * solo giocatore mentre l'altro è in parità → 75% al vincitore assoluto e 25%
- * diviso tra i giocatori in parità. Altrimenti ogni piatto vale il 50% ripartito
- * tra i suoi vincitori. La distribuzione è esatta in gettoni interi: i resti
- * vengono assegnati con il metodo del resto maggiore, in ordine di posto.
+ * Piatto 2 = 50. Ogni metà è divisa in parti uguali tra i vincitori (o
+ * pareggianti) di QUEL piatto, in modo indipendente dall'altro; un giocatore che
+ * vince/pareggia in entrambi i piatti cumula le due quote, e chi vince da solo
+ * entrambi i piatti prende il 100%. La carta alta non è una combinazione: se in
+ * un piatto nessuno crea combinazione tutti pareggiano e ne dividono la metà.
+ * La distribuzione è esatta in gettoni interi: i resti vengono assegnati con il
+ * metodo del resto maggiore ("se possibile per eccesso"), in ordine di posto.
  */
 export function settleShowdown(
   players: ShowdownPlayer[],
@@ -376,27 +378,15 @@ export function settleShowdown(
     });
   };
 
-  let splitRule: Settlement["splitRule"];
-  if (
+  // Piatto 1 = metà del totale ai suoi vincitori; Piatto 2 = l'altra metà ai
+  // suoi. Le due quote si cumulano su chi vince/pareggia in entrambi.
+  pot1Winners.forEach(id => addShare(id, 1, 2 * pot1Winners.length));
+  pot2Winners.forEach(id => addShare(id, 1, 2 * pot2Winners.length));
+  const soloWinner =
     pot1Winners.length === 1 &&
     pot2Winners.length === 1 &&
-    pot1Winners[0] === pot2Winners[0]
-  ) {
-    splitRule = "solo";
-    addShare(pot1Winners[0], 1, 1);
-  } else if (pot1Winners.length === 1 && pot2Winners.length > 1) {
-    splitRule = "75/25";
-    addShare(pot1Winners[0], 3, 4);
-    pot2Winners.forEach(id => addShare(id, 1, 4 * pot2Winners.length));
-  } else if (pot2Winners.length === 1 && pot1Winners.length > 1) {
-    splitRule = "75/25";
-    addShare(pot2Winners[0], 3, 4);
-    pot1Winners.forEach(id => addShare(id, 1, 4 * pot1Winners.length));
-  } else {
-    splitRule = "50/50";
-    pot1Winners.forEach(id => addShare(id, 1, 2 * pot1Winners.length));
-    pot2Winners.forEach(id => addShare(id, 1, 2 * pot2Winners.length));
-  }
+    pot1Winners[0] === pot2Winners[0];
+  const splitRule: Settlement["splitRule"] = soloWinner ? "solo" : "50/50";
 
   // Resto maggiore: pagamenti interi la cui somma è esattamente potTotal.
   const entries = players

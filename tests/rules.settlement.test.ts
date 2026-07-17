@@ -1,15 +1,13 @@
 /**
  * Regolamento §6 — divisione dei piatti (Piatto1 = 50, Piatto2 = 50, totale 100).
- *  - Vincitore assoluto di entrambi i piatti → 100%.
- *  - Vincitori diversi nei due piatti → 50/50.
- *  - Un piatto in parità e l'altro vinto da un solo giocatore → 75% al vincitore
- *    assoluto, 25% diviso tra i giocatori in parità (il vincitore assoluto
- *    partecipa anche al 25% se è tra i pareggianti, come nell'esempio del
- *    regolamento: piatto 1000 → 750+125 e 125).
- *  - "Nessuna combinazione" in un piatto = parità fra tutti i giocatori vivi.
- * Ogni scenario è costruito con carte reali (mai duplicate) e verificato sia
- * nei pagamenti sia nelle combinazioni attese. La somma dei pagamenti deve
- * essere SEMPRE uguale al piatto, in gettoni interi.
+ * Regola unica e coerente: ogni piatto vale metà del totale e la sua metà è
+ * divisa in parti uguali tra i vincitori (o pareggianti) di QUEL piatto, in modo
+ * indipendente dall'altro. Un giocatore che vince/pareggia in entrambi i piatti
+ * cumula le due quote; chi vince da solo entrambi i piatti prende il 100%.
+ * "Nessuna combinazione" in un piatto = carta alta = parità fra tutti i vivi.
+ * Ogni scenario è costruito con carte reali (mai duplicate) e verificato sia nei
+ * pagamenti sia nelle combinazioni attese. La somma dei pagamenti deve essere
+ * SEMPRE uguale al piatto, in gettoni interi (resti "per eccesso").
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -93,7 +91,7 @@ describe("2 giocatori", () => {
     }
   });
 
-  it("un piatto a testa → 50/50 (entrambe le varianti)", () => {
+  it("un piatto a testa → 500 / 500 (entrambe le varianti)", () => {
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["KS", "AH", "JD", "8H", "7S"] }, // full K sul Piatto 1
@@ -114,7 +112,7 @@ describe("2 giocatori", () => {
     }
   });
 
-  it("Standard: parità di colore sul Piatto 1 e nessuna combinazione sul Piatto 2 → 50/50", () => {
+  it("Standard: parità di colore sul Piatto 1 e nessuna combinazione sul Piatto 2 → 500 / 500", () => {
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["9H", "8H", "7H", "QC", "JD"] }, // colore di cuori
@@ -133,7 +131,9 @@ describe("2 giocatori", () => {
     expect(pay(result, "b")).toBe(500);
   });
 
-  it("Hi/Low, stesse carte: il colore di cuori vince da solo il Piatto 1 → 75/25", () => {
+  it("Heads-up 75/25 emergente: a vince da solo il Piatto 1, il Piatto 2 è pari → 750 / 250", () => {
+    // Con 2 giocatori, la regola 50/50-per-piatto produce l'effettivo 75/25:
+    // a prende tutto il Piatto 1 (500) e metà del Piatto 2 (250) = 750; b 250.
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["9H", "8H", "7H", "QC", "JD"] },
@@ -143,35 +143,35 @@ describe("2 giocatori", () => {
       board2: ["AD", "KD"],
     };
     const result = settle(scenario, 1000, "hilow");
-    expect(result.splitRule).toBe("75/25");
+    expect(result.splitRule).toBe("50/50");
     expect(result.pot1Winners).toEqual(["a"]); // cuori batte picche
     expect(result.pot2Winners).toEqual(["a", "b"]); // carta alta: parità anche in Hi/Low
-    expect(pay(result, "a")).toBe(875); // 750 + 125
-    expect(pay(result, "b")).toBe(125);
+    expect(pay(result, "a")).toBe(750); // 500 (Piatto 1) + 250 (metà Piatto 2)
+    expect(pay(result, "b")).toBe(250);
   });
 
-  it("esempio numerico del regolamento: parità sul Piatto 1, B vince il Piatto 2 → 875/125", () => {
+  it("esempio del regolamento (2 giocatori): parità sul Piatto 1, B vince il Piatto 2 → 250 / 750", () => {
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["KD", "KC", "QD", "8S", "9H"] }, // scala media K-alta
-        { id: "b", cards: ["8H", "AH", "AD", "9S", "10C"] }, // scala media Q-alta + tris d'assi sul P2
+        { id: "b", cards: ["8H", "AH", "AD", "9S", "10C"] }, // scala media Q-alta + scala minima sul P2
       ],
       board1: ["QS", "JD", "10H", "9C", "7D", "7S"],
       board2: ["AS", "7C"],
     };
     const result = settle(scenario, 1000, "standard");
-    expect(result.splitRule).toBe("75/25");
+    expect(result.splitRule).toBe("50/50");
     expect(result.pot1Winners).toEqual(["a", "b"]); // scale medie: dividono in Standard
     expect(result.pot2Winners).toEqual(["b"]);
     expect(result.bestPot1.category).toBe(CATS.STRAIGHT);
     // b sul Piatto 2 arriva alla scala minima 10-9-8-7-A (10C 9S 8H + 7C AS).
     expect(result.bestPot2.category).toBe(CATS.STRAIGHT);
-    // 75% = 750 al vincitore assoluto; 25% = 250 diviso a metà (125 ciascuno).
-    expect(pay(result, "b")).toBe(875);
-    expect(pay(result, "a")).toBe(125);
+    // a: metà Piatto 1 = 250; b: metà Piatto 1 (250) + tutto il Piatto 2 (500) = 750.
+    expect(pay(result, "a")).toBe(250);
+    expect(pay(result, "b")).toBe(750);
   });
 
-  it("Hi/Low, stesse carte: la scala K-alta vince il Piatto 1 → 50/50", () => {
+  it("Hi/Low, stesse carte: la scala K-alta vince il Piatto 1 → 500 / 500", () => {
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["KD", "KC", "QD", "8S", "9H"] },
@@ -213,7 +213,9 @@ describe("3 giocatori", () => {
     }
   });
 
-  it("2 di 3 pareggiano il Piatto 1, il terzo vince il Piatto 2 → 750 / 125 / 125", () => {
+  it("2 di 3 pareggiano il Piatto 1, il terzo vince il Piatto 2 → 250 / 250 / 500", () => {
+    // Esempio del regolamento: Piero (c) 50% del totale, Chiara e Giuseppe (a,b)
+    // si dividono l'altro 50% → 250 ciascuno.
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["9H", "8H", "7H", "QC", "JD"] }, // colore di cuori
@@ -224,15 +226,15 @@ describe("3 giocatori", () => {
       board2: ["AC", "7C"],
     };
     const result = settle(scenario, 1000, "standard");
-    expect(result.splitRule).toBe("75/25");
+    expect(result.splitRule).toBe("50/50");
     expect(result.pot1Winners).toEqual(["a", "b"]);
     expect(result.pot2Winners).toEqual(["c"]);
-    expect(pay(result, "c")).toBe(750);
-    expect(pay(result, "a")).toBe(125);
-    expect(pay(result, "b")).toBe(125);
+    expect(pay(result, "c")).toBe(500);
+    expect(pay(result, "a")).toBe(250);
+    expect(pay(result, "b")).toBe(250);
   });
 
-  it("3 pareggiano il Piatto 1, uno vince il Piatto 2 → 75% + quota del 25% (resti esatti)", () => {
+  it("3 pareggiano il Piatto 1, uno vince il Piatto 2 → 167 / 167 / 666 (resti esatti)", () => {
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["9H", "8H", "7H", "JC", "10C"] }, // colore di cuori
@@ -243,14 +245,14 @@ describe("3 giocatori", () => {
       board2: ["QC", "QS"],
     };
     const result = settle(scenario, 1000, "standard");
-    expect(result.splitRule).toBe("75/25");
+    expect(result.splitRule).toBe("50/50");
     expect(result.pot1Winners).toEqual(["a", "b", "c"]); // tre colori: dividono
     expect(result.pot2Winners).toEqual(["c"]);
     expect(result.bestPot2.category).toBe(CATS.QUADS);
-    // c: 750 + 250/3 → 833; a e b: 83 e 83; il resto (1 gettone) va per ordine di posto.
-    expect(pay(result, "c")).toBe(833);
-    expect(pay(result, "a")).toBe(84);
-    expect(pay(result, "b")).toBe(83);
+    // Piatto 1 (500) diviso in tre = 166,67 → 167/167/166; c aggiunge il Piatto 2 (500).
+    expect(pay(result, "c")).toBe(666);
+    expect(pay(result, "a")).toBe(167);
+    expect(pay(result, "b")).toBe(167);
   });
 
   it("stesso scenario con piatto dispari (997): nessun gettone perso", () => {
@@ -264,9 +266,9 @@ describe("3 giocatori", () => {
       board2: ["QC", "QS"],
     };
     const result = settle(scenario, 997, "standard");
-    expect(pay(result, "c")).toBe(831); // 830,83… arrotondato con il resto maggiore
-    expect(pay(result, "a")).toBe(83);
-    expect(pay(result, "b")).toBe(83);
+    expect(pay(result, "a")).toBe(166);
+    expect(pay(result, "b")).toBe(166);
+    expect(pay(result, "c")).toBe(665);
   });
 
   it("3 pareggiano il Piatto 1 e nessuno ha combinazioni sul Piatto 2 → divisione equa", () => {
@@ -291,7 +293,7 @@ describe("3 giocatori", () => {
     expect(pay(result, "c")).toBe(333);
   });
 
-  it("Hi/Low: il colore di cuori vince il P1, carta alta divide il P2 → 75/25 a tre", () => {
+  it("Hi/Low: il colore di cuori vince il P1, carta alta divide il P2 → 667 / 167 / 166", () => {
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["9H", "8H", "7H", "QC", "JC"] },
@@ -302,12 +304,13 @@ describe("3 giocatori", () => {
       board2: ["AC", "KC"],
     };
     const result = settle(scenario, 1000, "hilow");
-    expect(result.splitRule).toBe("75/25");
+    expect(result.splitRule).toBe("50/50");
     expect(result.pot1Winners).toEqual(["a"]);
     expect(result.pot2Winners).toEqual(["a", "b", "c"]);
-    expect(pay(result, "a")).toBe(834); // 750 + 83,33… col resto
-    expect(pay(result, "b")).toBe(83);
-    expect(pay(result, "c")).toBe(83);
+    // a: tutto il Piatto 1 (500) + un terzo del Piatto 2 (166,67) = 667 col resto.
+    expect(pay(result, "a")).toBe(667);
+    expect(pay(result, "b")).toBe(167);
+    expect(pay(result, "c")).toBe(166);
   });
 });
 
@@ -334,7 +337,7 @@ describe("4 giocatori", () => {
     }
   });
 
-  it("3 di 4 pareggiano il Piatto 1 (tre colori), il quarto vince il Piatto 2 → 750 / 84 / 83 / 83", () => {
+  it("3 di 4 pareggiano il Piatto 1 (tre colori), il quarto vince il Piatto 2 → 167 / 167 / 166 / 500", () => {
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["9H", "8H", "7H", "JC", "10C"] },
@@ -346,16 +349,17 @@ describe("4 giocatori", () => {
       board2: ["QC", "QS"],
     };
     const result = settle(scenario, 1000, "standard");
-    expect(result.splitRule).toBe("75/25");
+    expect(result.splitRule).toBe("50/50");
     expect(result.pot1Winners).toEqual(["a", "b", "c"]);
     expect(result.pot2Winners).toEqual(["d"]);
-    expect(pay(result, "d")).toBe(750);
-    expect(pay(result, "a")).toBe(84);
-    expect(pay(result, "b")).toBe(83);
-    expect(pay(result, "c")).toBe(83);
+    // Piatto 1 (500) diviso in tre = 167/167/166; d prende tutto il Piatto 2 (500).
+    expect(pay(result, "d")).toBe(500);
+    expect(pay(result, "a")).toBe(167);
+    expect(pay(result, "b")).toBe(167);
+    expect(pay(result, "c")).toBe(166);
   });
 
-  it("4 di 4 pareggiano il Piatto 1 (quattro scale colore!), uno vince il Piatto 2 → 75% + quota", () => {
+  it("4 di 4 pareggiano il Piatto 1 (quattro scale colore!), uno vince il Piatto 2 → 125 / 125 / 125 / 625", () => {
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["QH", "JH", "QD", "JC", "7D"] }, // scala colore media di cuori
@@ -367,20 +371,44 @@ describe("4 giocatori", () => {
       board2: ["KD", "KC"],
     };
     const result = settle(scenario, 1000, "standard");
-    expect(result.splitRule).toBe("75/25");
+    expect(result.splitRule).toBe("50/50");
     // In Standard tutte le scale colore (minima, media, massima) hanno lo stesso valore.
     expect(result.pot1Winners).toEqual(["a", "b", "c", "d"]);
     expect(result.bestPot1.category).toBe(CATS.STRAIGHT_FLUSH);
     expect(result.pot2Winners).toEqual(["d"]);
     expect(result.bestPot2.category).toBe(CATS.FULL_HOUSE);
-    // d: 750 + 62,5 → 812; a,b: 63; c: 62 (resti in ordine di posto). Somma = 1000.
-    expect(pay(result, "d")).toBe(812);
-    expect(pay(result, "a")).toBe(63);
-    expect(pay(result, "b")).toBe(63);
-    expect(pay(result, "c")).toBe(62);
+    // Piatto 1 (500) diviso in quattro = 125 ciascuno; d aggiunge il Piatto 2 (500).
+    expect(pay(result, "a")).toBe(125);
+    expect(pay(result, "b")).toBe(125);
+    expect(pay(result, "c")).toBe(125);
+    expect(pay(result, "d")).toBe(625);
   });
 
-  it("Hi/Low, stesse carte: la scala colore media di cuori vince da sola il P1 → 50/50", () => {
+  it("2 di 4 pareggiano il Piatto 1, gli altri 2 pareggiano il Piatto 2 → 250 ciascuno", () => {
+    // Esempio del regolamento: a,b vincono il Piatto 1 (250 a testa), c,d il
+    // Piatto 2 (250 a testa). Il totale è 50/50 fra i due piatti.
+    const scenario: Scenario = {
+      players: [
+        { id: "a", cards: ["QH", "JH", "QD", "JC", "7D"] }, // scala colore media di cuori (P1)
+        { id: "b", cards: ["QS", "JS", "QC", "JD", "7C"] }, // scala colore media di picche (P1)
+        { id: "c", cards: ["KH", "AH", "AD", "8D", "9C"] }, // full KKK+AA sul P2
+        { id: "d", cards: ["KS", "AS", "AC", "10D", "9D"] }, // full KKK+AA sul P2
+      ],
+      board1: ["10H", "9H", "8H", "10S", "9S", "8S"],
+      board2: ["KD", "KC"],
+    };
+    const result = settle(scenario, 1000, "standard");
+    expect(result.splitRule).toBe("50/50");
+    expect(result.pot1Winners).toEqual(["a", "b"]); // scale colore, battono i colori di c,d
+    expect(result.pot2Winners).toEqual(["c", "d"]); // full di K uguale, dividono; batte le doppie coppie di a,b
+    expect(result.bestPot2.category).toBe(CATS.FULL_HOUSE);
+    expect(pay(result, "a")).toBe(250);
+    expect(pay(result, "b")).toBe(250);
+    expect(pay(result, "c")).toBe(250);
+    expect(pay(result, "d")).toBe(250);
+  });
+
+  it("Hi/Low, stesse carte: la scala colore media di cuori vince da sola il P1 → 500 / 500", () => {
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["QH", "JH", "QD", "JC", "7D"] },
@@ -399,7 +427,7 @@ describe("4 giocatori", () => {
     expect(pay(result, "d")).toBe(500);
   });
 
-  it("4 pareggiano ENTRAMBI i piatti → 25% ciascuno (caso esplicito del regolamento)", () => {
+  it("4 pareggiano ENTRAMBI i piatti → 250 ciascuno (caso esplicito del regolamento)", () => {
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["QH", "JH", "7D", "9D", "AC"] }, // scala colore media di cuori
@@ -421,7 +449,7 @@ describe("4 giocatori", () => {
     expect(pay(result, "d")).toBe(250);
   });
 
-  it("Hi/Low, stesse carte: cuori decide il P1; sul P2 restano in parità i due con cuori → 75/25", () => {
+  it("Hi/Low, stesse carte: cuori decide il P1; sul P2 restano in parità i due con cuori → 750 / 250", () => {
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["QH", "JH", "7D", "9D", "AC"] },
@@ -433,13 +461,14 @@ describe("4 giocatori", () => {
       board2: ["KD", "KC"],
     };
     const result = settle(scenario, 1000, "hilow");
-    expect(result.splitRule).toBe("75/25");
+    expect(result.splitRule).toBe("50/50");
     expect(result.pot1Winners).toEqual(["a"]); // scala colore media di cuori
     // Coppia di K per tutti: lo spareggio Hi/Low sul seme lascia in parità
     // le due mani che contengono cuori (a e c).
     expect(result.pot2Winners).toEqual(["a", "c"]);
-    expect(pay(result, "a")).toBe(875); // 750 + 125
-    expect(pay(result, "c")).toBe(125);
+    // a: tutto il Piatto 1 (500) + metà Piatto 2 (250) = 750; c: metà Piatto 2 = 250.
+    expect(pay(result, "a")).toBe(750);
+    expect(pay(result, "c")).toBe(250);
     expect(pay(result, "b")).toBe(0);
     expect(pay(result, "d")).toBe(0);
   });
@@ -499,28 +528,30 @@ describe("proprietà matematiche su mani casuali (fuzzing deterministico)", () =
             if (!isWinner) expect(result.payouts[player.id] ?? 0).toBe(0);
           }
 
-          // La regola dichiarata corrisponde alla struttura dei vincitori.
+          // splitRule "solo" ⟺ un unico giocatore vince da solo entrambi i piatti.
           const n1 = result.pot1Winners.length;
           const n2 = result.pot2Winners.length;
+          const solo =
+            n1 === 1 &&
+            n2 === 1 &&
+            result.pot1Winners[0] === result.pot2Winners[0];
           if (result.splitRule === "solo") {
-            expect(n1).toBe(1);
-            expect(n2).toBe(1);
-            expect(result.pot1Winners[0]).toBe(result.pot2Winners[0]);
+            expect(solo).toBe(true);
             expect(result.payouts[result.pot1Winners[0]]).toBe(pot);
-          } else if (result.splitRule === "75/25") {
-            expect((n1 === 1 && n2 > 1) || (n2 === 1 && n1 > 1)).toBe(true);
-            const soloId =
-              n1 === 1 ? result.pot1Winners[0] : result.pot2Winners[0];
-            // Il vincitore assoluto prende almeno il 75% (a meno di resti interi).
-            expect(result.payouts[soloId]).toBeGreaterThanOrEqual(
-              Math.floor(pot * 0.75)
-            );
           } else {
-            expect(
-              n1 === 1 &&
-                n2 === 1 &&
-                result.pot1Winners[0] === result.pot2Winners[0]
-            ).toBe(false);
+            expect(solo).toBe(false);
+          }
+
+          // Ricostruzione indipendente col metodo 50/50-per-piatto: i pagamenti
+          // devono coincidere esattamente con la ripartizione dichiarata.
+          const expected = expectedPayouts(
+            players.map(p => p.id),
+            result.pot1Winners,
+            result.pot2Winners,
+            pot
+          );
+          for (const player of players) {
+            expect(result.payouts[player.id] ?? 0).toBe(expected[player.id]);
           }
 
           // Fatto matematico Sanzy: sul Piatto 1 esiste sempre almeno una coppia.
@@ -528,5 +559,45 @@ describe("proprietà matematiche su mani casuali (fuzzing deterministico)", () =
         }
       });
     }
+  }
+
+  // Riferimento indipendente: ogni piatto vale metà del totale, diviso tra i suoi
+  // vincitori; i resti interi vanno ai maggiori (a parità, in ordine di posto).
+  function expectedPayouts(
+    order: string[],
+    pot1Winners: string[],
+    pot2Winners: string[],
+    pot: number
+  ): Record<string, number> {
+    const num: Record<string, number> = {};
+    order.forEach(id => (num[id] = 0));
+    const den = 2 * pot1Winners.length * pot2Winners.length;
+    pot1Winners.forEach(id => (num[id] += pot2Winners.length));
+    pot2Winners.forEach(id => (num[id] += pot1Winners.length));
+    const entries = order
+      .filter(id => num[id] > 0)
+      .map((id, index) => {
+        const exact = pot * num[id];
+        return {
+          id,
+          index,
+          base: Math.floor(exact / den),
+          rem: (exact % den) / den,
+        };
+      });
+    let leftover = pot - entries.reduce((sum, e) => sum + e.base, 0);
+    entries
+      .slice()
+      .sort((a, b) => b.rem - a.rem || a.index - b.index)
+      .forEach(e => {
+        if (leftover > 0) {
+          e.base += 1;
+          leftover -= 1;
+        }
+      });
+    const out: Record<string, number> = {};
+    order.forEach(id => (out[id] = 0));
+    entries.forEach(e => (out[e.id] = e.base));
+    return out;
   }
 });

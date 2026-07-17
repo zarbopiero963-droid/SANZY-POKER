@@ -57,7 +57,7 @@ export type LastResult = {
   bestPot1: string;
   bestPot2: string;
   payouts: Record<string, number>;
-  splitRule: "50/50" | "75/25" | "solo";
+  splitRule: "50/50" | "solo";
 };
 
 export type TableState = {
