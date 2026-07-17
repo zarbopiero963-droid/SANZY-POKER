@@ -4,13 +4,13 @@
 
 Questa revisione è una **ricostruzione guidata da riferimenti**. Il tavolo di gioco del primo link e la lobby del secondo link costituiscono la specifica visiva principale; la foto fornita dall’utente è la verità di riferimento per l’ordine e l’orientamento delle carte.
 
-| Area | Specifica scelta |
-|---|---|
-| Lobby | Client desktop scuro con barra superiore, navigazione laterale, filtri, lista tavoli centrale e pannello d’ingresso a destra |
-| Tavolo | Tavolo ovale dominante a tutto schermo, sedute radiali, carte comuni centrali e pannello azioni ancorato in basso |
-| Piatto 1 | Sei posizioni in un’unica fila orizzontale: prime tre Flop, quarta e quinta Turn, sesta River secondo il motore Sanzy |
-| Piatto 2 | Due posizioni impilate verticalmente sul lato destro, separate dal Piatto 1 |
-| Mano giocatore | Sei carte personali in basso davanti alla postazione; cinque dopo lo scarto |
+| Area           | Specifica scelta                                                                                                             |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Lobby          | Client desktop scuro con barra superiore, navigazione laterale, filtri, lista tavoli centrale e pannello d’ingresso a destra |
+| Tavolo         | Tavolo ovale dominante a tutto schermo, sedute radiali, carte comuni centrali e pannello azioni ancorato in basso            |
+| Piatto 1       | Sei posizioni in un’unica fila orizzontale: prime tre Flop, quarta e quinta Turn, sesta River secondo il motore Sanzy        |
+| Piatto 2       | Due posizioni impilate verticalmente sul lato destro, separate dal Piatto 1                                                  |
+| Mano giocatore | Sei carte personali in basso davanti alla postazione; cinque dopo lo scarto                                                  |
 
 ## Linguaggio visivo
 

@@ -34,7 +34,13 @@ const FELT = "#176B50";
 const RED = "#E05A5A";
 type Screen = "lobby" | "table";
 
-function rect(name: string, width: string | number, height: string | number, background = PANEL, radius = 8) {
+function rect(
+  name: string,
+  width: string | number,
+  height: string | number,
+  background = PANEL,
+  radius = 8
+) {
   const control = new Rectangle(name);
   control.width = typeof width === "number" ? `${width}px` : width;
   control.height = typeof height === "number" ? `${height}px` : height;
@@ -45,7 +51,14 @@ function rect(name: string, width: string | number, height: string | number, bac
   return control;
 }
 
-function text(name: string, value: string, size = 15, color = TEXT, weight: string | number = 500, family = "Manrope") {
+function text(
+  name: string,
+  value: string,
+  size = 15,
+  color = TEXT,
+  weight: string | number = 500,
+  family = "Manrope"
+) {
   const control = new TextBlock(name, value);
   control.fontFamily = family;
   control.fontSize = size;
@@ -79,10 +92,12 @@ export class PokerUI {
     scene: Scene,
     private readonly gui: AdvancedDynamicTexture,
     private readonly controller: GameController,
-    private readonly onScreenChange: (screen: Screen) => void,
+    private readonly onScreenChange: (screen: Screen) => void
   ) {
     void scene;
-    this.mobile = window.innerWidth < 720 || window.innerWidth / Math.max(window.innerHeight, 1) < 0.78;
+    this.mobile =
+      window.innerWidth < 720 ||
+      window.innerWidth / Math.max(window.innerHeight, 1) < 0.78;
     this.mobileHeight = this.getMobileIdealHeight();
     this.gui.idealWidth = this.mobile ? 420 : 1600;
     this.gui.idealHeight = this.mobile ? this.mobileHeight : 900;
@@ -100,7 +115,11 @@ export class PokerUI {
 
   setMobileMode(mobile: boolean) {
     const nextMobileHeight = this.getMobileIdealHeight();
-    if (this.mobile === mobile && (!mobile || this.mobileHeight === nextMobileHeight)) return;
+    if (
+      this.mobile === mobile &&
+      (!mobile || this.mobileHeight === nextMobileHeight)
+    )
+      return;
     this.mobile = mobile;
     this.mobileHeight = nextMobileHeight;
     this.gui.idealWidth = mobile ? 420 : 1600;
@@ -112,7 +131,7 @@ export class PokerUI {
     const viewport = window.visualViewport;
     const width = Math.max(viewport?.width ?? window.innerWidth, 1);
     const height = viewport?.height ?? window.innerHeight;
-    return Math.max(700, Math.min(900, Math.round(420 * height / width)));
+    return Math.max(700, Math.min(900, Math.round((420 * height) / width)));
   }
 
   private mobileActionTop(table: TableState) {
@@ -128,7 +147,10 @@ export class PokerUI {
       oscillator.type = "sine";
       oscillator.frequency.value = frequency;
       volume.gain.setValueAtTime(gain, this.audioContext.currentTime);
-      volume.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
+      volume.gain.exponentialRampToValueAtTime(
+        0.001,
+        this.audioContext.currentTime + duration
+      );
       oscillator.connect(volume);
       volume.connect(this.audioContext.destination);
       oscillator.start();
@@ -138,7 +160,13 @@ export class PokerUI {
     }
   }
 
-  private button(label: string, width: number, height: number, onClick: () => void, primary = false) {
+  private button(
+    label: string,
+    width: number,
+    height: number,
+    onClick: () => void,
+    primary = false
+  ) {
     const control = Button.CreateSimpleButton(`button-${label}`, label);
     control.width = `${width}px`;
     control.height = `${height}px`;
@@ -176,7 +204,8 @@ export class PokerUI {
   private render(table: TableState, screen: Screen) {
     this.root.clearControls();
     this.pulseDots = [];
-    if (screen === "lobby") this.mobile ? this.renderLobbyMobile() : this.renderLobby();
+    if (screen === "lobby")
+      this.mobile ? this.renderLobbyMobile() : this.renderLobby();
     else this.mobile ? this.renderTableMobile(table) : this.renderTable(table);
     if (this.eventSerial !== table.eventSerial) {
       this.eventSerial = table.eventSerial;
@@ -187,7 +216,13 @@ export class PokerUI {
   }
 
   private brand(parent: Rectangle, compact = false) {
-    const mark = rect("brand-mark", compact ? 36 : 42, compact ? 36 : 42, "#14171D", 7);
+    const mark = rect(
+      "brand-mark",
+      compact ? 36 : 42,
+      compact ? 36 : 42,
+      "#14171D",
+      7
+    );
     mark.color = ORANGE;
     mark.thickness = 2;
     placeTopLeft(mark, compact ? 16 : 22, compact ? 12 : 11);
@@ -195,7 +230,13 @@ export class PokerUI {
     const glyph = text("brand-glyph", "S♠", compact ? 15 : 18, ORANGE, 900);
     glyph.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     mark.addControl(glyph);
-    const wordmark = text("brand-wordmark", "SANZY POKER", compact ? 18 : 21, TEXT, 900);
+    const wordmark = text(
+      "brand-wordmark",
+      "SANZY POKER",
+      compact ? 18 : 21,
+      TEXT,
+      900
+    );
     wordmark.width = compact ? "170px" : "210px";
     wordmark.height = "42px";
     placeTopLeft(wordmark, compact ? 62 : 78, compact ? 9 : 10);
@@ -225,7 +266,13 @@ export class PokerUI {
     heading.height = "40px";
     placeTopLeft(heading, 14, 82);
     this.root.addControl(heading);
-    const subtitle = text("mobile-lobby-subtitle", "Scegli la variante e siediti al tavolo.", 12, MUTED, 600);
+    const subtitle = text(
+      "mobile-lobby-subtitle",
+      "Scegli la variante e siediti al tavolo.",
+      12,
+      MUTED,
+      600
+    );
     subtitle.width = "392px";
     subtitle.height = "28px";
     placeTopLeft(subtitle, 14, 120);
@@ -233,24 +280,78 @@ export class PokerUI {
 
     const filters = ["TUTTI", "STANDARD", "HI / LOW"];
     filters.forEach((label, index) => {
-      const chip = rect(`mobile-filter-${index}`, index === 0 ? 94 : 132, 36, index === 0 ? ORANGE : "#2A303A", 5);
+      const chip = rect(
+        `mobile-filter-${index}`,
+        index === 0 ? 94 : 132,
+        36,
+        index === 0 ? ORANGE : "#2A303A",
+        5
+      );
       chip.color = index === 0 ? ORANGE : BORDER;
       placeTopLeft(chip, 14 + index * 132, 158);
       this.root.addControl(chip);
-      const copy = text(`mobile-filter-label-${index}`, label, 10, index === 0 ? "#17191D" : "#D4D8DD", 900);
+      const copy = text(
+        `mobile-filter-label-${index}`,
+        label,
+        10,
+        index === 0 ? "#17191D" : "#D4D8DD",
+        900
+      );
       copy.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       chip.addControl(copy);
     });
 
-    const rooms: Array<{ name: string; bots: string; variant: Variant; blinds: string; status: string }> = [
-      { name: "Sala Smeraldo", bots: "Nadia · Rico · Mara", variant: "standard", blinds: "25 / 50", status: "IN CORSO" },
-      { name: "Aurora Hi/Low", bots: "Iris · Dino · Nadia", variant: "hilow", blinds: "25 / 50", status: "IN CORSO" },
-      { name: "Tavolo Notturno", bots: "Rico · Mara · Dino", variant: "standard", blinds: "50 / 100", status: "IN CORSO" },
-      { name: "Club Sanzy", bots: "Nadia · Iris", variant: "hilow", blinds: "10 / 20", status: "ATTESA" },
-      { name: "Deep Stack", bots: "Dino · Rico · Iris", variant: "standard", blinds: "100 / 200", status: "IN CORSO" },
+    const rooms: Array<{
+      name: string;
+      bots: string;
+      variant: Variant;
+      blinds: string;
+      status: string;
+    }> = [
+      {
+        name: "Sala Smeraldo",
+        bots: "Nadia · Rico · Mara",
+        variant: "standard",
+        blinds: "25 / 50",
+        status: "IN CORSO",
+      },
+      {
+        name: "Aurora Hi/Low",
+        bots: "Iris · Dino · Nadia",
+        variant: "hilow",
+        blinds: "25 / 50",
+        status: "IN CORSO",
+      },
+      {
+        name: "Tavolo Notturno",
+        bots: "Rico · Mara · Dino",
+        variant: "standard",
+        blinds: "50 / 100",
+        status: "IN CORSO",
+      },
+      {
+        name: "Club Sanzy",
+        bots: "Nadia · Iris",
+        variant: "hilow",
+        blinds: "10 / 20",
+        status: "ATTESA",
+      },
+      {
+        name: "Deep Stack",
+        bots: "Dino · Rico · Iris",
+        variant: "standard",
+        blinds: "100 / 200",
+        status: "IN CORSO",
+      },
     ];
     rooms.forEach((room, index) => {
-      const row = rect(`mobile-room-${index}`, 392, 112, index === 0 ? "#2E3540" : "#232832", 7);
+      const row = rect(
+        `mobile-room-${index}`,
+        392,
+        112,
+        index === 0 ? "#2E3540" : "#232832",
+        7
+      );
       row.color = index === 0 ? "#F49A3566" : "#FFFFFF10";
       row.hoverCursor = "pointer";
       placeTopLeft(row, 14, 212 + index * 122);
@@ -268,7 +369,13 @@ export class PokerUI {
       name.height = "30px";
       placeTopLeft(name, 36, 8);
       row.addControl(name);
-      const status = text(`mobile-room-status-${index}`, room.status, 9, room.status === "IN CORSO" ? GREEN : ORANGE, 900);
+      const status = text(
+        `mobile-room-status-${index}`,
+        room.status,
+        9,
+        room.status === "IN CORSO" ? GREEN : ORANGE,
+        900
+      );
       status.width = "102px";
       status.height = "30px";
       status.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
@@ -279,18 +386,32 @@ export class PokerUI {
       bots.height = "24px";
       placeTopLeft(bots, 16, 41);
       row.addControl(bots);
-      const meta = text(`mobile-room-meta-${index}`, `${room.variant === "hilow" ? "HI / LOW" : "STANDARD"}   •   BUI ${room.blinds}`, 11, ORANGE, 800);
+      const meta = text(
+        `mobile-room-meta-${index}`,
+        `${room.variant === "hilow" ? "HI / LOW" : "STANDARD"}   •   BUI ${room.blinds}`,
+        11,
+        ORANGE,
+        800
+      );
       meta.width = "250px";
       meta.height = "28px";
       placeTopLeft(meta, 16, 72);
       row.addControl(meta);
-      const enter = text(`mobile-room-enter-${index}`, "SIEDITI  →", 11, TEXT, 900);
+      const enter = text(
+        `mobile-room-enter-${index}`,
+        "SIEDITI  →",
+        11,
+        TEXT,
+        900
+      );
       enter.width = "112px";
       enter.height = "28px";
       enter.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
       placeTopLeft(enter, 262, 72);
       row.addControl(enter);
-      row.onPointerUpObservable.add(() => this.controller.openTable(3, room.variant));
+      row.onPointerUpObservable.add(() =>
+        this.controller.openTable(3, room.variant)
+      );
     });
   }
 
@@ -307,7 +428,13 @@ export class PokerUI {
 
     const tabs = ["TAVOLI LIVE", "HI / LOW", "TORNEI", "AMICI"];
     tabs.forEach((label, index) => {
-      const tab = text(`top-tab-${index}`, label, 12, index === 0 ? ORANGE : MUTED, index === 0 ? 800 : 600);
+      const tab = text(
+        `top-tab-${index}`,
+        label,
+        12,
+        index === 0 ? ORANGE : MUTED,
+        index === 0 ? 800 : 600
+      );
       tab.width = "105px";
       tab.height = "64px";
       placeTopLeft(tab, 330 + index * 118, 0);
@@ -357,16 +484,34 @@ export class PokerUI {
     ];
     navItems.forEach(([icon, label], index) => {
       const active = index === 0;
-      const row = rect(`nav-${index}`, 182, 46, active ? "#2C323CE8" : "transparent", 6);
+      const row = rect(
+        `nav-${index}`,
+        182,
+        46,
+        active ? "#2C323CE8" : "transparent",
+        6
+      );
       row.thickness = 0;
       placeTopLeft(row, 14, 26 + index * 54);
       sidebar.addControl(row);
-      const symbol = text(`nav-icon-${index}`, icon, 17, active ? ORANGE : MUTED, 800);
+      const symbol = text(
+        `nav-icon-${index}`,
+        icon,
+        17,
+        active ? ORANGE : MUTED,
+        800
+      );
       symbol.width = "30px";
       symbol.height = "46px";
       placeTopLeft(symbol, 14, 0);
       row.addControl(symbol);
-      const copy = text(`nav-label-${index}`, label, 14, active ? TEXT : MUTED, active ? 700 : 500);
+      const copy = text(
+        `nav-label-${index}`,
+        label,
+        14,
+        active ? TEXT : MUTED,
+        active ? 700 : 500
+      );
       copy.width = "130px";
       copy.height = "46px";
       placeTopLeft(copy, 48, 0);
@@ -401,7 +546,13 @@ export class PokerUI {
     heading.height = "44px";
     placeTopLeft(heading, 246, 92);
     this.root.addControl(heading);
-    const subtitle = text("lobby-subtitle", "Scegli un tavolo e siediti contro i bot già in partita.", 13, MUTED, 500);
+    const subtitle = text(
+      "lobby-subtitle",
+      "Scegli un tavolo e siediti contro i bot già in partita.",
+      13,
+      MUTED,
+      500
+    );
     subtitle.width = "520px";
     subtitle.height = "28px";
     placeTopLeft(subtitle, 246, 132);
@@ -410,13 +561,31 @@ export class PokerUI {
     const filters = rect("filters", 1008, 58, PANEL_3, 7);
     placeTopLeft(filters, 246, 174);
     this.root.addControl(filters);
-    const filterNames = ["TUTTI", "STANDARD", "HI / LOW", "BUI 25 / 50", "4 POSTI"];
+    const filterNames = [
+      "TUTTI",
+      "STANDARD",
+      "HI / LOW",
+      "BUI 25 / 50",
+      "4 POSTI",
+    ];
     filterNames.forEach((label, index) => {
-      const chip = rect(`filter-${index}`, index === 0 ? 74 : 112, 32, index === 0 ? ORANGE : "#2A303A", 5);
+      const chip = rect(
+        `filter-${index}`,
+        index === 0 ? 74 : 112,
+        32,
+        index === 0 ? ORANGE : "#2A303A",
+        5
+      );
       chip.color = index === 0 ? ORANGE : BORDER;
       placeTopLeft(chip, 16 + index * 124, 13);
       filters.addControl(chip);
-      const labelText = text(`filter-label-${index}`, label, 11, index === 0 ? "#17191D" : "#C9CED5", 800);
+      const labelText = text(
+        `filter-label-${index}`,
+        label,
+        11,
+        index === 0 ? "#17191D" : "#C9CED5",
+        800
+      );
       labelText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       chip.addControl(labelText);
     });
@@ -444,15 +613,69 @@ export class PokerUI {
     placeTopLeft(divider, 24, 44);
     list.addControl(divider);
 
-    const rooms: Array<{ name: string; bots: string; variant: Variant; blinds: string; players: string; stack: string; status: string }> = [
-      { name: "Sala Smeraldo", bots: "Nadia · Rico · Mara", variant: "standard", blinds: "25 / 50", players: "3 / 4", stack: "5.120", status: "IN CORSO" },
-      { name: "Aurora Hi/Low", bots: "Iris · Dino · Nadia", variant: "hilow", blinds: "25 / 50", players: "3 / 4", stack: "4.860", status: "IN CORSO" },
-      { name: "Tavolo Notturno", bots: "Rico · Mara · Dino", variant: "standard", blinds: "50 / 100", players: "3 / 4", stack: "7.430", status: "IN CORSO" },
-      { name: "Club Sanzy", bots: "Nadia · Iris", variant: "hilow", blinds: "10 / 20", players: "2 / 4", stack: "2.180", status: "ATTESA" },
-      { name: "Deep Stack", bots: "Dino · Rico · Iris", variant: "standard", blinds: "100 / 200", players: "3 / 4", stack: "14.600", status: "IN CORSO" },
+    const rooms: Array<{
+      name: string;
+      bots: string;
+      variant: Variant;
+      blinds: string;
+      players: string;
+      stack: string;
+      status: string;
+    }> = [
+      {
+        name: "Sala Smeraldo",
+        bots: "Nadia · Rico · Mara",
+        variant: "standard",
+        blinds: "25 / 50",
+        players: "3 / 4",
+        stack: "5.120",
+        status: "IN CORSO",
+      },
+      {
+        name: "Aurora Hi/Low",
+        bots: "Iris · Dino · Nadia",
+        variant: "hilow",
+        blinds: "25 / 50",
+        players: "3 / 4",
+        stack: "4.860",
+        status: "IN CORSO",
+      },
+      {
+        name: "Tavolo Notturno",
+        bots: "Rico · Mara · Dino",
+        variant: "standard",
+        blinds: "50 / 100",
+        players: "3 / 4",
+        stack: "7.430",
+        status: "IN CORSO",
+      },
+      {
+        name: "Club Sanzy",
+        bots: "Nadia · Iris",
+        variant: "hilow",
+        blinds: "10 / 20",
+        players: "2 / 4",
+        stack: "2.180",
+        status: "ATTESA",
+      },
+      {
+        name: "Deep Stack",
+        bots: "Dino · Rico · Iris",
+        variant: "standard",
+        blinds: "100 / 200",
+        players: "3 / 4",
+        stack: "14.600",
+        status: "IN CORSO",
+      },
     ];
     rooms.forEach((room, index) => {
-      const row = rect(`room-row-${index}`, 960, 88, index === 0 ? "#2E3540" : index % 2 ? "#222730" : "#252A33", 5);
+      const row = rect(
+        `room-row-${index}`,
+        960,
+        88,
+        index === 0 ? "#2E3540" : index % 2 ? "#222730" : "#252A33",
+        5
+      );
       row.color = index === 0 ? "#F49A3566" : "#FFFFFF0E";
       row.hoverCursor = "pointer";
       placeTopLeft(row, 24, 58 + index * 98);
@@ -485,7 +708,13 @@ export class PokerUI {
       const lefts = [306, 476, 596, 736, 881];
       const widths = [150, 100, 120, 130, 66];
       values.forEach((value, valueIndex) => {
-        const cell = text(`room-${index}-cell-${valueIndex}`, value, 12, valueIndex === 4 ? GREEN : "#D1D5DA", valueIndex === 4 ? 800 : 600);
+        const cell = text(
+          `room-${index}-cell-${valueIndex}`,
+          value,
+          12,
+          valueIndex === 4 ? GREEN : "#D1D5DA",
+          valueIndex === 4 ? 800 : 600
+        );
         cell.width = `${widths[valueIndex]}px`;
         cell.height = "88px";
         placeTopLeft(cell, lefts[valueIndex], 0);
@@ -496,10 +725,13 @@ export class PokerUI {
         row.left = "28px";
       });
       row.onPointerOutObservable.add(() => {
-        row.background = index === 0 ? "#2E3540" : index % 2 ? "#222730" : "#252A33";
+        row.background =
+          index === 0 ? "#2E3540" : index % 2 ? "#222730" : "#252A33";
         row.left = "24px";
       });
-      row.onPointerUpObservable.add(() => this.controller.openTable(3, room.variant));
+      row.onPointerUpObservable.add(() =>
+        this.controller.openTable(3, room.variant)
+      );
     });
 
     const detail = rect("table-detail", 306, 746, PANEL, 8);
@@ -515,7 +747,7 @@ export class PokerUI {
     previewFelt.color = "#B57A34";
     previewFelt.thickness = 5;
     preview.addControl(previewFelt);
-    [0, 1, 2, 3].forEach((index) => {
+    [0, 1, 2, 3].forEach(index => {
       const miniSeat = new Ellipse(`mini-seat-${index}`);
       miniSeat.width = "23px";
       miniSeat.height = "23px";
@@ -525,12 +757,24 @@ export class PokerUI {
       miniSeat.top = `${[0, -55, 0, 55][index]}px`;
       preview.addControl(miniSeat);
     });
-    const selectedTitle = text("selected-title", "Sala Smeraldo", 21, TEXT, 800);
+    const selectedTitle = text(
+      "selected-title",
+      "Sala Smeraldo",
+      21,
+      TEXT,
+      800
+    );
     selectedTitle.width = "274px";
     selectedTitle.height = "38px";
     placeTopLeft(selectedTitle, 16, 204);
     detail.addControl(selectedTitle);
-    const selectedMeta = text("selected-meta", "STANDARD  ·  25 / 50", 11, ORANGE, 800);
+    const selectedMeta = text(
+      "selected-meta",
+      "STANDARD  ·  25 / 50",
+      11,
+      ORANGE,
+      800
+    );
     selectedMeta.width = "274px";
     selectedMeta.height = "26px";
     placeTopLeft(selectedMeta, 16, 242);
@@ -542,7 +786,13 @@ export class PokerUI {
       ["Velocità", "Normale"],
     ];
     detailRows.forEach(([label, value], index) => {
-      const row = rect(`detail-row-${index}`, 274, 42, index % 2 ? "#292E38" : "#262B34", 4);
+      const row = rect(
+        `detail-row-${index}`,
+        274,
+        42,
+        index % 2 ? "#292E38" : "#262B34",
+        4
+      );
       row.thickness = 0;
       placeTopLeft(row, 16, 292 + index * 48);
       detail.addControl(row);
@@ -583,45 +833,98 @@ export class PokerUI {
       botName.height = "42px";
       placeTopLeft(botName, 42, 0);
       bot.addControl(botName);
-      const thinking = text(`lineup-state-${index}`, index === 1 ? "RILANCIA" : "IN GIOCO", 10, index === 1 ? ORANGE : GREEN, 800);
+      const thinking = text(
+        `lineup-state-${index}`,
+        index === 1 ? "RILANCIA" : "IN GIOCO",
+        10,
+        index === 1 ? ORANGE : GREEN,
+        800
+      );
       thinking.width = "100px";
       thinking.height = "42px";
       thinking.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
       placeTopLeft(thinking, 168, 0);
       bot.addControl(thinking);
     });
-    const enter = this.button("ENTRA AL TAVOLO", 274, 52, () => this.controller.openTable(3, "standard"), true);
+    const enter = this.button(
+      "ENTRA AL TAVOLO",
+      274,
+      52,
+      () => this.controller.openTable(3, "standard"),
+      true
+    );
     placeTopLeft(enter, 16, 672);
     detail.addControl(enter);
   }
 
-  private card(code: CardCode | null, mode: "face" | "back" | "slot", width = 70, height = 96) {
+  private card(
+    code: CardCode | null,
+    mode: "face" | "back" | "slot",
+    width = 70,
+    height = 96
+  ) {
     const face = mode === "face";
-    const card = rect(`card-${code ?? mode}-${Math.random()}`, width, height, face ? "#FAFAF7" : mode === "back" ? "#202B36" : "#0B513D66", 6);
+    const card = rect(
+      `card-${code ?? mode}-${Math.random()}`,
+      width,
+      height,
+      face ? "#FAFAF7" : mode === "back" ? "#202B36" : "#0B513D66",
+      6
+    );
     card.color = face ? "#FFFFFF" : mode === "back" ? "#F49A3588" : "#B8D8CC44";
     card.thickness = mode === "slot" ? 2 : 1;
     if (face && code) {
       const { rank, symbol, red } = cardParts(code);
-      const rankText = text(`rank-${code}-${Math.random()}`, rank, Math.round(width * 0.29), red ? "#D64545" : "#1E2329", 900);
+      const rankText = text(
+        `rank-${code}-${Math.random()}`,
+        rank,
+        Math.round(width * 0.29),
+        red ? "#D64545" : "#1E2329",
+        900
+      );
       rankText.width = `${width - 12}px`;
       rankText.height = `${height * 0.34}px`;
       placeTopLeft(rankText, 7, 1);
       card.addControl(rankText);
-      const suitText = text(`suit-${code}-${Math.random()}`, symbol, Math.round(width * 0.46), red ? "#D64545" : "#1E2329", 800);
+      const suitText = text(
+        `suit-${code}-${Math.random()}`,
+        symbol,
+        Math.round(width * 0.46),
+        red ? "#D64545" : "#1E2329",
+        800
+      );
       suitText.width = `${width}px`;
       suitText.height = `${height * 0.65}px`;
       suitText.top = `${height * 0.22}px`;
       suitText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       card.addControl(suitText);
     } else if (mode === "back") {
-      const inner = rect(`card-back-inner-${Math.random()}`, width - 10, height - 10, "#273746", 4);
+      const inner = rect(
+        `card-back-inner-${Math.random()}`,
+        width - 10,
+        height - 10,
+        "#273746",
+        4
+      );
       inner.color = "#F49A3555";
       card.addControl(inner);
-      const symbol = text(`card-back-symbol-${Math.random()}`, "S♠", Math.round(width * 0.23), ORANGE, 900);
+      const symbol = text(
+        `card-back-symbol-${Math.random()}`,
+        "S♠",
+        Math.round(width * 0.23),
+        ORANGE,
+        900
+      );
       symbol.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       inner.addControl(symbol);
     } else {
-      const slotMark = text(`slot-mark-${Math.random()}`, "·", 24, "#8AC0AD55", 800);
+      const slotMark = text(
+        `slot-mark-${Math.random()}`,
+        "·",
+        24,
+        "#8AC0AD55",
+        800
+      );
       slotMark.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       card.addControl(slotMark);
     }
@@ -637,7 +940,13 @@ export class PokerUI {
     ];
     const position = positions[index] ?? positions[0];
     const active = table.status === "playing" && table.turnIndex === index;
-    const panel = rect(`seat-${player.id}`, index === 0 ? 196 : 178, index === 0 ? 74 : 70, active ? "#313A43FA" : "#20252DF5", 9);
+    const panel = rect(
+      `seat-${player.id}`,
+      index === 0 ? 196 : 178,
+      index === 0 ? 74 : 70,
+      active ? "#313A43FA" : "#20252DF5",
+      9
+    );
     panel.color = active ? ORANGE : player.folded ? "#FFFFFF0D" : "#FFFFFF20";
     panel.thickness = active ? 2 : 1;
     panel.left = `${position.left}px`;
@@ -652,7 +961,13 @@ export class PokerUI {
     avatar.thickness = active ? 3 : 1;
     avatar.left = "-58px";
     panel.addControl(avatar);
-    const initial = text(`seat-initial-${player.id}`, player.name.slice(0, 1).toUpperCase(), 18, TEXT, 900);
+    const initial = text(
+      `seat-initial-${player.id}`,
+      player.name.slice(0, 1).toUpperCase(),
+      18,
+      TEXT,
+      900
+    );
     initial.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     avatar.addControl(initial);
     const name = text(`seat-name-${player.id}`, player.name, 14, TEXT, 800);
@@ -662,19 +977,37 @@ export class PokerUI {
     name.top = "-15px";
     name.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     panel.addControl(name);
-    const chips = text(`seat-chips-${player.id}`, `${Math.round(player.chips).toLocaleString("it-IT")} chip`, 12, "#D6DBDF", 700);
+    const chips = text(
+      `seat-chips-${player.id}`,
+      `${Math.round(player.chips).toLocaleString("it-IT")} chip`,
+      12,
+      "#D6DBDF",
+      700
+    );
     chips.width = "108px";
     chips.height = "24px";
     chips.left = "32px";
     chips.top = "10px";
     chips.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     panel.addControl(chips);
-    const action = rect(`seat-action-${player.id}`, 92, 23, active ? ORANGE : "#333A44", 11);
+    const action = rect(
+      `seat-action-${player.id}`,
+      92,
+      23,
+      active ? ORANGE : "#333A44",
+      11
+    );
     action.thickness = 0;
     action.left = "33px";
     action.top = "31px";
     panel.addControl(action);
-    const actionText = text(`seat-action-text-${player.id}`, player.folded ? "FOLD" : player.lastAction.toUpperCase(), 9, active ? "#17191D" : MUTED, 800);
+    const actionText = text(
+      `seat-action-text-${player.id}`,
+      player.folded ? "FOLD" : player.lastAction.toUpperCase(),
+      9,
+      active ? "#17191D" : MUTED,
+      800
+    );
     actionText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     action.addControl(actionText);
 
@@ -691,13 +1024,18 @@ export class PokerUI {
       d.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       dealer.addControl(d);
     }
-
   }
 
   private seatMobile(player: PlayerState, index: number, table: TableState) {
     const active = table.status === "playing" && table.turnIndex === index;
     if (index === 0) {
-      const panel = rect(`mobile-seat-${player.id}`, 166, 48, active ? "#313A43FA" : "#20252DF8", 9);
+      const panel = rect(
+        `mobile-seat-${player.id}`,
+        166,
+        48,
+        active ? "#313A43FA" : "#20252DF8",
+        9
+      );
       panel.color = active ? ORANGE : "#FFFFFF20";
       panel.thickness = active ? 2 : 1;
       panel.top = `${this.mobileActionTop(table) - 54}px`;
@@ -710,16 +1048,34 @@ export class PokerUI {
       avatar.color = active ? ORANGE : "#FFFFFF24";
       avatar.left = "-58px";
       panel.addControl(avatar);
-      const initial = text(`mobile-seat-initial-${player.id}`, player.name.slice(0, 1).toUpperCase(), 14, TEXT, 900);
+      const initial = text(
+        `mobile-seat-initial-${player.id}`,
+        player.name.slice(0, 1).toUpperCase(),
+        14,
+        TEXT,
+        900
+      );
       initial.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       avatar.addControl(initial);
-      const name = text(`mobile-seat-name-${player.id}`, `${player.name}  ·  ${Math.round(player.chips).toLocaleString("it-IT")}`, 12, TEXT, 800);
+      const name = text(
+        `mobile-seat-name-${player.id}`,
+        `${player.name}  ·  ${Math.round(player.chips).toLocaleString("it-IT")}`,
+        12,
+        TEXT,
+        800
+      );
       name.width = "112px";
       name.height = "23px";
       name.left = "24px";
       name.top = "-10px";
       panel.addControl(name);
-      const action = text(`mobile-seat-action-${player.id}`, player.folded ? "FOLD" : player.lastAction.toUpperCase(), 9, active ? ORANGE : MUTED, 900);
+      const action = text(
+        `mobile-seat-action-${player.id}`,
+        player.folded ? "FOLD" : player.lastAction.toUpperCase(),
+        9,
+        active ? ORANGE : MUTED,
+        900
+      );
       action.width = "112px";
       action.height = "20px";
       action.left = "24px";
@@ -734,8 +1090,16 @@ export class PokerUI {
       { left: 286, width: 126 },
     ];
     const position = positions[index - 1] ?? positions[0];
-    const showCards = Boolean(table.lastResult && !player.folded && player.cards.length === 5);
-    const panel = rect(`mobile-seat-${player.id}`, position.width, showCards ? 78 : 54, active ? "#313A43FA" : "#20252DF8", 8);
+    const showCards = Boolean(
+      table.lastResult && !player.folded && player.cards.length === 5
+    );
+    const panel = rect(
+      `mobile-seat-${player.id}`,
+      position.width,
+      showCards ? 78 : 54,
+      active ? "#313A43FA" : "#20252DF8",
+      8
+    );
     panel.color = active ? ORANGE : player.folded ? "#FFFFFF0D" : "#FFFFFF20";
     panel.thickness = active ? 2 : 1;
     placeTopLeft(panel, position.left, 126);
@@ -747,15 +1111,33 @@ export class PokerUI {
     avatar.color = active ? ORANGE : "#FFFFFF24";
     placeTopLeft(avatar, 8, 8);
     panel.addControl(avatar);
-    const initial = text(`mobile-seat-initial-${player.id}`, player.name.slice(0, 1).toUpperCase(), 11, TEXT, 900);
+    const initial = text(
+      `mobile-seat-initial-${player.id}`,
+      player.name.slice(0, 1).toUpperCase(),
+      11,
+      TEXT,
+      900
+    );
     initial.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     avatar.addControl(initial);
-    const name = text(`mobile-seat-name-${player.id}`, player.name, 11, TEXT, 900);
+    const name = text(
+      `mobile-seat-name-${player.id}`,
+      player.name,
+      11,
+      TEXT,
+      900
+    );
     name.width = "76px";
     name.height = "22px";
     placeTopLeft(name, 41, 3);
     panel.addControl(name);
-    const chips = text(`mobile-seat-chips-${player.id}`, `${Math.round(player.chips).toLocaleString("it-IT")}`, 10, "#D6DBDF", 700);
+    const chips = text(
+      `mobile-seat-chips-${player.id}`,
+      `${Math.round(player.chips).toLocaleString("it-IT")}`,
+      10,
+      "#D6DBDF",
+      700
+    );
     chips.width = "76px";
     chips.height = "20px";
     placeTopLeft(chips, 41, 21);
@@ -767,7 +1149,13 @@ export class PokerUI {
         panel.addControl(card);
       });
     } else {
-      const action = text(`mobile-seat-action-${player.id}`, player.folded ? "FOLD" : player.lastAction.toUpperCase(), 8, active ? ORANGE : MUTED, 900);
+      const action = text(
+        `mobile-seat-action-${player.id}`,
+        player.folded ? "FOLD" : player.lastAction.toUpperCase(),
+        8,
+        active ? ORANGE : MUTED,
+        900
+      );
       action.width = "110px";
       action.height = "16px";
       placeTopLeft(action, 8, 37);
@@ -786,7 +1174,13 @@ export class PokerUI {
     room.height = "30px";
     placeTopLeft(room, 16, 6);
     topBar.addControl(room);
-    const roomMeta = text("mobile-table-meta", `${table.variant === "hilow" ? "HI / LOW" : "STANDARD"}  •  ${table.smallBlind}/${table.bigBlind}  •  MANO ${table.handNumber}`, 9, MUTED, 800);
+    const roomMeta = text(
+      "mobile-table-meta",
+      `${table.variant === "hilow" ? "HI / LOW" : "STANDARD"}  •  ${table.smallBlind}/${table.bigBlind}  •  MANO ${table.handNumber}`,
+      9,
+      MUTED,
+      800
+    );
     roomMeta.width = "250px";
     roomMeta.height = "22px";
     placeTopLeft(roomMeta, 16, 30);
@@ -802,32 +1196,63 @@ export class PokerUI {
     const phases = rect("mobile-phases", 404, 52, "#171C23F5", 8);
     placeTopLeft(phases, 8, 64);
     this.root.addControl(phases);
-    const phaseKeys = ["blinds", "discard", "flop", "turn", "river", "pot2"];
-    const phaseLabels = ["BUI", "SCARTO", "FLOP", "TURN", "RIVER", "P2"];
+    const phaseKeys = [
+      "blinds",
+      "discard",
+      "preflop",
+      "flop",
+      "turn",
+      "river",
+      "pot2",
+    ];
+    const phaseLabels = ["BUI", "SCARTO", "PRE", "FLOP", "TURN", "RIVER", "P2"];
     phaseLabels.forEach((label, index) => {
       const active = table.phase === phaseKeys[index];
-      const done = phaseKeys.indexOf(table.phase) > index || table.phase === "showdown" || table.status === "waiting" && table.handNumber > 0;
-      const step = rect(`mobile-phase-${index}`, index === 1 ? 74 : 62, 38, active ? "#3B352B" : "transparent", 5);
+      const done =
+        phaseKeys.indexOf(table.phase) > index ||
+        table.phase === "showdown" ||
+        (table.status === "waiting" && table.handNumber > 0);
+      const step = rect(
+        `mobile-phase-${index}`,
+        index === 1 ? 60 : 54,
+        38,
+        active ? "#3B352B" : "transparent",
+        5
+      );
       step.thickness = active ? 1 : 0;
       step.color = active ? "#F49A3566" : "transparent";
-      placeTopLeft(step, 7 + index * 65, 7);
+      placeTopLeft(step, 6 + index * 56, 7);
       phases.addControl(step);
-      const marker = text(`mobile-phase-marker-${index}`, done ? "✓" : String(index + 1), 8, active ? "#17191D" : done ? GREEN : MUTED, 900);
-      marker.width = "18px";
+      const marker = text(
+        `mobile-phase-marker-${index}`,
+        done ? "✓" : String(index + 1),
+        8,
+        active ? "#17191D" : done ? GREEN : MUTED,
+        900
+      );
+      marker.width = "16px";
       marker.height = "18px";
       marker.color = active ? ORANGE : done ? GREEN : MUTED;
       marker.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-      placeTopLeft(marker, 3, 12);
+      placeTopLeft(marker, 2, 12);
       step.addControl(marker);
-      const copy = text(`mobile-phase-label-${index}`, label, index === 1 ? 8 : 9, active ? TEXT : done ? "#C0CCC7" : MUTED, 900);
-      copy.width = index === 1 ? "50px" : "40px";
+      const copy = text(
+        `mobile-phase-label-${index}`,
+        label,
+        index === 1 ? 7 : 8,
+        active ? TEXT : done ? "#C0CCC7" : MUTED,
+        900
+      );
+      copy.width = index === 1 ? "42px" : "36px";
       copy.height = "38px";
-      placeTopLeft(copy, 22, 0);
+      placeTopLeft(copy, 18, 0);
       copy.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       step.addControl(copy);
     });
 
-    table.players.forEach((player, index) => this.seatMobile(player, index, table));
+    table.players.forEach((player, index) =>
+      this.seatMobile(player, index, table)
+    );
 
     if (!table.lastResult) {
       const pot = rect("mobile-pot", 140, 32, "#172323F5", 16);
@@ -835,7 +1260,13 @@ export class PokerUI {
       pot.top = "186px";
       pot.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
       this.root.addControl(pot);
-      const potText = text("mobile-pot-text", `PIATTO  ${Math.round(table.pot).toLocaleString("it-IT")}`, 11, ORANGE, 900);
+      const potText = text(
+        "mobile-pot-text",
+        `PIATTO  ${Math.round(table.pot).toLocaleString("it-IT")}`,
+        11,
+        ORANGE,
+        900
+      );
       potText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       pot.addControl(potText);
     }
@@ -844,14 +1275,26 @@ export class PokerUI {
     boardOne.color = "#8EBBAB44";
     placeTopLeft(boardOne, 18, 226);
     this.root.addControl(boardOne);
-    const boardOneText = text("mobile-board-one-copy", "P1  ·  3 + 2 + 1", 9, "#B9D6CB", 900);
+    const boardOneText = text(
+      "mobile-board-one-copy",
+      "P1  ·  3 + 2 + 1",
+      9,
+      "#B9D6CB",
+      900
+    );
     boardOneText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     boardOne.addControl(boardOneText);
     const boardTwo = rect("mobile-board-two-label", 88, 22, "#101B19ED", 11);
     boardTwo.color = "#8EBBAB44";
     placeTopLeft(boardTwo, 314, 226);
     this.root.addControl(boardTwo);
-    const boardTwoText = text("mobile-board-two-copy", "P2  ·  2", 9, "#B9D6CB", 900);
+    const boardTwoText = text(
+      "mobile-board-two-copy",
+      "P2  ·  2",
+      9,
+      "#B9D6CB",
+      900
+    );
     boardTwoText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     boardTwo.addControl(boardTwoText);
 
@@ -872,10 +1315,13 @@ export class PokerUI {
       card.left = `${(index - (human.cards.length - 1) / 2) * spread}px`;
       card.top = `${handTop}px`;
       card.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-      card.rotation = (index - (human.cards.length - 1) / 2) * 1.35 * Math.PI / 180;
+      card.rotation =
+        ((index - (human.cards.length - 1) / 2) * 1.35 * Math.PI) / 180;
       if (discard) {
         card.hoverCursor = "pointer";
-        card.onPointerUpObservable.add(() => this.controller.humanDiscard(code));
+        card.onPointerUpObservable.add(() =>
+          this.controller.humanDiscard(code)
+        );
       }
       this.root.addControl(card);
     });
@@ -885,7 +1331,13 @@ export class PokerUI {
       hint.top = `${handTop - 40}px`;
       hint.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
       this.root.addControl(hint);
-      const hintText = text("mobile-discard-hint-text", "SCARTO · TOCCA UNA CARTA", 10, ORANGE, 900);
+      const hintText = text(
+        "mobile-discard-hint-text",
+        "SCARTO · TOCCA UNA CARTA",
+        10,
+        ORANGE,
+        900
+      );
       hintText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       hint.addControl(hintText);
     }
@@ -893,38 +1345,78 @@ export class PokerUI {
 
   private renderActionsMobile(table: TableState) {
     const human = table.players[0];
-    const humanTurn = table.status === "playing" && table.turnIndex === 0 && !human.folded;
-    const panel = rect("mobile-action-panel", 408, table.status === "waiting" ? 112 : 126, "#171C23FA", 9);
+    const humanTurn =
+      table.status === "playing" && table.turnIndex === 0 && !human.folded;
+    const panel = rect(
+      "mobile-action-panel",
+      408,
+      table.status === "waiting" ? 112 : 126,
+      "#171C23FA",
+      9
+    );
     panel.color = humanTurn ? "#F49A3566" : BORDER;
     placeTopLeft(panel, 6, this.mobileActionTop(table));
     this.root.addControl(panel);
     if (table.status === "waiting") {
-      const completed = text("mobile-completed", table.lastResult ? "Mano completata" : "Tavolo pronto", 15, TEXT, 900);
+      const completed = text(
+        "mobile-completed",
+        table.lastResult ? "Mano completata" : "Tavolo pronto",
+        15,
+        TEXT,
+        900
+      );
       completed.width = "174px";
       completed.height = "42px";
       placeTopLeft(completed, 14, 8);
       panel.addControl(completed);
-      const start = this.button(table.handNumber === 0 ? "GIOCA" : "NUOVA MANO", 190, 48, () => this.controller.startHand(), true);
+      const start = this.button(
+        table.handNumber === 0 ? "GIOCA" : "NUOVA MANO",
+        190,
+        48,
+        () => this.controller.startHand(),
+        true
+      );
       placeTopLeft(start, 204, 12);
       panel.addControl(start);
       return;
     }
 
     const callAmount = Math.max(0, table.roundMaxBet - human.roundBet);
-    const canRaise = humanTurn && table.roundRaises === 0 && human.chips > callAmount + table.bigBlind;
-    const fold = this.button("FOLD", 88, 44, () => this.controller.humanAction("fold"));
+    const canRaise =
+      humanTurn &&
+      table.roundRaises === 0 &&
+      human.chips > callAmount + table.bigBlind;
+    const fold = this.button("FOLD", 88, 44, () =>
+      this.controller.humanAction("fold")
+    );
     placeTopLeft(fold, 12, 10);
     fold.isEnabled = humanTurn;
     panel.addControl(fold);
-    const checkCall = this.button(callAmount ? `CALL ${callAmount}` : "CHECK", 128, 44, () => this.controller.humanAction(callAmount ? "call" : "check"), true);
+    const checkCall = this.button(
+      callAmount ? `CALL ${callAmount}` : "CHECK",
+      128,
+      44,
+      () => this.controller.humanAction(callAmount ? "call" : "check"),
+      true
+    );
     placeTopLeft(checkCall, 106, 10);
     checkCall.isEnabled = humanTurn;
     panel.addControl(checkCall);
-    const allIn = this.button("ALL-IN", 88, 44, () => this.controller.humanAction("allin"));
+    const allIn = this.button("ALL-IN", 88, 44, () =>
+      this.controller.humanAction("allin")
+    );
     placeTopLeft(allIn, 240, 10);
     allIn.isEnabled = humanTurn;
     panel.addControl(allIn);
-    const timerText = text("mobile-turn-state", humanTurn ? "TOCCA A TE" : `${table.players[table.turnIndex]?.name ?? "Dealer"} pensa…`, 9, humanTurn ? ORANGE : MUTED, 900);
+    const timerText = text(
+      "mobile-turn-state",
+      humanTurn
+        ? "TOCCA A TE"
+        : `${table.players[table.turnIndex]?.name ?? "Dealer"} pensa…`,
+      9,
+      humanTurn ? ORANGE : MUTED,
+      900
+    );
     timerText.width = "66px";
     timerText.height = "44px";
     timerText.textWrapping = true;
@@ -933,9 +1425,15 @@ export class PokerUI {
     panel.addControl(timerText);
 
     const slider = new Slider("mobile-raise-slider");
-    slider.minimum = Math.max(table.roundMaxBet + table.bigBlind, table.bigBlind * 2);
+    slider.minimum = Math.max(
+      table.roundMaxBet + table.bigBlind,
+      table.bigBlind * 2
+    );
     slider.maximum = Math.max(slider.minimum, human.chips + human.roundBet);
-    slider.value = Math.min(slider.maximum, Math.max(slider.minimum, table.roundMaxBet + table.bigBlind * 2));
+    slider.value = Math.min(
+      slider.maximum,
+      Math.max(slider.minimum, table.roundMaxBet + table.bigBlind * 2)
+    );
     slider.width = "212px";
     slider.height = "18px";
     slider.color = ORANGE;
@@ -944,11 +1442,23 @@ export class PokerUI {
     slider.isEnabled = canRaise;
     placeTopLeft(slider, 14, 78);
     panel.addControl(slider);
-    const raise = this.button("RAISE", 108, 44, () => this.controller.humanAction("raise", Math.round(slider.value)), true);
+    const raise = this.button(
+      "RAISE",
+      108,
+      44,
+      () => this.controller.humanAction("raise", Math.round(slider.value)),
+      true
+    );
     placeTopLeft(raise, 238, 67);
     raise.isEnabled = canRaise;
     panel.addControl(raise);
-    const amount = text("mobile-raise-amount", `${Math.round(slider.value)}`, 10, "#CBD0D6", 800);
+    const amount = text(
+      "mobile-raise-amount",
+      `${Math.round(slider.value)}`,
+      10,
+      "#CBD0D6",
+      800
+    );
     amount.width = "46px";
     amount.height = "44px";
     amount.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
@@ -964,22 +1474,46 @@ export class PokerUI {
     overlay.shadowBlur = 18;
     placeTopLeft(overlay, 6, this.mobileActionTop(table));
     this.root.addControl(overlay);
-    const eyebrow = text("mobile-result-eyebrow", `SHOWDOWN  ·  REGOLA ${result.splitRule}`, 10, ORANGE, 900);
+    const eyebrow = text(
+      "mobile-result-eyebrow",
+      `SHOWDOWN  ·  REGOLA ${result.splitRule}`,
+      10,
+      ORANGE,
+      900
+    );
     eyebrow.width = "270px";
     eyebrow.height = "24px";
     placeTopLeft(eyebrow, 14, 8);
     overlay.addControl(eyebrow);
-    const pot1 = text("mobile-result-pot1", `P1  ${result.bestPot1}  ·  ${result.pot1Winners.join(", ")}`, 10, "#D7DCE1", 800);
+    const pot1 = text(
+      "mobile-result-pot1",
+      `P1  ${result.bestPot1}  ·  ${result.pot1Winners.join(", ")}`,
+      10,
+      "#D7DCE1",
+      800
+    );
     pot1.width = "270px";
     pot1.height = "28px";
     placeTopLeft(pot1, 14, 36);
     overlay.addControl(pot1);
-    const pot2 = text("mobile-result-pot2", `P2  ${result.bestPot2}  ·  ${result.pot2Winners.join(", ")}`, 10, "#D7DCE1", 800);
+    const pot2 = text(
+      "mobile-result-pot2",
+      `P2  ${result.bestPot2}  ·  ${result.pot2Winners.join(", ")}`,
+      10,
+      "#D7DCE1",
+      800
+    );
     pot2.width = "270px";
     pot2.height = "28px";
     placeTopLeft(pot2, 14, 64);
     overlay.addControl(pot2);
-    const close = this.button("NUOVA MANO", 112, 78, () => this.controller.startHand(), true);
+    const close = this.button(
+      "NUOVA MANO",
+      112,
+      78,
+      () => this.controller.startHand(),
+      true
+    );
     placeTopLeft(close, 282, 24);
     overlay.addControl(close);
   }
@@ -995,7 +1529,13 @@ export class PokerUI {
     room.height = "58px";
     placeTopLeft(room, 404, 0);
     topBar.addControl(room);
-    const roomMeta = text("table-room-meta", `${table.variant === "hilow" ? "HI / LOW" : "STANDARD"}   •   ${table.smallBlind} / ${table.bigBlind}   •   MANO ${table.handNumber}`, 11, MUTED, 700);
+    const roomMeta = text(
+      "table-room-meta",
+      `${table.variant === "hilow" ? "HI / LOW" : "STANDARD"}   •   ${table.smallBlind} / ${table.bigBlind}   •   MANO ${table.handNumber}`,
+      11,
+      MUTED,
+      700
+    );
     roomMeta.width = "410px";
     roomMeta.height = "58px";
     placeTopLeft(roomMeta, 714, 0);
@@ -1016,12 +1556,37 @@ export class PokerUI {
     phaseTitle.height = "38px";
     placeTopLeft(phaseTitle, 16, 8);
     phasePanel.addControl(phaseTitle);
-    const phaseKeys = ["blinds", "discard", "flop", "turn", "river", "pot2"];
-    const phaseLabels = ["Bui", "Scarto", "Flop", "Turn", "River", "Piatto 2"];
+    const phaseKeys = [
+      "blinds",
+      "discard",
+      "preflop",
+      "flop",
+      "turn",
+      "river",
+      "pot2",
+    ];
+    const phaseLabels = [
+      "Bui",
+      "Scarto",
+      "Pre-board",
+      "Flop",
+      "Turn",
+      "River",
+      "Piatto 2",
+    ];
     phaseLabels.forEach((label, index) => {
       const active = table.phase === phaseKeys[index];
-      const done = phaseKeys.indexOf(table.phase) > index || table.phase === "showdown" || table.status === "waiting" && table.handNumber > 0;
-      const step = rect(`phase-step-${index}`, 158, 48, active ? "#3B352B" : "transparent", 5);
+      const done =
+        phaseKeys.indexOf(table.phase) > index ||
+        table.phase === "showdown" ||
+        (table.status === "waiting" && table.handNumber > 0);
+      const step = rect(
+        `phase-step-${index}`,
+        158,
+        48,
+        active ? "#3B352B" : "transparent",
+        5
+      );
       step.thickness = active ? 1 : 0;
       step.color = active ? "#F49A3566" : "transparent";
       placeTopLeft(step, 16, 50 + index * 56);
@@ -1033,10 +1598,22 @@ export class PokerUI {
       number.color = number.background;
       number.left = "-55px";
       step.addControl(number);
-      const numberText = text(`phase-number-text-${index}`, done ? "✓" : String(index + 1), 10, done || active ? TEXT : MUTED, 900);
+      const numberText = text(
+        `phase-number-text-${index}`,
+        done ? "✓" : String(index + 1),
+        10,
+        done || active ? TEXT : MUTED,
+        900
+      );
       numberText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       number.addControl(numberText);
-      const labelText = text(`phase-label-${index}`, label, 13, active ? TEXT : done ? "#B9C7C2" : MUTED, active ? 800 : 600);
+      const labelText = text(
+        `phase-label-${index}`,
+        label,
+        13,
+        active ? TEXT : done ? "#B9C7C2" : MUTED,
+        active ? 800 : 600
+      );
       labelText.width = "105px";
       labelText.height = "48px";
       labelText.left = "24px";
@@ -1063,7 +1640,13 @@ export class PokerUI {
     logStack.width = "154px";
     viewer.addControl(logStack);
     table.log.slice(0, 7).forEach((entry, index) => {
-      const line = text(`log-line-${index}`, entry, 10, index === 0 ? "#E1E4E7" : "#7E8792", index === 0 ? 700 : 500);
+      const line = text(
+        `log-line-${index}`,
+        entry,
+        10,
+        index === 0 ? "#E1E4E7" : "#7E8792",
+        index === 0 ? 700 : 500
+      );
       line.width = "150px";
       line.height = "46px";
       line.textWrapping = true;
@@ -1078,7 +1661,13 @@ export class PokerUI {
     pot.top = "194px";
     pot.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     this.root.addControl(pot);
-    const potText = text("pot-text", `PIATTO  ${Math.round(table.pot).toLocaleString("it-IT")}`, 14, ORANGE, 900);
+    const potText = text(
+      "pot-text",
+      `PIATTO  ${Math.round(table.pot).toLocaleString("it-IT")}`,
+      14,
+      ORANGE,
+      900
+    );
     potText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     pot.addControl(potText);
 
@@ -1099,7 +1688,13 @@ export class PokerUI {
       copy.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       this.root.addControl(copy);
     });
-    const pot1Label = text("pot1-label", "BOARD · PIATTO 1", 10, "#9CC1B3", 800);
+    const pot1Label = text(
+      "pot1-label",
+      "BOARD · PIATTO 1",
+      10,
+      "#9CC1B3",
+      800
+    );
     pot1Label.width = "210px";
     pot1Label.height = "24px";
     pot1Label.left = "-337px";
@@ -1136,7 +1731,8 @@ export class PokerUI {
       card.left = `${(index - (human.cards.length - 1) / 2) * spread}px`;
       card.top = discard ? "596px" : "618px";
       card.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-      card.rotation = (index - (human.cards.length - 1) / 2) * 1.7 * Math.PI / 180;
+      card.rotation =
+        ((index - (human.cards.length - 1) / 2) * 1.7 * Math.PI) / 180;
       if (discard) {
         card.hoverCursor = "pointer";
         card.onPointerEnterObservable.add(() => {
@@ -1149,7 +1745,9 @@ export class PokerUI {
           card.color = "#FFFFFF";
           card.thickness = 1;
         });
-        card.onPointerUpObservable.add(() => this.controller.humanDiscard(code));
+        card.onPointerUpObservable.add(() =>
+          this.controller.humanDiscard(code)
+        );
       }
       this.root.addControl(card);
     });
@@ -1159,7 +1757,13 @@ export class PokerUI {
       hint.top = "550px";
       hint.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
       this.root.addControl(hint);
-      const hintText = text("discard-hint-text", "SCARTO: SELEZIONA UNA CARTA", 11, ORANGE, 900);
+      const hintText = text(
+        "discard-hint-text",
+        "SCARTO: SELEZIONA UNA CARTA",
+        11,
+        ORANGE,
+        900
+      );
       hintText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       hint.addControl(hintText);
     }
@@ -1167,60 +1771,112 @@ export class PokerUI {
 
   private renderActions(table: TableState) {
     const human = table.players[0];
-    const humanTurn = table.status === "playing" && table.turnIndex === 0 && !human.folded;
+    const humanTurn =
+      table.status === "playing" && table.turnIndex === 0 && !human.folded;
     const panel = rect("action-panel", 312, 272, PANEL_3, 8);
     panel.color = humanTurn ? "#F49A3566" : BORDER;
     placeTopLeft(panel, 1272, 528);
     this.root.addControl(panel);
-    const title = text("action-title", humanTurn ? "TOCCA A TE" : "AZIONI", 12, humanTurn ? ORANGE : MUTED, 900);
+    const title = text(
+      "action-title",
+      humanTurn ? "TOCCA A TE" : "AZIONI",
+      12,
+      humanTurn ? ORANGE : MUTED,
+      900
+    );
     title.width = "280px";
     title.height = "36px";
     placeTopLeft(title, 16, 6);
     panel.addControl(title);
 
     if (table.status === "waiting") {
-      const completed = text("completed", table.lastResult ? `SHOWDOWN · ${table.lastResult.splitRule}` : "Tavolo pronto", 18, table.lastResult ? ORANGE : TEXT, 900);
+      const completed = text(
+        "completed",
+        table.lastResult
+          ? `SHOWDOWN · ${table.lastResult.splitRule}`
+          : "Tavolo pronto",
+        18,
+        table.lastResult ? ORANGE : TEXT,
+        900
+      );
       completed.width = "280px";
       completed.height = "42px";
       placeTopLeft(completed, 16, 42);
       panel.addControl(completed);
       if (table.lastResult) {
-        const pot1 = text("completed-pot1", `P1  ${table.lastResult.bestPot1}\n${table.lastResult.pot1Winners.join(", ")}`, 10, "#D7DCE1", 700);
+        const pot1 = text(
+          "completed-pot1",
+          `P1  ${table.lastResult.bestPot1}\n${table.lastResult.pot1Winners.join(", ")}`,
+          10,
+          "#D7DCE1",
+          700
+        );
         pot1.width = "132px";
         pot1.height = "58px";
         placeTopLeft(pot1, 16, 88);
         panel.addControl(pot1);
-        const pot2 = text("completed-pot2", `P2  ${table.lastResult.bestPot2}\n${table.lastResult.pot2Winners.join(", ")}`, 10, "#D7DCE1", 700);
+        const pot2 = text(
+          "completed-pot2",
+          `P2  ${table.lastResult.bestPot2}\n${table.lastResult.pot2Winners.join(", ")}`,
+          10,
+          "#D7DCE1",
+          700
+        );
         pot2.width = "132px";
         pot2.height = "58px";
         placeTopLeft(pot2, 156, 88);
         panel.addControl(pot2);
       }
-      const start = this.button(table.handNumber === 0 ? "GIOCA" : "NUOVA MANO", 280, 52, () => this.controller.startHand(), true);
+      const start = this.button(
+        table.handNumber === 0 ? "GIOCA" : "NUOVA MANO",
+        280,
+        52,
+        () => this.controller.startHand(),
+        true
+      );
       placeTopLeft(start, 16, table.lastResult ? 180 : 112);
       panel.addControl(start);
       return;
     }
 
     const callAmount = Math.max(0, table.roundMaxBet - human.roundBet);
-    const canRaise = humanTurn && table.roundRaises === 0 && human.chips > callAmount + table.bigBlind;
-    const fold = this.button("FOLD", 84, 46, () => this.controller.humanAction("fold"));
+    const canRaise =
+      humanTurn &&
+      table.roundRaises === 0 &&
+      human.chips > callAmount + table.bigBlind;
+    const fold = this.button("FOLD", 84, 46, () =>
+      this.controller.humanAction("fold")
+    );
     placeTopLeft(fold, 16, 48);
     fold.isEnabled = humanTurn;
     panel.addControl(fold);
-    const checkCall = this.button(callAmount ? `CALL ${callAmount}` : "CHECK", 102, 46, () => this.controller.humanAction(callAmount ? "call" : "check"), true);
+    const checkCall = this.button(
+      callAmount ? `CALL ${callAmount}` : "CHECK",
+      102,
+      46,
+      () => this.controller.humanAction(callAmount ? "call" : "check"),
+      true
+    );
     placeTopLeft(checkCall, 105, 48);
     checkCall.isEnabled = humanTurn;
     panel.addControl(checkCall);
-    const allIn = this.button("ALL-IN", 84, 46, () => this.controller.humanAction("allin"));
+    const allIn = this.button("ALL-IN", 84, 46, () =>
+      this.controller.humanAction("allin")
+    );
     placeTopLeft(allIn, 212, 48);
     allIn.isEnabled = humanTurn;
     panel.addControl(allIn);
 
     const slider = new Slider("raise-slider");
-    slider.minimum = Math.max(table.roundMaxBet + table.bigBlind, table.bigBlind * 2);
+    slider.minimum = Math.max(
+      table.roundMaxBet + table.bigBlind,
+      table.bigBlind * 2
+    );
     slider.maximum = Math.max(slider.minimum, human.chips + human.roundBet);
-    slider.value = Math.min(slider.maximum, Math.max(slider.minimum, table.roundMaxBet + table.bigBlind * 2));
+    slider.value = Math.min(
+      slider.maximum,
+      Math.max(slider.minimum, table.roundMaxBet + table.bigBlind * 2)
+    );
     slider.width = "180px";
     slider.height = "18px";
     slider.color = ORANGE;
@@ -1229,20 +1885,46 @@ export class PokerUI {
     slider.isEnabled = canRaise;
     placeTopLeft(slider, 16, 126);
     panel.addControl(slider);
-    const raise = this.button("RAISE", 94, 44, () => this.controller.humanAction("raise", Math.round(slider.value)), true);
+    const raise = this.button(
+      "RAISE",
+      94,
+      44,
+      () => this.controller.humanAction("raise", Math.round(slider.value)),
+      true
+    );
     placeTopLeft(raise, 202, 112);
     raise.isEnabled = canRaise;
     panel.addControl(raise);
-    const amount = text("raise-amount", `Puntata: ${Math.round(slider.value)}`, 11, "#CBD0D6", 700);
+    const amount = text(
+      "raise-amount",
+      `Puntata: ${Math.round(slider.value)}`,
+      11,
+      "#CBD0D6",
+      700
+    );
     amount.width = "180px";
     amount.height = "30px";
     placeTopLeft(amount, 16, 151);
     panel.addControl(amount);
-    const timer = rect("decision-timer", 280, 48, humanTurn ? "#2C312D" : "#242A32", 6);
+    const timer = rect(
+      "decision-timer",
+      280,
+      48,
+      humanTurn ? "#2C312D" : "#242A32",
+      6
+    );
     timer.color = humanTurn ? "#F49A3544" : BORDER;
     placeTopLeft(timer, 16, 196);
     panel.addControl(timer);
-    const timerText = text("decision-timer-text", humanTurn ? "●  DECISIONE  18s" : `${table.players[table.turnIndex]?.name ?? "Dealer"} sta pensando…`, 11, humanTurn ? ORANGE : MUTED, 800);
+    const timerText = text(
+      "decision-timer-text",
+      humanTurn
+        ? "●  DECISIONE  18s"
+        : `${table.players[table.turnIndex]?.name ?? "Dealer"} sta pensando…`,
+      11,
+      humanTurn ? ORANGE : MUTED,
+      800
+    );
     timerText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     timer.addControl(timerText);
   }
@@ -1254,35 +1936,65 @@ export class PokerUI {
     overlay.shadowColor = "#000000";
     overlay.shadowBlur = 30;
     this.root.addControl(overlay);
-    const eyebrow = text("result-eyebrow", `SHOWDOWN  ·  REGOLA ${result.splitRule}`, 11, ORANGE, 900);
+    const eyebrow = text(
+      "result-eyebrow",
+      `SHOWDOWN  ·  REGOLA ${result.splitRule}`,
+      11,
+      ORANGE,
+      900
+    );
     eyebrow.width = "550px";
     eyebrow.height = "30px";
     eyebrow.top = "16px";
     eyebrow.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     eyebrow.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     overlay.addControl(eyebrow);
-    const title = text("result-title", result.splitRule === "75/25" ? "DIVISIONE 75 / 25" : "MANO COMPLETATA", 25, TEXT, 900);
+    const title = text(
+      "result-title",
+      result.splitRule === "75/25" ? "DIVISIONE 75 / 25" : "MANO COMPLETATA",
+      25,
+      TEXT,
+      900
+    );
     title.width = "550px";
     title.height = "42px";
     title.top = "47px";
     title.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     title.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     overlay.addControl(title);
-    const pot1 = text("result-pot1", `PIATTO 1  ·  ${result.bestPot1}  ·  ${result.pot1Winners.join(", ")}`, 13, "#D7DCE1", 700);
+    const pot1 = text(
+      "result-pot1",
+      `PIATTO 1  ·  ${result.bestPot1}  ·  ${result.pot1Winners.join(", ")}`,
+      13,
+      "#D7DCE1",
+      700
+    );
     pot1.width = "530px";
     pot1.height = "30px";
     pot1.top = "103px";
     pot1.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     pot1.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     overlay.addControl(pot1);
-    const pot2 = text("result-pot2", `PIATTO 2  ·  ${result.bestPot2}  ·  ${result.pot2Winners.join(", ")}`, 13, "#D7DCE1", 700);
+    const pot2 = text(
+      "result-pot2",
+      `PIATTO 2  ·  ${result.bestPot2}  ·  ${result.pot2Winners.join(", ")}`,
+      13,
+      "#D7DCE1",
+      700
+    );
     pot2.width = "530px";
     pot2.height = "30px";
     pot2.top = "136px";
     pot2.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     pot2.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     overlay.addControl(pot2);
-    const close = this.button("CONTINUA", 160, 38, () => this.controller.startHand(), true);
+    const close = this.button(
+      "CONTINUA",
+      160,
+      38,
+      () => this.controller.startHand(),
+      true
+    );
     close.top = "171px";
     close.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     overlay.addControl(close);

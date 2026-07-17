@@ -1,5 +1,17 @@
 # Revisione grafica — client poker online
 
+## Blindatura del regolamento con test matematici
+
+- [x] Confrontare il motore con il regolamento ufficiale (PDF) per Standard e Hi/Low.
+- [x] Correggere la carta alta: non è una combinazione, in parità si divide (entrambe le varianti).
+- [x] Correggere le scale colore Hi/Low: prima il valore delle carte, poi il seme.
+- [x] Aggiungere il giro di puntata pre-board (§3: il primo giro avviene prima del flop) — ora i giri sono cinque.
+- [x] Estrarre `settleShowdown` puro con divisione 100/solo, 50/50 e 75/25 e distribuzione esatta dei gettoni (metodo del resto maggiore: nessun gettone creato o perso, anche con piatti non divisibili).
+- [x] Suite di test hard (99 test): mazzo a 32 carte, gerarchia §5 completa (colore batte full, scala colore minima batte il poker), spareggi Standard (le parità dividono, senza kicker né seme) e Hi/Low (valore poi seme cuori>quadri>fiori>picche), vincoli §4 dei due piatti (mai 5 carte dal tavolo sul P1, minimo 3 personali sul P2, piatti mai mischiati), tutti i casi §6 per 2/3/4 giocatori con i numeri esatti del regolamento (1000 → 875/125, 750/125/125, 833/84/83, 812/63/63/62, 250×4), fuzzing deterministico (1500 mani) e motore completo (fasi, ante, ordine di parola, rilancio minimo, all-in, vittoria per fold, conservazione dei gettoni su 8 mani × 6 configurazioni).
+- [x] Verificare typecheck e build di produzione.
+
+**Fatto matematico dimostrato dai test:** con 8 valori e 6 carte sul Piatto 1, ogni giocatore ha SEMPRE almeno una coppia sul Piatto 1; il caso "nessuna combinazione" del regolamento può presentarsi solo sul Piatto 2.
+
 - [x] Analizzare entrambi i riferimenti web condivisi e annotare struttura, densità e linguaggio visivo.
 - [x] Trattare la foto allegata come specifica vincolante per la disposizione delle carte.
 - [x] Disporre **Piatto 1** orizzontalmente: tre carte Flop, due carte Turn e una carta River, secondo la disposizione mostrata nella foto e la sequenza del motore Sanzy.
