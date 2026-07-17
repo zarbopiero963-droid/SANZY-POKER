@@ -449,7 +449,7 @@ describe("4 giocatori", () => {
     expect(pay(result, "d")).toBe(250);
   });
 
-  it("Hi/Low, stesse carte: cuori decide il P1; sul P2 restano in parità i due con cuori → 750 / 250", () => {
+  it("Hi/Low: cuori vince il P1; sul P2 la coppia di K è del tavolo → tutti pari, a 625 / altri 125", () => {
     const scenario: Scenario = {
       players: [
         { id: "a", cards: ["QH", "JH", "7D", "9D", "AC"] },
@@ -463,14 +463,15 @@ describe("4 giocatori", () => {
     const result = settle(scenario, 1000, "hilow");
     expect(result.splitRule).toBe("50/50");
     expect(result.pot1Winners).toEqual(["a"]); // scala colore media di cuori
-    // Coppia di K per tutti: lo spareggio Hi/Low sul seme lascia in parità
-    // le due mani che contengono cuori (a e c).
-    expect(result.pot2Winners).toEqual(["a", "c"]);
-    // a: tutto il Piatto 1 (500) + metà Piatto 2 (250) = 750; c: metà Piatto 2 = 250.
-    expect(pay(result, "a")).toBe(750);
-    expect(pay(result, "c")).toBe(250);
-    expect(pay(result, "b")).toBe(0);
-    expect(pay(result, "d")).toBe(0);
+    // La coppia di K è formata dalle due carte del tavolo (KD, KC): nessuno ha un
+    // K in mano, quindi il seme della coppia è identico per tutti e i kicker non
+    // contano → i quattro pareggiano il Piatto 2.
+    expect(result.pot2Winners).toEqual(["a", "b", "c", "d"]);
+    // a: tutto il Piatto 1 (500) + un quarto del Piatto 2 (125) = 625; altri 125.
+    expect(pay(result, "a")).toBe(625);
+    expect(pay(result, "b")).toBe(125);
+    expect(pay(result, "c")).toBe(125);
+    expect(pay(result, "d")).toBe(125);
   });
 });
 

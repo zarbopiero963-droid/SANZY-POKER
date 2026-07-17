@@ -134,6 +134,25 @@ export function evaluateHand(cardCodes: CardCode[]): HandEvaluation {
       SUIT_PRIORITY[card.suit] > SUIT_PRIORITY[best] ? card.suit : best,
     cards[0].suit
   );
+  // Spareggio di seme in Hi/Low: si guarda "il seme della carta più alta" della
+  // combinazione. Quando la carta chiave ha lo stesso valore in più semi (es. le
+  // due carte di una coppia), vince il seme migliore fra quelle carte.
+  // I kicker non contano mai, coerentemente col resto del Sanzy.
+  const suitOfValue = (targetValue: number): Suit =>
+    cards
+      .filter(card => card.value === targetValue)
+      .reduce(
+        (best, card) =>
+          SUIT_PRIORITY[card.suit] > SUIT_PRIORITY[best] ? card.suit : best,
+        cards.find(card => card.value === targetValue)!.suit
+      );
+  const straightHigh = straightInfo
+    ? Math.max(
+        ...straightInfo.ranks.map(rank =>
+          straightInfo.level === 1 && rank === "A" ? -1 : RANK_VALUE[rank]
+        )
+      )
+    : -1;
 
   if (isFlush && straightInfo) {
     return {
@@ -166,7 +185,7 @@ export function evaluateHand(cardCodes: CardCode[]): HandEvaluation {
       category: CATS.FULL_HOUSE,
       tripRank: groups[0].value,
       pairRank: groups[1].value,
-      suit: bestSuit,
+      suit: suitOfValue(groups[0].value), // seme del tris (carta più alta del full)
       label: `Full di ${groups[0].rank}`,
     };
   }
@@ -174,12 +193,8 @@ export function evaluateHand(cardCodes: CardCode[]): HandEvaluation {
     return {
       category: CATS.STRAIGHT,
       level: straightInfo.level,
-      high: Math.max(
-        ...straightInfo.ranks.map(rank =>
-          straightInfo.level === 1 && rank === "A" ? -1 : RANK_VALUE[rank]
-        )
-      ),
-      suit: bestSuit,
+      high: straightHigh,
+      suit: suitOfValue(straightHigh), // seme della carta più alta della scala
       label: straightInfo.name,
     };
   }
@@ -187,7 +202,7 @@ export function evaluateHand(cardCodes: CardCode[]): HandEvaluation {
     return {
       category: CATS.TRIPS,
       rank: groups[0].value,
-      suit: bestSuit,
+      suit: suitOfValue(groups[0].value), // seme del tris
       label: `Tris di ${groups[0].rank}`,
     };
   if (groups[0].count === 2 && groups[1]?.count === 2) {
@@ -195,7 +210,7 @@ export function evaluateHand(cardCodes: CardCode[]): HandEvaluation {
       category: CATS.TWO_PAIR,
       hi: Math.max(groups[0].value, groups[1].value),
       lo: Math.min(groups[0].value, groups[1].value),
-      suit: bestSuit,
+      suit: suitOfValue(Math.max(groups[0].value, groups[1].value)), // seme della coppia più alta
       label: "Doppia coppia",
     };
   }
@@ -203,7 +218,7 @@ export function evaluateHand(cardCodes: CardCode[]): HandEvaluation {
     return {
       category: CATS.PAIR,
       rank: groups[0].value,
-      suit: bestSuit,
+      suit: suitOfValue(groups[0].value), // seme della coppia
       label: `Coppia di ${groups[0].rank}`,
     };
   return {
