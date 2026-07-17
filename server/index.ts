@@ -18,15 +18,22 @@ async function startServer() {
 
   app.use(express.static(staticPath));
 
+  // Health check per Railway (e qualsiasi altro monitor esterno).
+  app.get("/healthz", (_req, res) => {
+    res.status(200).json({ status: "ok" });
+  });
+
   // Handle client-side routing - serve index.html for all routes
   app.get("*", (_req, res) => {
     res.sendFile(path.join(staticPath, "index.html"));
   });
 
-  const port = process.env.PORT || 3000;
+  // Railway inietta PORT; bind esplicito su 0.0.0.0 per essere raggiungibile.
+  const port = Number(process.env.PORT) || 3000;
+  const host = "0.0.0.0";
 
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+  server.listen(port, host, () => {
+    console.log(`Server running on http://${host}:${port}/`);
   });
 }
 
