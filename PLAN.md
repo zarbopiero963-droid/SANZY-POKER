@@ -2,7 +2,7 @@
 
 ## Obiettivo
 
-Realizzare una versione giocabile e visivamente premium di Sanzy Poker, con lobby dinamica, tavolo 2–4 giocatori, bot automatici, animazioni di distribuzione e divisione del piatto 75/25.
+Realizzare una versione giocabile e visivamente premium di Sanzy Poker, con lobby dinamica, tavolo 2–4 giocatori, bot automatici, animazioni di distribuzione e divisione del piatto 50/50 per piatto (ogni piatto vale 50, diviso tra i suoi vincitori).
 
 ## Rischi principali
 
@@ -10,7 +10,7 @@ Realizzare una versione giocabile e visivamente premium di Sanzy Poker, con lobb
 | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
 | Gestione completa delle fasi e dei turni | Una mano demo avanza da ante a showdown senza blocchi                                       |
 | Valutazione di Piatto 1 e Piatto 2       | La UI mostra vincitori distinti e split coerente                                            |
-| Regola 75/25                             | Scenario con vincitore unico e pareggio opposto assegna 75/25                               |
+| Regola 50/50 per piatto                  | Ogni piatto (50) va diviso tra i suoi vincitori; chi li vince entrambi da solo prende 100%  |
 | Layout responsive                        | Lobby e tavolo leggibili a 1280×720 e 375×812                                               |
 | Animazioni senza interferenza            | Carte e fiches si muovono senza coprire controlli o punteggi                                |
 | Tavolo ancora percepito come UI 2D       | Una cattura mostra chiaramente sala, pavimento, rail, sedie e quattro corpi tridimensionali |

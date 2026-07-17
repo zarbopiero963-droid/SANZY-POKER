@@ -1476,7 +1476,7 @@ export class PokerUI {
     this.root.addControl(overlay);
     const eyebrow = text(
       "mobile-result-eyebrow",
-      `SHOWDOWN  ·  REGOLA ${result.splitRule}`,
+      `SHOWDOWN  ·  ${result.splitRule === "solo" ? "VINCITORE UNICO" : "PIATTI 50 / 50"}`,
       10,
       ORANGE,
       900
@@ -1793,7 +1793,7 @@ export class PokerUI {
       const completed = text(
         "completed",
         table.lastResult
-          ? `SHOWDOWN · ${table.lastResult.splitRule}`
+          ? `SHOWDOWN · ${table.lastResult.splitRule === "solo" ? "VINCITORE UNICO" : "50 / 50"}`
           : "Tavolo pronto",
         18,
         table.lastResult ? ORANGE : TEXT,
@@ -1938,7 +1938,7 @@ export class PokerUI {
     this.root.addControl(overlay);
     const eyebrow = text(
       "result-eyebrow",
-      `SHOWDOWN  ·  REGOLA ${result.splitRule}`,
+      `SHOWDOWN  ·  ${result.splitRule === "solo" ? "VINCITORE UNICO" : "PIATTI 50 / 50"}`,
       11,
       ORANGE,
       900
@@ -1951,7 +1951,7 @@ export class PokerUI {
     overlay.addControl(eyebrow);
     const title = text(
       "result-title",
-      result.splitRule === "75/25" ? "DIVISIONE 75 / 25" : "MANO COMPLETATA",
+      result.splitRule === "solo" ? "VINCITORE UNICO" : "DIVISIONE 50 / 50",
       25,
       TEXT,
       900

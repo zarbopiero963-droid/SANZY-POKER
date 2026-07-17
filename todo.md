@@ -1,5 +1,13 @@
 # Revisione grafica — client poker online
 
+## Divisione dei piatti: regola definitiva 50/50 per piatto
+
+- [x] Chiarita la contraddizione interna del regolamento (§6 diceva 75/25, gli esempi Piero/Giuseppe/Chiara dicevano 50/50).
+- [x] Regola definitiva confermata dall'autore: **ogni piatto vale 50 e la sua metà è divisa in parti uguali tra i vincitori di quel piatto**, in modo indipendente. Chi vince entrambi da solo prende 100%. Niente più 75/25 come caso speciale (nell'heads-up il 50/50-per-piatto dà comunque 750/250).
+- [x] `settleShowdown` riscritta: rimosso il ramo 75/25; `splitRule` ora è `solo | 50/50`. Distribuzione esatta in gettoni interi (resto maggiore, "se possibile per eccesso").
+- [x] Etichette UI aggiornate (niente più "REGOLA 75/25"): "VINCITORE UNICO" oppure "PIATTI 50/50".
+- [x] Test showdown ricalcolati (100 test): 3 giocatori 250/250/500 e 167/167/666; 4 giocatori 167/167/166/500, 125/125/125/625 e 2-contro-2 250×4; più un riferimento indipendente che ricostruisce ogni pagamento nel fuzzing (1500 mani).
+
 ## Blindatura del regolamento con test matematici
 
 - [x] Confrontare il motore con il regolamento ufficiale (PDF) per Standard e Hi/Low.
@@ -18,7 +26,7 @@
 - [x] Disporre **Piatto 2** verticalmente a destra, separato dal Piatto 1.
 - [x] Collocare le carte personali in basso davanti alla postazione del giocatore.
 - [x] Ridisegnare la lobby come un vero client di poker online con tavoli, posti, bui e attività dei bot.
-- [x] Conservare motore di gioco, fase di scarto, modalità Standard/Hi-Low e regola 75/25.
+- [x] Conservare motore di gioco, fase di scarto, modalità Standard/Hi-Low e regola di divisione dei piatti (poi definita come 50/50 per piatto).
 - [x] Verificare TypeScript, build, lobby, tavolo e ciclo automatico dei bot.
 - [x] Salvare un nuovo checkpoint e consegnare la revisione.
 
