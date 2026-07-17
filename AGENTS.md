@@ -262,6 +262,16 @@ On this repo the reviewers that appear on PRs are **CodeRabbit**, **Sourcery**, 
 
 Each push costs CI minutes. Batch review fixes into a single push per round; never push for cosmetic-only cleanups or to chase per-push-range false positives (a reviewer that only saw the last commit and thinks an earlier-commit implementation is "missing") — answer those in-thread with evidence, not a commit.
 
+### Active PR monitoring — required
+
+Reading comments once is not enough: after opening or updating a PR, follow it actively until it is merged or closed.
+
+- **Subscribe to PR events** as soon as you create it (or when asked to watch one): use `subscribe_pr_activity` (GitHub MCP tool) to receive `<github-webhook-activity>` events in-session — failed CI, reviews, inline comments. If `subscribe_pr_activity` is unavailable, fall back to controlled polling of checks/comments (no rapid `sleep` loops), respecting the check completion gate.
+- **For each event received:** investigate whether it is actionable. If the fix is small and safe, apply it (one patch, one push per round) and update status; if it is ambiguous or architectural, ask the owner before acting; if it is a known non-gate (Codex "usage limits", Sourcery rate-limit, CodeRabbit "Review skipped" because the base is not the default branch), skip with no action and say so.
+- **Reply in threads with evidence, never "by feel":** for a resolved finding write `Fatto in commit <SHA>` with the commands run and their result (`pnpm check`: PASS, `pnpm test`: PASS, file:line); for a non-applicable one write `Skipped / already covered` with the reason (outdated/duplicate/already-fixed/out-of-scope) and the proof. Do not rely on webhooks as the only signal: CI success, new pushes, and merge-conflict transitions are not always delivered as events — verify via API when needed.
+- **The subscription is not finished until the PR is merged or closed.** Do not spam PR comments: reply only when it genuinely helps (a fix that closes the point, or a question), not every round. Stop immediately if the owner asks you to stop.
+- **A push costs CI minutes:** batch fixes into a single push per round; do not push for cosmetic cleanups or to chase per-push-range false positives (answer those in-thread with evidence).
+
 ### Post-merge tracking of late comments
 
 Merge stays manual, owner-only. Because bot comments can arrive after the merge, the backstop is post-merge tracking. After a PR is merged/closed, when a review event lands on it, re-read it and look for inline comments / review bodies with `submitted_at` after the merge, unresolved threads, and check annotations. If something real/actionable is found, open a **GitHub Issue** recording each finding (PR number, head SHA, file:line, bot, severity, link) and, for real fixes, a **new dedicated fix PR** that branches from the latest `main` and follows the full sequence. Do not reuse or stack on the merged PR. One Issue may aggregate multiple findings; dedup before opening a new one.

@@ -115,6 +115,16 @@ Su questo repository i reviewer che compaiono sulle PR sono **CodeRabbit**, **So
 
 Ogni push consuma minuti CI. Sii parsimonioso: accorpa i fix di review in un solo push per giro; non pushare per cleanup puramente cosmetici o per rincorrere falsi positivi da diff-per-push (un reviewer che ha visto solo l'ultimo commit e crede «mancante» un'implementazione che sta in un commit precedente della stessa PR) — a quelli rispondi nel thread con l'evidenza, mai con un commit.
 
+## MONITORAGGIO ATTIVO DELLA PR — OBBLIGATORIO
+
+Non basta leggere i commenti una volta: dopo aver aperto o aggiornato una PR devi **seguirla attivamente** finché non è mergiata o chiusa.
+
+- **Iscriviti agli eventi della PR** appena la crei (o quando ti viene chiesto di sorvegliarne una): usa `subscribe_pr_activity` (tool MCP GitHub) per ricevere in sessione gli eventi `<github-webhook-activity>` — CI fallite, review, commenti inline. Se `subscribe_pr_activity` non è disponibile, ripiega sul polling controllato dei check/commenti (senza `sleep` a raffica) rispettando il check completion gate.
+- **Per ogni evento ricevuto**: indaga se è azionabile. Se il fix è piccolo e sicuro, applicalo (una patch, un solo push per giro) e aggiorna lo stato; se è ambiguo o architetturale, chiedi al proprietario prima di agire; se è un non-gate noto (Codex «usage limits», Sourcery rate-limit, CodeRabbit «Review skipped» perché la base non è il default branch) salta senza azione, dicendolo.
+- **Rispondi nei thread con l'evidenza, mai «a sensazione»**: per un finding risolto scrivi `Fatto in commit <SHA>` con i comandi eseguiti e l'esito (`pnpm check`: PASS, `pnpm test`: PASS, file:riga); per uno non applicabile scrivi `Skipped / already covered` con il motivo (outdated/duplicate/già coperto/fuori scope) e la prova. Non usare i webhook come unico segnale: CI verde, nuovi push e transizioni di merge-conflict non sempre arrivano come eventi — verifica anche via API quando serve.
+- **La sottoscrizione non è finita finché la PR non è mergiata o chiusa.** Non spammare commenti sulla PR: replica solo quando serve davvero (un fix che chiude il punto o una domanda), non a ogni giro. Fermati subito se il proprietario chiede di smettere.
+- **Un push consuma minuti CI**: accorpa i fix in un solo push per giro; non pushare per cleanup cosmetici o per rincorrere falsi positivi da diff-per-push (rispondi nel thread con l'evidenza).
+
 ## FINESTRA DI REVIEW POST-MERGE
 
 Il merge resta sempre manuale del proprietario. Poiché i commenti-bot possono arrivare **dopo** il merge, la rete di sicurezza è il **tracciamento post-merge**: quando arriva un evento review su una PR già mergiata/chiusa, rileggila e cerca inline comment / review body con `submitted_at` successivo al merge, thread non risolti e annotazioni dei check. Se trovi qualcosa di reale e azionabile, aprilo come **nuova Issue** (con numero PR, head SHA, file:riga, bot, severità, link) e, per i fix veri, una **nuova PR dedicata** che parte dall'ultimo `main` e segue tutto l'ordine operativo. Non riusare né stackare sopra la PR mergiata. Una sola Issue può aggregare più finding della stessa PR; deduplica prima di aprirne una nuova.
