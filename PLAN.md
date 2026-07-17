@@ -10,7 +10,7 @@ Realizzare una versione giocabile e visivamente premium di Sanzy Poker, con lobb
 | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
 | Gestione completa delle fasi e dei turni | Una mano demo avanza da ante a showdown senza blocchi                                       |
 | Valutazione di Piatto 1 e Piatto 2       | La UI mostra vincitori distinti e split coerente                                            |
-| Regola 50/50 per piatto                  | Ogni piatto (50) va diviso tra i suoi vincitori; chi li vince entrambi da solo prende 100%   |
+| Regola 50/50 per piatto                  | Ogni piatto (50) va diviso tra i suoi vincitori; chi li vince entrambi da solo prende 100%  |
 | Layout responsive                        | Lobby e tavolo leggibili a 1280×720 e 375×812                                               |
 | Animazioni senza interferenza            | Carte e fiches si muovono senza coprire controlli o punteggi                                |
 | Tavolo ancora percepito come UI 2D       | Una cattura mostra chiaramente sala, pavimento, rail, sedie e quattro corpi tridimensionali |
