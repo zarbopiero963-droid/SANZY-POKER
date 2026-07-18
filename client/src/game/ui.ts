@@ -1450,9 +1450,13 @@ export class PokerUI {
     slider.isEnabled = canRaise;
     placeTopLeft(slider, 14, 78);
     panel.addControl(slider);
+    // Importo di rilancio mostrato sul pulsante e aggiornato in tempo reale
+    // mentre si trascina lo slider (prima restava fisso al valore iniziale).
+    const raiseLabel = (value: number) =>
+      t("action.raiseN", { n: Math.round(value) });
     const raise = this.button(
-      "RAISE",
-      108,
+      raiseLabel(slider.value),
+      158,
       44,
       () => this.controller.humanAction("raise", Math.round(slider.value)),
       true
@@ -1460,18 +1464,9 @@ export class PokerUI {
     placeTopLeft(raise, 238, 67);
     raise.isEnabled = canRaise;
     panel.addControl(raise);
-    const amount = text(
-      "mobile-raise-amount",
-      `${Math.round(slider.value)}`,
-      10,
-      "#CBD0D6",
-      800
-    );
-    amount.width = "46px";
-    amount.height = "44px";
-    amount.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    placeTopLeft(amount, 350, 67);
-    panel.addControl(amount);
+    slider.onValueChangedObservable.add(value => {
+      if (raise.textBlock) raise.textBlock.text = raiseLabel(value);
+    });
   }
 
   private renderResultMobile(table: TableState) {
@@ -1892,14 +1887,18 @@ export class PokerUI {
     const amount = text(
       "raise-amount",
       t("bet.amount", { n: Math.round(slider.value) }),
-      11,
-      "#CBD0D6",
-      700
+      12,
+      ORANGE,
+      800
     );
     amount.width = "180px";
     amount.height = "30px";
     placeTopLeft(amount, 16, 151);
     panel.addControl(amount);
+    // L'importo si aggiorna mentre si trascina lo slider (era statico).
+    slider.onValueChangedObservable.add(value => {
+      amount.text = t("bet.amount", { n: Math.round(value) });
+    });
     const timer = rect(
       "decision-timer",
       280,
