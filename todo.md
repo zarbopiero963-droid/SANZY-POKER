@@ -9,7 +9,11 @@
 - [x] Variante propagata: `Home → GameCanvas(variant) → createGameScene(variant) → new GameController(demo, variant)`; niente più variante hardcoded.
 - [x] Test hard `i18n.test.ts` (26): completezza chiavi nelle 4 lingue, `describeHand` per ogni categoria, interpolazione, invarianza dell'italiano (regressione motore), integrazione col `GameController` (log/nome tavolo tradotti, gettoni intatti).
 - [x] Persistenza della lingua in `localStorage`; `document.documentElement.lang` aggiornato.
-- [ ] Migliorare la grafica 3D del tavolo di gioco → delega a un passaggio dedicato di design (`HANDOFF-DESIGN.md`).
+- [ ] Migliorare la grafica 3D del tavolo di gioco → passaggio di design a step (`HANDOFF-DESIGN.md`), **una PR alla volta dopo merge del proprietario**:
+  - [x] Step 1 — distribuzione carte: le carte del board (flop/turn/river/Piatto 2) scivolano dal mazzo allo slot e poi si girano scoperte (`createCard` con origine `dealFrom` + stagger; `scene.ts`). Solo rendering, motore invariato.
+  - [ ] Step 2 — fiches che convergono al piatto su ogni puntata.
+  - [ ] Step 3 — transizioni di fase/turno morbide (dissolvenze, bordo attivo, timer).
+  - [ ] Step 4 — stabilità/performance 60 fps, niente sfarfallio su mobile.
 
 ## Divisione dei piatti: regola definitiva 50/50 per piatto
 
