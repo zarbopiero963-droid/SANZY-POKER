@@ -1,17 +1,29 @@
 # Configurazione build per Railway (Nixpacks).
-# Fissa Node 22 e installa lo stesso pnpm della CI (10.4.1) via npm.
-# Nota: NON usiamo corepack perché su Node 22 le sue chiavi di firma
-# integrate falliscono la verifica del pacchetto pnpm scaricato dal
-# registry ("Cannot find matching keyid"); npm -g installa la versione
-# esatta senza quel passaggio di firma, come fa pnpm/action-setup in CI.
+# Fissa Node 22 e attiva pnpm 10.4.1 (stessa versione della CI) via corepack.
+#
+# Perché corepack e non "npm install -g pnpm":
+#  - corepack è incluso in Node ed è già nel PATH; i suoi shim mettono pnpm
+#    nel PATH per TUTTE le fasi (install, build, start). Con "npm install -g"
+#    invece il bin globale non finisce nel PATH dei layer successivi e la
+#    build fallisce con "pnpm: command not found" (exit 127).
+#
+# Perché COREPACK_INTEGRITY_KEYS=0:
+#  - su Node 22 le chiavi di firma integrate in corepack non verificano il
+#    pacchetto pnpm scaricato dal registry ("Internal Error: Cannot find
+#    matching keyid"); la variabile disattiva quel controllo di firma e
+#    lascia procedere l'attivazione della versione pinnata.
 providers = ["node"]
+
+[variables]
+COREPACK_INTEGRITY_KEYS = "0"
 
 [phases.setup]
 nixPkgs = ["nodejs_22"]
 
 [phases.install]
 cmds = [
-  "npm install -g pnpm@10.4.1",
+  "corepack enable",
+  "corepack prepare pnpm@10.4.1 --activate",
   "pnpm install --frozen-lockfile",
 ]
 
