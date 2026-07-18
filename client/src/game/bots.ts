@@ -12,6 +12,7 @@ import {
   type CardCode,
   type HandEvaluation,
 } from "./rules";
+import { t } from "./i18n";
 import type { PlayerState, TableState, PokerAction } from "./state";
 
 const BOT_PROFILES = [
@@ -48,7 +49,7 @@ export function createBot(index: number, chips: number): PlayerState {
     roundBet: 0,
     acted: false,
     paidBlind: false,
-    lastAction: "In attesa",
+    lastAction: t("act.waiting"),
   };
 }
 

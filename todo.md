@@ -1,5 +1,16 @@
 # Revisione grafica — client poker online
 
+## Flusso d'ingresso + internazionalizzazione (IT/EN/ES/FR)
+
+- [x] Schermata d'ingresso React: prima la scelta della **lingua** (IT/EN/ES/FR, default IT), poi il **logo Sanzy Poker** con i due pulsanti di variante **Standard / Hi-Low**; la variante scelta avvia la partita nella variante giusta.
+- [x] Logo vettoriale `SanzyLogo.tsx` ricostruito dal marchio originale (feltro ovale, SANZY bianco, POKER rosso, board dei due piatti, quattro semi agli angoli).
+- [x] Modulo `i18n.ts` con dizionari nelle 4 lingue, `t()`, `formatChips()` e `describeHand()` (nomi delle mani localizzati dai campi strutturati, senza toccare `rules.ts`).
+- [x] Traduzione completa dell'interfaccia di gioco (`ui.ts`) e dei testi dinamici del motore (`state.ts`/`bots.ts`: log, badge azione, showdown) via `t()`, con la lingua scelta all'avvio.
+- [x] Variante propagata: `Home → GameCanvas(variant) → createGameScene(variant) → new GameController(demo, variant)`; niente più variante hardcoded.
+- [x] Test hard `i18n.test.ts` (26): completezza chiavi nelle 4 lingue, `describeHand` per ogni categoria, interpolazione, invarianza dell'italiano (regressione motore), integrazione col `GameController` (log/nome tavolo tradotti, gettoni intatti).
+- [x] Persistenza della lingua in `localStorage`; `document.documentElement.lang` aggiornato.
+- [ ] Migliorare la grafica 3D del tavolo di gioco → delega a un passaggio dedicato di design (`HANDOFF-DESIGN.md`).
+
 ## Divisione dei piatti: regola definitiva 50/50 per piatto
 
 - [x] Chiarita la contraddizione interna del regolamento (§6 diceva 75/25, gli esempi Piero/Giuseppe/Chiara dicevano 50/50).

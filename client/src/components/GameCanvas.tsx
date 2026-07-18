@@ -7,8 +7,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { createGameScene, type GameHandle } from "@/game/scene";
+import type { Variant } from "@/game/rules";
+import { t } from "@/game/i18n";
 
-export default function GameCanvas() {
+type GameCanvasProps = {
+  variant?: Variant;
+};
+
+export default function GameCanvas({ variant = "standard" }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const startedRef = useRef(false);
   const [loading, setLoading] = useState(true);
@@ -24,7 +30,7 @@ export default function GameCanvas() {
     });
     let handle: GameHandle | null = null;
     let cancelled = false;
-    createGameScene(engine, canvas).then(game => {
+    createGameScene(engine, canvas, variant).then(game => {
       if (cancelled) {
         game.dispose();
         return;
@@ -73,7 +79,7 @@ export default function GameCanvas() {
         <div className="sanzy-loader" role="status" aria-live="polite">
           <span className="sanzy-loader-mark" />
           <strong>SANZY POKER</strong>
-          <small>Preparazione del tavolo…</small>
+          <small>{t("loader.preparing")}</small>
         </div>
       )}
     </main>

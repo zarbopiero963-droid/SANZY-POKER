@@ -25,7 +25,7 @@ import {
 } from "@babylonjs/core";
 import { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture";
 import { GameController, type PlayerState, type TableState } from "./state";
-import { cardParts, type CardCode } from "./rules";
+import { cardParts, type CardCode, type Variant } from "./rules";
 import { PokerUI } from "./ui";
 
 export type GameHandle = {
@@ -817,7 +817,8 @@ class PokerRoom3D {
 
 export async function createGameScene(
   engine: Engine,
-  canvas: HTMLCanvasElement
+  canvas: HTMLCanvasElement,
+  variant: Variant = "standard"
 ): Promise<GameHandle> {
   const scene = new Scene(engine);
   scene.clearColor = new Color4(0.012, 0.018, 0.02, 1);
@@ -856,7 +857,7 @@ export async function createGameScene(
   shadow.darkness = 0.42;
 
   const demo = new URLSearchParams(window.location.search).has("demo");
-  const controller = new GameController(demo);
+  const controller = new GameController(demo, variant);
   const room = new PokerRoom3D(scene, controller, shadow);
   const gui = AdvancedDynamicTexture.CreateFullscreenUI(
     "sanzy-poker-ui",

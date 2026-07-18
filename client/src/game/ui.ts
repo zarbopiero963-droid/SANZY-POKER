@@ -17,7 +17,13 @@ import {
   TextBlock,
 } from "@babylonjs/gui/2D";
 import { cardParts, type CardCode, type Variant } from "./rules";
+import { formatChips, t } from "./i18n";
 import type { GameController, PlayerState, TableState } from "./state";
+
+/** Etichetta breve e maiuscola della variante per le barre del tavolo. */
+function variantLabel(variant: Variant): string {
+  return variant === "hilow" ? "HI / LOW" : "STANDARD";
+}
 
 const BG = "#15181F";
 const TOP = "#20242CFA";
@@ -979,7 +985,7 @@ export class PokerUI {
     panel.addControl(name);
     const chips = text(
       `seat-chips-${player.id}`,
-      `${Math.round(player.chips).toLocaleString("it-IT")} chip`,
+      `${formatChips(player.chips)} ${t("chips.unit")}`,
       12,
       "#D6DBDF",
       700
@@ -1059,7 +1065,7 @@ export class PokerUI {
       avatar.addControl(initial);
       const name = text(
         `mobile-seat-name-${player.id}`,
-        `${player.name}  ·  ${Math.round(player.chips).toLocaleString("it-IT")}`,
+        `${player.name}  ·  ${formatChips(player.chips)}`,
         12,
         TEXT,
         800
@@ -1133,7 +1139,7 @@ export class PokerUI {
     panel.addControl(name);
     const chips = text(
       `mobile-seat-chips-${player.id}`,
-      `${Math.round(player.chips).toLocaleString("it-IT")}`,
+      formatChips(player.chips),
       10,
       "#D6DBDF",
       700
@@ -1176,7 +1182,7 @@ export class PokerUI {
     topBar.addControl(room);
     const roomMeta = text(
       "mobile-table-meta",
-      `${table.variant === "hilow" ? "HI / LOW" : "STANDARD"}  •  ${table.smallBlind}/${table.bigBlind}  •  MANO ${table.handNumber}`,
+      `${variantLabel(table.variant)}  •  ${table.smallBlind}/${table.bigBlind}  •  ${t("meta.hand", { n: table.handNumber })}`,
       9,
       MUTED,
       800
@@ -1185,7 +1191,7 @@ export class PokerUI {
     roomMeta.height = "22px";
     placeTopLeft(roomMeta, 16, 30);
     topBar.addControl(roomMeta);
-    const live = text("mobile-table-live", "● LIVE", 9, GREEN, 900);
+    const live = text("mobile-table-live", t("table.liveShort"), 9, GREEN, 900);
     live.width = "76px";
     live.height = "58px";
     live.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
@@ -1205,7 +1211,7 @@ export class PokerUI {
       "river",
       "pot2",
     ];
-    const phaseLabels = ["BUI", "SCARTO", "PRE", "FLOP", "TURN", "RIVER", "P2"];
+    const phaseLabels = phaseKeys.map(key => t(`phaseShort.${key}`));
     phaseLabels.forEach((label, index) => {
       const active = table.phase === phaseKeys[index];
       const done =
@@ -1262,7 +1268,7 @@ export class PokerUI {
       this.root.addControl(pot);
       const potText = text(
         "mobile-pot-text",
-        `PIATTO  ${Math.round(table.pot).toLocaleString("it-IT")}`,
+        t("pot.label", { n: formatChips(table.pot) }),
         11,
         ORANGE,
         900
@@ -1277,7 +1283,7 @@ export class PokerUI {
     this.root.addControl(boardOne);
     const boardOneText = text(
       "mobile-board-one-copy",
-      "P1  ·  3 + 2 + 1",
+      t("board.p1short"),
       9,
       "#B9D6CB",
       900
@@ -1290,7 +1296,7 @@ export class PokerUI {
     this.root.addControl(boardTwo);
     const boardTwoText = text(
       "mobile-board-two-copy",
-      "P2  ·  2",
+      t("board.p2short"),
       9,
       "#B9D6CB",
       900
@@ -1333,7 +1339,7 @@ export class PokerUI {
       this.root.addControl(hint);
       const hintText = text(
         "mobile-discard-hint-text",
-        "SCARTO · TOCCA UNA CARTA",
+        t("discard.hintMobile"),
         10,
         ORANGE,
         900
@@ -1360,7 +1366,7 @@ export class PokerUI {
     if (table.status === "waiting") {
       const completed = text(
         "mobile-completed",
-        table.lastResult ? "Mano completata" : "Tavolo pronto",
+        table.lastResult ? t("waiting.done") : t("waiting.ready"),
         15,
         TEXT,
         900
@@ -1370,7 +1376,7 @@ export class PokerUI {
       placeTopLeft(completed, 14, 8);
       panel.addControl(completed);
       const start = this.button(
-        table.handNumber === 0 ? "GIOCA" : "NUOVA MANO",
+        table.handNumber === 0 ? t("button.play") : t("button.newHand"),
         190,
         48,
         () => this.controller.startHand(),
@@ -1393,7 +1399,7 @@ export class PokerUI {
     fold.isEnabled = humanTurn;
     panel.addControl(fold);
     const checkCall = this.button(
-      callAmount ? `CALL ${callAmount}` : "CHECK",
+      callAmount ? t("action.callN", { n: callAmount }) : "CHECK",
       128,
       44,
       () => this.controller.humanAction(callAmount ? "call" : "check"),
@@ -1411,8 +1417,10 @@ export class PokerUI {
     const timerText = text(
       "mobile-turn-state",
       humanTurn
-        ? "TOCCA A TE"
-        : `${table.players[table.turnIndex]?.name ?? "Dealer"} pensa…`,
+        ? t("turn.yours")
+        : t("decision.thinkingShort", {
+            name: table.players[table.turnIndex]?.name ?? t("dealer.fallback"),
+          }),
       9,
       humanTurn ? ORANGE : MUTED,
       900
@@ -1476,7 +1484,7 @@ export class PokerUI {
     this.root.addControl(overlay);
     const eyebrow = text(
       "mobile-result-eyebrow",
-      `SHOWDOWN  ·  ${result.splitRule === "solo" ? "VINCITORE UNICO" : "PIATTI 50 / 50"}`,
+      `${t("result.showdown")}  ·  ${result.splitRule === "solo" ? t("result.solo") : t("result.split")}`,
       10,
       ORANGE,
       900
@@ -1508,7 +1516,7 @@ export class PokerUI {
     placeTopLeft(pot2, 14, 64);
     overlay.addControl(pot2);
     const close = this.button(
-      "NUOVA MANO",
+      t("button.newHand"),
       112,
       78,
       () => this.controller.startHand(),
@@ -1531,7 +1539,7 @@ export class PokerUI {
     topBar.addControl(room);
     const roomMeta = text(
       "table-room-meta",
-      `${table.variant === "hilow" ? "HI / LOW" : "STANDARD"}   •   ${table.smallBlind} / ${table.bigBlind}   •   MANO ${table.handNumber}`,
+      `${variantLabel(table.variant)}   •   ${table.smallBlind} / ${table.bigBlind}   •   ${t("meta.hand", { n: table.handNumber })}`,
       11,
       MUTED,
       700
@@ -1540,7 +1548,7 @@ export class PokerUI {
     roomMeta.height = "58px";
     placeTopLeft(roomMeta, 714, 0);
     topBar.addControl(roomMeta);
-    const live = text("table-live", "●  PARTITA LIVE", 11, GREEN, 800);
+    const live = text("table-live", t("table.live"), 11, GREEN, 800);
     live.width = "160px";
     live.height = "58px";
     live.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
@@ -1551,7 +1559,7 @@ export class PokerUI {
     const phasePanel = rect("phase-panel", 190, 438, PANEL_3, 7);
     placeTopLeft(phasePanel, 16, 76);
     this.root.addControl(phasePanel);
-    const phaseTitle = text("phase-title", "SVOLGIMENTO", 11, MUTED, 800);
+    const phaseTitle = text("phase-title", t("phase.title"), 11, MUTED, 800);
     phaseTitle.width = "158px";
     phaseTitle.height = "38px";
     placeTopLeft(phaseTitle, 16, 8);
@@ -1565,15 +1573,7 @@ export class PokerUI {
       "river",
       "pot2",
     ];
-    const phaseLabels = [
-      "Bui",
-      "Scarto",
-      "Pre-board",
-      "Flop",
-      "Turn",
-      "River",
-      "Piatto 2",
-    ];
+    const phaseLabels = phaseKeys.map(key => t(`phase.${key}`));
     phaseLabels.forEach((label, index) => {
       const active = table.phase === phaseKeys[index];
       const done =
@@ -1623,7 +1623,7 @@ export class PokerUI {
     const logPanel = rect("log-panel", 190, 248, PANEL_3, 7);
     placeTopLeft(logPanel, 16, 528);
     this.root.addControl(logPanel);
-    const logTitle = text("log-title", "AZIONI", 11, MUTED, 800);
+    const logTitle = text("log-title", t("log.title"), 11, MUTED, 800);
     logTitle.width = "158px";
     logTitle.height = "34px";
     placeTopLeft(logTitle, 16, 5);
@@ -1663,7 +1663,7 @@ export class PokerUI {
     this.root.addControl(pot);
     const potText = text(
       "pot-text",
-      `PIATTO  ${Math.round(table.pot).toLocaleString("it-IT")}`,
+      t("pot.label", { n: formatChips(table.pot) }),
       14,
       ORANGE,
       900
@@ -1688,13 +1688,7 @@ export class PokerUI {
       copy.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       this.root.addControl(copy);
     });
-    const pot1Label = text(
-      "pot1-label",
-      "BOARD · PIATTO 1",
-      10,
-      "#9CC1B3",
-      800
-    );
+    const pot1Label = text("pot1-label", t("board.p1"), 10, "#9CC1B3", 800);
     pot1Label.width = "210px";
     pot1Label.height = "24px";
     pot1Label.left = "-337px";
@@ -1709,7 +1703,7 @@ export class PokerUI {
     separator.top = "250px";
     separator.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     this.root.addControl(separator);
-    const pot2Label = text("pot2-label", "PIATTO 2", 10, "#9CC1B3", 800);
+    const pot2Label = text("pot2-label", t("board.p2"), 10, "#9CC1B3", 800);
     pot2Label.width = "110px";
     pot2Label.height = "24px";
     pot2Label.left = "352px";
@@ -1759,7 +1753,7 @@ export class PokerUI {
       this.root.addControl(hint);
       const hintText = text(
         "discard-hint-text",
-        "SCARTO: SELEZIONA UNA CARTA",
+        t("discard.hint"),
         11,
         ORANGE,
         900
@@ -1779,7 +1773,7 @@ export class PokerUI {
     this.root.addControl(panel);
     const title = text(
       "action-title",
-      humanTurn ? "TOCCA A TE" : "AZIONI",
+      humanTurn ? t("turn.yours") : t("panel.actions"),
       12,
       humanTurn ? ORANGE : MUTED,
       900
@@ -1793,8 +1787,8 @@ export class PokerUI {
       const completed = text(
         "completed",
         table.lastResult
-          ? `SHOWDOWN · ${table.lastResult.splitRule === "solo" ? "VINCITORE UNICO" : "50 / 50"}`
-          : "Tavolo pronto",
+          ? `${t("result.showdown")} · ${table.lastResult.splitRule === "solo" ? t("result.solo") : t("result.splitShort")}`
+          : t("waiting.ready"),
         18,
         table.lastResult ? ORANGE : TEXT,
         900
@@ -1828,7 +1822,7 @@ export class PokerUI {
         panel.addControl(pot2);
       }
       const start = this.button(
-        table.handNumber === 0 ? "GIOCA" : "NUOVA MANO",
+        table.handNumber === 0 ? t("button.play") : t("button.newHand"),
         280,
         52,
         () => this.controller.startHand(),
@@ -1851,7 +1845,7 @@ export class PokerUI {
     fold.isEnabled = humanTurn;
     panel.addControl(fold);
     const checkCall = this.button(
-      callAmount ? `CALL ${callAmount}` : "CHECK",
+      callAmount ? t("action.callN", { n: callAmount }) : "CHECK",
       102,
       46,
       () => this.controller.humanAction(callAmount ? "call" : "check"),
@@ -1897,7 +1891,7 @@ export class PokerUI {
     panel.addControl(raise);
     const amount = text(
       "raise-amount",
-      `Puntata: ${Math.round(slider.value)}`,
+      t("bet.amount", { n: Math.round(slider.value) }),
       11,
       "#CBD0D6",
       700
@@ -1919,8 +1913,10 @@ export class PokerUI {
     const timerText = text(
       "decision-timer-text",
       humanTurn
-        ? "●  DECISIONE  18s"
-        : `${table.players[table.turnIndex]?.name ?? "Dealer"} sta pensando…`,
+        ? t("decision.timer")
+        : t("decision.thinking", {
+            name: table.players[table.turnIndex]?.name ?? t("dealer.fallback"),
+          }),
       11,
       humanTurn ? ORANGE : MUTED,
       800
@@ -1938,7 +1934,7 @@ export class PokerUI {
     this.root.addControl(overlay);
     const eyebrow = text(
       "result-eyebrow",
-      `SHOWDOWN  ·  ${result.splitRule === "solo" ? "VINCITORE UNICO" : "PIATTI 50 / 50"}`,
+      `${t("result.showdown")}  ·  ${result.splitRule === "solo" ? t("result.solo") : t("result.split")}`,
       11,
       ORANGE,
       900
@@ -1951,7 +1947,7 @@ export class PokerUI {
     overlay.addControl(eyebrow);
     const title = text(
       "result-title",
-      result.splitRule === "solo" ? "VINCITORE UNICO" : "DIVISIONE 50 / 50",
+      result.splitRule === "solo" ? t("result.solo") : t("result.titleSplit"),
       25,
       TEXT,
       900
@@ -1964,7 +1960,7 @@ export class PokerUI {
     overlay.addControl(title);
     const pot1 = text(
       "result-pot1",
-      `PIATTO 1  ·  ${result.bestPot1}  ·  ${result.pot1Winners.join(", ")}`,
+      `${t("result.pot1")}  ·  ${result.bestPot1}  ·  ${result.pot1Winners.join(", ")}`,
       13,
       "#D7DCE1",
       700
@@ -1977,7 +1973,7 @@ export class PokerUI {
     overlay.addControl(pot1);
     const pot2 = text(
       "result-pot2",
-      `PIATTO 2  ·  ${result.bestPot2}  ·  ${result.pot2Winners.join(", ")}`,
+      `${t("result.pot2")}  ·  ${result.bestPot2}  ·  ${result.pot2Winners.join(", ")}`,
       13,
       "#D7DCE1",
       700
@@ -1989,7 +1985,7 @@ export class PokerUI {
     pot2.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     overlay.addControl(pot2);
     const close = this.button(
-      "CONTINUA",
+      t("button.continue"),
       160,
       38,
       () => this.controller.startHand(),
