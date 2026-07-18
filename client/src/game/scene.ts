@@ -468,13 +468,19 @@ class PokerRoom3D {
   private roomRoot: TransformNode;
   private tableRoot: TransformNode;
   private dynamicRoot: TransformNode;
+  private chipsRoot: TransformNode;
   private stations: TransformNode[] = [];
   private mobile = false;
   private renderedHandNumber = -1;
   private renderedBoard1Revealed = 0;
   private renderedBoard2Revealed = false;
   private unsubscribe: () => void;
-  private lastSignature = "";
+  // Firme separate: le carte si ricostruiscono solo quando cambiano davvero
+  // (fase/mano/scoperta), le fiches del piatto solo quando cambia il numero di
+  // gettoni. Così una puntata NON distrugge e ricrea le carte a ogni evento —
+  // niente più lampeggio o texture "grigie" durante i movimenti.
+  private lastCardSignature = "";
+  private lastChipSignature = "";
 
   constructor(
     private scene: Scene,
@@ -485,6 +491,8 @@ class PokerRoom3D {
     this.tableRoot = new TransformNode("poker-table-root", scene);
     this.dynamicRoot = new TransformNode("dynamic-table-content", scene);
     this.dynamicRoot.parent = this.tableRoot;
+    this.chipsRoot = new TransformNode("dynamic-pot-chips", scene);
+    this.chipsRoot.parent = this.tableRoot;
     this.buildRoom();
     this.buildTable();
     this.unsubscribe = controller.subscribe((table, screen) =>
@@ -665,7 +673,8 @@ class PokerRoom3D {
     // tavolo e le board 3D, ma rimuoviamo modelli e oggetti decorativi che
     // finivano sotto badge, piatto e carte operative.
     this.stations.forEach(station => station.setEnabled(!mobile));
-    this.lastSignature = "";
+    this.lastCardSignature = "";
+    this.lastChipSignature = "";
     this.update(this.controller.table, this.controller.screen);
   }
 
@@ -750,9 +759,12 @@ class PokerRoom3D {
   private update(table: TableState, screen: "lobby" | "table") {
     this.tableRoot.setEnabled(screen === "table");
     if (screen !== "table") return;
-    const signature = `${table.eventSerial}-${table.phase}-${table.board1Revealed}-${table.board2Revealed}-${table.revealAll}-${table.players.map(player => player.cards.length).join("-")}`;
-    if (signature === this.lastSignature) return;
-    this.lastSignature = signature;
+    this.syncPotChips(table);
+    // Le carte dipendono solo da fase/mano/scoperta/scarto/dealer: NON da
+    // eventSerial né dal piatto. Evita di distruggerle a ogni puntata.
+    const cardSignature = `${table.handNumber}-${table.phase}-${table.board1Revealed}-${table.board2Revealed}-${table.revealAll}-${table.dealerIndex}-${this.mobile ? "m" : "d"}-${table.players.map(player => player.cards.length).join("-")}`;
+    if (cardSignature === this.lastCardSignature) return;
+    this.lastCardSignature = cardSignature;
     this.dynamicRoot.dispose(false, true);
     this.dynamicRoot = new TransformNode("dynamic-table-content", this.scene);
     this.dynamicRoot.parent = this.tableRoot;
@@ -822,23 +834,6 @@ class PokerRoom3D {
       table.players.forEach((player, index) =>
         this.renderPlayerCards(this.dynamicRoot, table, player, index)
       );
-      for (
-        let index = 0;
-        index < Math.min(18, Math.max(4, Math.ceil(table.pot / 50)));
-        index += 1
-      ) {
-        const column = index % 6;
-        const row = Math.floor(index / 6);
-        createChip(
-          this.scene,
-          this.dynamicRoot,
-          `pot-chip-${index}`,
-          -0.75 + column * 0.3,
-          1.84 + row * 0.064,
-          1.28 + (column % 2) * 0.12,
-          index % 2 ? GOLD : new Color3(0.82, 0.12, 0.12)
-        );
-      }
       const dealerPositions = [
         new Vector3(-2.8, 1.84, -2.05),
         new Vector3(-3.55, 1.84, -1.55),
@@ -863,6 +858,36 @@ class PokerRoom3D {
     this.renderedHandNumber = table.handNumber;
     this.renderedBoard1Revealed = table.board1Revealed;
     this.renderedBoard2Revealed = table.board2Revealed;
+  }
+
+  /**
+   * Fiches del piatto in un root dedicato: si ricostruiscono SOLO quando cambia
+   * il numero di gettoni, non a ogni evento. Separandole dalle carte, una
+   * puntata non tocca le carte (niente lampeggio/grigio durante i movimenti).
+   */
+  private syncPotChips(table: TableState) {
+    const chipCount = this.mobile
+      ? 0
+      : Math.min(18, Math.max(4, Math.ceil(table.pot / 50)));
+    const chipSignature = `${chipCount}`;
+    if (chipSignature === this.lastChipSignature) return;
+    this.lastChipSignature = chipSignature;
+    this.chipsRoot.dispose(false, true);
+    this.chipsRoot = new TransformNode("dynamic-pot-chips", this.scene);
+    this.chipsRoot.parent = this.tableRoot;
+    for (let index = 0; index < chipCount; index += 1) {
+      const column = index % 6;
+      const row = Math.floor(index / 6);
+      createChip(
+        this.scene,
+        this.chipsRoot,
+        `pot-chip-${index}`,
+        -0.75 + column * 0.3,
+        1.84 + row * 0.064,
+        1.28 + (column % 2) * 0.12,
+        index % 2 ? GOLD : new Color3(0.82, 0.12, 0.12)
+      );
+    }
   }
 
   dispose() {
