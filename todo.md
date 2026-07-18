@@ -11,7 +11,6 @@
 - [x] Persistenza della lingua in `localStorage`; `document.documentElement.lang` aggiornato.
 - [ ] Migliorare la grafica 3D del tavolo di gioco → delega a un passaggio dedicato di design (`HANDOFF-DESIGN.md`).
 
-
 ## Divisione dei piatti: regola definitiva 50/50 per piatto
 
 - [x] Chiarita la contraddizione interna del regolamento (§6 diceva 75/25, gli esempi Piero/Giuseppe/Chiara dicevano 50/50).

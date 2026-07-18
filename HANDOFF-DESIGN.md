@@ -94,7 +94,7 @@ Non modificare (motore): `rules.ts`, `state.ts` (salvo etichette via `t()`),
 
 ```ts
 import { t, formatChips, describeHand } from "@/game/i18n";
-t("turn.yours");                 // "TOCCA A TE" / "YOUR TURN" / …
+t("turn.yours"); // "TOCCA A TE" / "YOUR TURN" / …
 t("pot.label", { n: formatChips(pot) });
 ```
 
