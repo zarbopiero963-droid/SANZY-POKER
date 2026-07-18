@@ -218,3 +218,5 @@ Nel caso di due o più coppie uguali e di due o più doppie coppie uguali si gua
 ---
 
 **Autore del gioco Sanzy Poker: Piero Zarbo.**
+
+**Regolamento dell'11 aprile 2018 — Versione 1.0.**
