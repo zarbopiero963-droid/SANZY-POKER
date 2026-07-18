@@ -4,6 +4,8 @@
 
 Realizzare una versione giocabile e visivamente premium di Sanzy Poker, con lobby dinamica, tavolo 2–4 giocatori, bot automatici, animazioni di distribuzione e divisione del piatto 50/50 per piatto (ogni piatto vale 50, diviso tra i suoi vincitori).
 
+**Ingresso e lingue:** all'apertura si sceglie prima la lingua (IT/EN/ES/FR, default IT), poi il logo Sanzy Poker con i due pulsanti di variante (Standard / Hi-Low) avvia la partita. L'interfaccia è completamente internazionalizzata (`i18n.ts`, testi via `t()`), senza toccare regole e matematica. Il miglioramento della grafica 3D è delegato a un passaggio di design dedicato (`HANDOFF-DESIGN.md`).
+
 ## Rischi principali
 
 | Rischio                                  | Criterio di verifica                                                                        |
