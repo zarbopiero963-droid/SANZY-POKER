@@ -2,9 +2,7 @@
 
 Sanzy Poker Pro è un client di poker giocabile nel browser (React + Vite + TypeScript, rendering 3D Babylon.js) che implementa la specialità **Sanzy Poker**, ideata da **Piero Zarbo**.
 
-Questo README raccoglie la trascrizione fedele dei documenti ufficiali del regolamento forniti dall'autore. Sono trascritti in copia integrale i quattro documenti; sono stati esclusi i documenti d'identità personali eventualmente allegati ai file originali.
-
-> **Nota sulla divisione dei piatti.** Il documento principale (§6) riporta, per 3 e 4 giocatori, una divisione **75/25**. I documenti «regole da sistemare (3 giocatori)» e «regole da sistemare (4 giocatori)» sono la **versione corretta e definitiva**: la divisione è **50/50 per piatto** (ogni piatto vale 50 ed è diviso in parti uguali tra i suoi vincitori; chi vince entrambi da solo prende il 100%). È questa la regola implementata nel gioco. La §6 del documento principale è conservata qui sotto per completezza storica, ma è **superata** dai documenti «regole da sistemare» per quanto riguarda 3 e 4 giocatori.
+Questo README raccoglie la trascrizione dei documenti ufficiali del regolamento forniti dall'autore (regolamento principale, regole di divisione a 3 e 4 giocatori e regolamento Hi/Low). Sono stati esclusi i documenti d'identità personali eventualmente allegati ai file originali.
 
 ---
 
@@ -124,8 +122,6 @@ Nel caso di due o più coppie uguali e di due o più doppie coppie uguali non si
 
 ### 6) Regole per la divisione del piatto: divisione – split
 
-> **Attenzione:** la divisione 75/25 riportata qui sotto per 3 e 4 giocatori è **superata** dai documenti «regole da sistemare» (vedi più avanti). La regola definitiva è **50/50 per piatto**.
-
 Capita spesso che due o più giocatori abbiano, alla fine dello showdown, lo stesso punteggio. Qualcuno potrebbe pensare che, in questi casi di uguaglianza, il piatto debba essere suddiviso 50-50%, ma questo non è sempre il caso, in quanto vengono applicate le regole fondamentali per la divisione dei piatti che determineranno se il totale dei 2 piatti sarà assegnato a un giocatore o diviso tra tutti o alcuni dei concorrenti.
 
 **IL VALORE DEI DUE PIATTI SOMMATI È UGUALE A 100. IL VALORE DEL PIATTO 1 (PIATTO SOTTO) È UGUALE A 50. IL VALORE DEL PIATTO 2 (PIATTO SOPRA) È UGUALE A 50.**
@@ -138,7 +134,7 @@ Capita spesso che due o più giocatori abbiano, alla fine dello showdown, lo ste
 - Se entrambi i 2 giocatori hanno la stessa combinazione solamente nel piatto 2 e nel piatto 1 nessuno dei due crea una combinazione, entrambi dividono 50-50%.
 - Se entrambi i 2 giocatori hanno la stessa combinazione nel piatto 1 mentre l'altro giocatore ha la combinazione migliore nel piatto 2, il totale del piatto verrà diviso 75-25%: 75% al giocatore con la migliore combinazione nel piatto 2 perché vincitore assoluto; 25% verrà diviso a metà tra i due che hanno la stessa combinazione (12,5-12,5). Con un totale del piatto di 1000 verrà diviso: 750 andrà al giocatore vincitore assoluto, 250 verrà diviso 125 a ciascuno.
 
-**Con 3 giocatori (versione §6, superata — vedi «regole da sistemare»):**
+**Con 3 giocatori:**
 
 - Se solo uno dei 3 giocatori ha la combinazione migliore in entrambi i due piatti (1 e 2), ha la vincita assoluta del 100%.
 - Se 2 di 3 giocatori hanno la stessa combinazione migliore nel piatto 1 mentre nel piatto 2 solo un giocatore ha la migliore combinazione, è diviso 75-25% del totale (75 al giocatore con la migliore combinazione al piatto 2, il 25% diviso tra i restanti 2 giocatori).
@@ -147,7 +143,7 @@ Capita spesso che due o più giocatori abbiano, alla fine dello showdown, lo ste
 - Se 3 giocatori hanno la stessa combinazione migliore nel piatto 2 mentre nel piatto 1 solo uno dei giocatori ha la migliore combinazione, è diviso 75-25% del totale (75 al giocatore con la migliore combinazione al piatto 1, il 25% diviso tra i 3 giocatori).
 - Se 3 giocatori hanno la stessa combinazione migliore nel piatto 1 mentre nel piatto 2 nessuno dei 3 giocatori crea una combinazione, dividono il 25% del piatto.
 
-**Con 4 giocatori (versione §6, superata — vedi «regole da sistemare»):**
+**Con 4 giocatori:**
 
 - Se solo uno dei 4 giocatori ha la combinazione migliore in entrambi i due piatti (1 e 2), ha la vincita assoluta del 100%.
 - Se 3 di 4 giocatori hanno la stessa combinazione migliore nel piatto 1 mentre nel piatto 2 solo un giocatore ha la migliore combinazione, è diviso 75-25% del totale (75 al giocatore con la migliore combinazione al piatto 2, il 25% diviso tra i restanti 3 giocatori).
@@ -159,15 +155,15 @@ Capita spesso che due o più giocatori abbiano, alla fine dello showdown, lo ste
 
 ---
 
-## Regole da sistemare — 3 giocatori (versione corretta: 50/50 per piatto)
+## Regole da sistemare — 3 giocatori
 
 **Con 3 giocatori:**
 
 - Se solo uno dei 3 giocatori ha la combinazione migliore in entrambi i due piatti (1 e 2), ha la vincita assoluta del 100%.
 
-- Se 2 di 3 giocatori (esempio: Piero, Giuseppe, Chiara): Chiara e Giuseppe hanno la stessa combinazione migliore nel piatto 1 (pareggiano) mentre, nel piatto 2, solo Piero ha la migliore combinazione. È diviso 50% (solo Piero) – 50% (diviso tra Chiara e Giuseppe) del totale: quindi 50% va a Piero con la migliore combinazione al piatto 2; l'altra parte del 50% spetterà a Giuseppe e Chiara perché vincitori del piatto 1 ma pareggiano (ovvero metà di quel 50% ciascuno). **(1)**
+- Se 2 di 3 giocatori (esempio: Piero, Giuseppe, Chiara): Chiara e Giuseppe hanno la stessa combinazione migliore nel piatto 1 (pareggiano) mentre, nel piatto 2, solo Piero ha la migliore combinazione. È diviso 50% (solo Piero) – 50% (diviso tra Chiara e Giuseppe) del totale: quindi 50% va a Piero con la migliore combinazione al piatto 2; l'altra parte del 50% spetterà a Giuseppe e Chiara perché vincitori del piatto 1 ma pareggiano (ovvero metà del piatto 1, 25% diviso due). **(1)**
 
-- Se 2 di 3 giocatori (esempio: Piero, Giuseppe, Chiara): Chiara e Giuseppe hanno la stessa combinazione migliore nel piatto 2 (pareggiano) mentre, nel piatto 1, solo Piero ha la migliore combinazione. È diviso 50% (solo Piero) – 50% (diviso tra Chiara e Giuseppe) del totale: quindi 50% va a Piero con la migliore combinazione al piatto 1; il 50% spetterà a Giuseppe e Chiara perché vincitori del piatto 2 ma pareggiano (ovvero metà di quel 50% ciascuno). **(2)**
+- Se 2 di 3 giocatori (esempio: Piero, Giuseppe, Chiara): Chiara e Giuseppe hanno la stessa combinazione migliore nel piatto 2 (pareggiano) mentre, nel piatto 1, solo Piero ha la migliore combinazione. È diviso 50% (solo Piero) – 50% (diviso tra Chiara e Giuseppe) del totale: quindi 50% va a Piero con la migliore combinazione al piatto 1; il 50% spetterà a Giuseppe e Chiara perché vincitori del piatto 2 ma pareggiano (ovvero metà del piatto 2, 25% diviso due). **(2)**
 
 - Se 3 giocatori (esempio: Piero, Giuseppe, Chiara): tutti e tre hanno la stessa combinazione migliore nel piatto 1 (pareggiano) mentre, nel piatto 2, solo Piero ha la migliore combinazione. È diviso 50% (solo Piero) – 50% (Giuseppe, Chiara e Piero) del totale. (Il 50% è la somma di un intero piatto vinto in assoluto.) Quindi 50% va a Piero con la migliore combinazione al piatto 2 + Piero divide insieme a Giuseppe e Chiara il 50% del piatto 1. **(3)**
 
@@ -177,7 +173,7 @@ Capita spesso che due o più giocatori abbiano, alla fine dello showdown, lo ste
 
 ---
 
-## Regole da sistemare — 4 giocatori (versione corretta: 50/50 per piatto)
+## Regole da sistemare — 4 giocatori
 
 **Con 4 giocatori:**
 
@@ -195,7 +191,7 @@ Capita spesso che due o più giocatori abbiano, alla fine dello showdown, lo ste
 
 - **Non può verificarsi che 4 giocatori abbiano la stessa combinazione migliore al piatto 2 (pareggiano).**
 
-- Se 2 di 4 giocatori (esempio: Piero, Giuseppe, Chiara e Giusy): Giusy e Piero hanno la stessa combinazione migliore nel piatto 1, mentre nel piatto 2 Chiara e Giuseppe hanno la migliore combinazione. È diviso 50-50% del totale (50% va diviso a Giusy e Piero con la migliore combinazione al piatto 1; il restante 50% verrà diviso tra Chiara e Giuseppe con la migliore combinazione al piatto 2, in parti uguali, se possibile per eccesso). **(3)**
+- Se 2 di 4 giocatori (esempio: Piero, Giuseppe, Chiara e Giusy): Giusy e Piero hanno la stessa combinazione migliore nel piatto 1, mentre nel piatto 2 Chiara e Giuseppe hanno la migliore combinazione. È diviso 50-50% del totale (50% va diviso a Piero e Giuseppe con la migliore combinazione al piatto 1; il restante 50% verrà diviso tra Giusy e Chiara con la migliore combinazione al piatto 2, in parti uguali, se possibile per eccesso). **(3)**
 
 ---
 
