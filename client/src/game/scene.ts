@@ -262,7 +262,8 @@ function createCard(
   x: number,
   z: number,
   rotation = 0,
-  flipDelayFrames = -1
+  flipDelayFrames = -1,
+  dealFrom?: { x: number; z: number }
 ) {
   const card = MeshBuilder.CreateBox(
     name,
@@ -324,14 +325,55 @@ function createCard(
   backPlane.material = backMat;
 
   if (face && flipDelayFrames >= 0) {
+    // Distribuzione: la carta attende il suo turno (stagger `delay`), poi
+    // scivola dal mazzo allo slot (`slide` frame) e infine si gira scoperta.
     const delay = Math.max(0, flipDelayFrames);
-    const middle = delay + 13;
-    const end = delay + 26;
-    card.rotation.x = Math.PI;
-    card.position.y = 1.86;
+    const dealing = dealFrom != null;
+    const slide = dealing ? 12 : 0;
+    const flipStart = delay + slide;
+    const middle = flipStart + 13;
+    const end = flipStart + 26;
+    card.rotation.x = Math.PI; // parte coperta
 
     const easing = new CubicEase();
     easing.setEasingMode(EasingFunction.EASINGMODE_EASEINOUT);
+    const animations: Animation[] = [];
+
+    if (dealing) {
+      card.position.x = dealFrom.x;
+      card.position.z = dealFrom.z;
+      const slideX = new Animation(
+        `${name}-slide-x`,
+        "position.x",
+        60,
+        Animation.ANIMATIONTYPE_FLOAT,
+        Animation.ANIMATIONLOOPMODE_CONSTANT
+      );
+      slideX.setKeys([
+        { frame: 0, value: dealFrom.x },
+        { frame: delay, value: dealFrom.x },
+        { frame: flipStart, value: x },
+      ]);
+      slideX.setEasingFunction(easing);
+      const slideZ = new Animation(
+        `${name}-slide-z`,
+        "position.z",
+        60,
+        Animation.ANIMATIONTYPE_FLOAT,
+        Animation.ANIMATIONLOOPMODE_CONSTANT
+      );
+      slideZ.setKeys([
+        { frame: 0, value: dealFrom.z },
+        { frame: delay, value: dealFrom.z },
+        { frame: flipStart, value: z },
+      ]);
+      slideZ.setEasingFunction(easing);
+      animations.push(slideX, slideZ);
+    }
+
+    const startY = dealing ? 2.12 : 1.86;
+    card.position.y = startY;
+
     const flip = new Animation(
       `${name}-flip`,
       "rotation.x",
@@ -341,7 +383,7 @@ function createCard(
     );
     flip.setKeys([
       { frame: 0, value: Math.PI },
-      { frame: delay, value: Math.PI },
+      { frame: flipStart, value: Math.PI },
       { frame: middle, value: Math.PI / 2 },
       { frame: end, value: 0 },
     ]);
@@ -354,14 +396,25 @@ function createCard(
       Animation.ANIMATIONTYPE_FLOAT,
       Animation.ANIMATIONLOOPMODE_CONSTANT
     );
-    lift.setKeys([
-      { frame: 0, value: 1.86 },
-      { frame: delay, value: 1.86 },
-      { frame: middle, value: 2.18 },
-      { frame: end, value: 1.83 },
-    ]);
+    lift.setKeys(
+      dealing
+        ? [
+            { frame: 0, value: startY },
+            { frame: delay, value: startY },
+            { frame: flipStart, value: 1.86 },
+            { frame: middle, value: 2.18 },
+            { frame: end, value: 1.83 },
+          ]
+        : [
+            { frame: 0, value: 1.86 },
+            { frame: delay, value: 1.86 },
+            { frame: middle, value: 2.18 },
+            { frame: end, value: 1.83 },
+          ]
+    );
     lift.setEasingFunction(easing);
-    card.animations = [flip, lift];
+    animations.push(flip, lift);
+    card.animations = animations;
     scene.beginAnimation(card, 0, end, false);
   }
   return card;
@@ -711,6 +764,8 @@ class PokerRoom3D {
       : this.renderedBoard2Revealed;
 
     const board1X = [-2.55, -1.7, -0.85, 0.18, 1.03, 2.05];
+    // Punto "mazzo" da cui le carte scoperte scivolano fino allo slot.
+    const DEAL_FROM = { x: 0, z: -1.35 };
     table.board1.forEach((code, index) => {
       const visible = index < table.board1Revealed || table.revealAll;
       const newlyRevealed =
@@ -725,7 +780,8 @@ class PokerRoom3D {
           board1X[index],
           0.15,
           0,
-          newlyRevealed ? (index - previousBoard1Revealed) * 7 : -1
+          newlyRevealed ? (index - previousBoard1Revealed) * 7 : -1,
+          newlyRevealed ? DEAL_FROM : undefined
         );
       else
         createSlot(
@@ -750,7 +806,8 @@ class PokerRoom3D {
           3.28,
           -0.52 + index * 1.08,
           0,
-          newlyRevealed ? index * 8 : -1
+          newlyRevealed ? index * 8 : -1,
+          newlyRevealed ? DEAL_FROM : undefined
         );
       else
         createSlot(
