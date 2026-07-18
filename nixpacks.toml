@@ -1,12 +1,17 @@
 # Configurazione build per Railway (Nixpacks).
-# Fissa Node 22 e pnpm, con più heap per la build Babylon/Vite.
+# Fissa Node 22 e usa lo stesso pnpm della CI (10.4.1, via corepack),
+# con più heap per la build Babylon/Vite.
 providers = ["node"]
 
 [phases.setup]
-nixPkgs = ["nodejs_22", "pnpm-9_x"]
+nixPkgs = ["nodejs_22"]
 
 [phases.install]
-cmds = ["pnpm install --frozen-lockfile"]
+cmds = [
+  "corepack enable",
+  "corepack prepare pnpm@10.4.1 --activate",
+  "pnpm install --frozen-lockfile",
+]
 
 [phases.build]
 cmds = ["pnpm build"]
