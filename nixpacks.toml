@@ -1,6 +1,9 @@
 # Configurazione build per Railway (Nixpacks).
-# Fissa Node 22 e usa lo stesso pnpm della CI (10.4.1, via corepack),
-# con più heap per la build Babylon/Vite.
+# Fissa Node 22 e installa lo stesso pnpm della CI (10.4.1) via npm.
+# Nota: NON usiamo corepack perché su Node 22 le sue chiavi di firma
+# integrate falliscono la verifica del pacchetto pnpm scaricato dal
+# registry ("Cannot find matching keyid"); npm -g installa la versione
+# esatta senza quel passaggio di firma, come fa pnpm/action-setup in CI.
 providers = ["node"]
 
 [phases.setup]
@@ -8,8 +11,7 @@ nixPkgs = ["nodejs_22"]
 
 [phases.install]
 cmds = [
-  "corepack enable",
-  "corepack prepare pnpm@10.4.1 --activate",
+  "npm install -g pnpm@10.4.1",
   "pnpm install --frozen-lockfile",
 ]
 
