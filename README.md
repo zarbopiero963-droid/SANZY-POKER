@@ -32,6 +32,8 @@ Prima che le carte siano distribuite a tutti i giocatori, ognuno svolge la propr
 
 Dopo che il mazziere distribuisce le 6 carte per ogni giocatore, vengono distribuite 8 carte coperte sul tavolo chiamato Boards, composto da 6 carte in senso verticale (chiamato piatto 1 o piatto sotto, formato da flop – turn – river) e 2 in orizzontale. Le ultime 2 carte fungono da secondo piatto o piatto sopra e non si possono creare combinazioni usando le ultime due carte con una o più carte delle 6 che formano il Board. (Vedi immagine.)
 
+![Disposizione del Board: Piatto 1 (Flop, Turn, River) e Piatto 2](docs/assets/board-layout.jpg)
+
 **Primo giro di puntata.** Inizia il giocatore a sinistra del mazziere a decidere di: puntare (bet); passare o bussare (check); lasciare (fold). Si punta un minimo equivalente al grande buio (in questo caso $0,10); i giocatori successivi possono: chiamare o vedere (call); rilanciare (raise); lasciare (fold). In seguito il mazziere scopre le prime 3 carte (flop) già precedentemente poste sul tavolo.
 
 **Secondo giro di puntata.** Inizia il giocatore a sinistra del mazziere a decidere di: puntare (bet); passare o bussare (check); lasciare (fold). Si punta un minimo equivalente al grande buio; i giocatori successivi possono: call; raise; fold. In seguito il mazziere scopre le successive 2 carte (turn) già precedentemente poste sul tavolo.
@@ -84,6 +86,10 @@ Le 6 carte posizionate in verticale formano il Piatto 1 (piatto sotto), e le ult
 - **Punto in mano:** combinazione migliore già tra le carte personali senza dover usare nessuna carta dal tavolo.
 
 Non è possibile creare una combinazione sommando le 2 carte del piatto 2 con 1 o più carte del piatto 1 e con le carte personali. (Vedi immagine.)
+
+![Esempio di showdown: si usano K♦ e 10♦ del Piatto 1 con le carte personali; la X rossa indica che il Piatto 2 non si può mischiare](docs/assets/showdown-esempio.jpg)
+
+Come nell'esempio, il giocatore non può usare K♦10♦ (piatto 1) + Q♦ (piatto 2) con le carte personali A♣K♣(9♦J♦Q♦)8♣ per creare la combinazione K♦Q♦J♦10♦9♦.
 
 ### 5) I punteggi in ordine gerarchico
 
