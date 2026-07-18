@@ -1,10 +1,4 @@
-# Sanzy Poker Pro
-
-Sanzy Poker Pro è un client di poker giocabile nel browser (React + Vite + TypeScript, rendering 3D Babylon.js) che implementa la specialità **Sanzy Poker**, ideata da **Piero Zarbo**.
-
-Questo README raccoglie la trascrizione dei documenti ufficiali del regolamento forniti dall'autore (regolamento principale, regole di divisione a 3 e 4 giocatori e regolamento Hi/Low). Sono stati esclusi i documenti d'identità personali eventualmente allegati ai file originali.
-
----
+# Regolamento gioco Sanzy Poker
 
 ## Regolamento gioco Sanzy Poker (documento principale)
 
