@@ -41,7 +41,7 @@ jobs:
           # Imposta il modello nella Variable OPENAI_REVIEW_MODEL del repo.
           # Default: gpt-5.6-sol (verifica l'ID esatto su platform.openai.com/docs/models).
           MODEL: ${{ vars.OPENAI_REVIEW_MODEL || 'gpt-5.6-sol' }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_2 }}
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}

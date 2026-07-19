@@ -12,5 +12,6 @@
 | `client/src/game/state.ts`              | Stato tavolo, fasi, azioni e regola split 50/50 per piatto             |
 | `client/src/game/bots.ts`               | Decisioni e personalità dei bot                                        |
 | `client/src/game/ui.ts`                 | Costruzione HUD, sedute, carte e controlli (testi via `t()`)           |
+| `client/src/game/viewSignature.ts`      | Firma pura dello stato visibile: render-gate anti-flicker dell'HUD     |
 
 **Confine architetturale:** React ospita il flusso d'ingresso e il canvas; regole e gameplay restano classi e funzioni TypeScript indipendenti dal framework. L'i18n è un modulo puro senza logica di gioco: traduce solo le etichette mostrate; la `label` italiana in `rules.ts` resta la forma canonica usata dai test, mentre il rendering usa `describeHand()`.

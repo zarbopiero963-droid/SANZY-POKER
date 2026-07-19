@@ -18,6 +18,7 @@ import {
 } from "@babylonjs/gui/2D";
 import { cardParts, type CardCode, type Variant } from "./rules";
 import { formatChips, t } from "./i18n";
+import { VISIBLE_LOG_LINES, computeViewSignature } from "./viewSignature";
 import type { GameController, PlayerState, TableState } from "./state";
 
 /** Etichetta breve e maiuscola della variante per le barre del tavolo. */
@@ -88,6 +89,10 @@ export class PokerUI {
   private unsubscribe: (() => void) | null = null;
   private pulseDots: Ellipse[] = [];
   private eventSerial = -1;
+  // Firma di ciò che è VISIBILE nell'HUD: si ricostruisce solo quando cambia,
+  // non a ogni evento. Evita il frame "strappato" durante le puntate e non
+  // ricrea (azzerando) lo slider di rilancio mentre il giocatore lo usa.
+  private lastViewSignature = "";
   private audioContext: AudioContext | null = null;
   private mobile = false;
   private mobileHeight = 900;
@@ -130,6 +135,7 @@ export class PokerUI {
     this.mobileHeight = nextMobileHeight;
     this.gui.idealWidth = mobile ? 420 : 1600;
     this.gui.idealHeight = mobile ? this.mobileHeight : 900;
+    this.lastViewSignature = ""; // forza il rebuild al cambio mobile/viewport
     if (this.currentTable) this.render(this.currentTable, this.currentScreen);
   }
 
@@ -207,18 +213,37 @@ export class PokerUI {
     return control;
   }
 
+  /**
+   * Firma dello stato VISIBILE dell'HUD (delegata a `computeViewSignature`, un
+   * modulo puro testabile offline). Se non cambia, non c'è nulla di nuovo da
+   * disegnare: durante il turno del giocatore resta costante, quindi lo slider
+   * non viene ricreato e non lampeggia.
+   */
+  private viewSignature(table: TableState, screen: Screen): string {
+    return computeViewSignature(table, {
+      screen,
+      mobile: this.mobile,
+      mobileHeight: this.mobileHeight,
+    });
+  }
+
   private render(table: TableState, screen: Screen) {
-    this.root.clearControls();
-    this.pulseDots = [];
-    if (screen === "lobby")
-      this.mobile ? this.renderLobbyMobile() : this.renderLobby();
-    else this.mobile ? this.renderTableMobile(table) : this.renderTable(table);
+    // Cue audio sugli eventi, indipendente dalla ricostruzione visiva.
     if (this.eventSerial !== table.eventSerial) {
       this.eventSerial = table.eventSerial;
       if (["chips-to-pot", "winner", "showdown"].includes(table.lastEvent)) {
         this.tone(table.lastEvent === "chips-to-pot" ? 340 : 560, 0.08, 0.024);
       }
     }
+    // Ricostruisci l'HUD SOLO se qualcosa di visibile è cambiato.
+    const signature = this.viewSignature(table, screen);
+    if (signature === this.lastViewSignature) return;
+    this.lastViewSignature = signature;
+    this.root.clearControls();
+    this.pulseDots = [];
+    if (screen === "lobby")
+      this.mobile ? this.renderLobbyMobile() : this.renderLobby();
+    else this.mobile ? this.renderTableMobile(table) : this.renderTable(table);
   }
 
   private brand(parent: Rectangle, compact = false) {
@@ -1634,7 +1659,7 @@ export class PokerUI {
     const logStack = new StackPanel("log-stack");
     logStack.width = "154px";
     viewer.addControl(logStack);
-    table.log.slice(0, 7).forEach((entry, index) => {
+    table.log.slice(0, VISIBLE_LOG_LINES).forEach((entry, index) => {
       const line = text(
         `log-line-${index}`,
         entry,
