@@ -39,6 +39,10 @@ const GREEN = "#27C68B";
 const FELT = "#176B50";
 const RED = "#E05A5A";
 type Screen = "lobby" | "table";
+// Numero di righe di log visibili nell'HUD: condiviso tra il render e la
+// viewSignature così i due non possono divergere (se cambia qui, cambia in
+// entrambi i punti).
+const VISIBLE_LOG_LINES = 7;
 
 function rect(
   name: string,
@@ -216,53 +220,70 @@ export class PokerUI {
    * Firma dello stato VISIBILE dell'HUD. Se non cambia, non c'è nulla di nuovo
    * da disegnare: durante il turno del giocatore (piatto/turno/stack fermi)
    * resta costante, quindi lo slider non viene ricreato e non lampeggia.
+   *
+   * CONTRATTO DI MANUTENZIONE: ogni dato letto da renderTable/renderTableMobile
+   * (e renderLobby*) DEVE comparire qui, altrimenti l'HUD resta "stantio".
+   * `lastEvent`/`eventSerial` sono esclusi di proposito: guidano solo i cue
+   * audio in render(), non il rendering visivo.
+   *
+   * La firma è un JSON.stringify di un oggetto strutturato: niente separatori
+   * manuali, quindi nessuna collisione possibile tra testi liberi (lastAction,
+   * righe di log, id) e i delimitatori.
    */
   private viewSignature(table: TableState, screen: Screen): string {
-    if (screen !== "table") return screen;
-    const players = table.players
-      .map(
-        // Valori esatti (niente Math.round): i gettoni sono interi, ma la firma
-        // deve rispecchiare lo stato reale senza approssimare. Le carte entrano
-        // per identità (join dei codici), non solo per conteggio: così anche uno
-        // scambio a parità di numero (scarto/pesca) forza il rebuild.
-        p =>
-          `${p.id}:${p.chips}:${p.lastAction}:${p.folded ? 1 : 0}:${p.cards.join(".")}:${p.roundBet}`
-      )
-      .join(",");
-    const result = table.lastResult
-      ? [
-          table.lastResult.splitRule,
-          table.lastResult.bestPot1,
-          table.lastResult.bestPot2,
-          table.lastResult.pot1Winners.join(">"),
-          table.lastResult.pot2Winners.join(">"),
-        ].join("~")
-      : "-";
-    return [
+    // Rami non-"table" (lobby): includi comunque lingua e layout, così un cambio
+    // lingua o viewport ridisegna i testi t() anche in lobby.
+    if (screen !== "table") {
+      return JSON.stringify({
+        screen,
+        locale: getLocale(),
+        mobile: this.mobile,
+        mobileHeight: this.mobileHeight,
+      });
+    }
+    return JSON.stringify({
       screen,
       // Lingua attiva: se cambia a runtime, tutti i testi t() vanno ridisegnati.
-      getLocale(),
-      this.mobile ? "m" : "d",
-      this.mobileHeight,
-      table.status,
-      table.phase,
-      table.handNumber,
-      table.pot,
-      table.turnIndex,
-      table.roundMaxBet,
-      table.roundRaises,
-      table.board1Revealed,
-      table.board2Revealed ? 1 : 0,
-      table.revealAll ? 1 : 0,
-      table.dealerIndex,
-      result,
-      players,
-      // Rifletti l'intero log visibile (l'HUD mostra slice(0, 7)) + la lunghezza
-      // totale: qualunque riga di log visibile cambi forza il rebuild. Durante il
-      // turno umano il log non cambia, quindi lo slider di rilancio resta stabile.
-      table.log.length,
-      table.log.slice(0, 7).join("¦"),
-    ].join("|");
+      locale: getLocale(),
+      mobile: this.mobile,
+      mobileHeight: this.mobileHeight,
+      status: table.status,
+      phase: table.phase,
+      handNumber: table.handNumber,
+      // Valore esatto (niente Math.round): la firma rispecchia lo stato reale.
+      pot: table.pot,
+      turnIndex: table.turnIndex,
+      roundMaxBet: table.roundMaxBet,
+      roundRaises: table.roundRaises,
+      board1Revealed: table.board1Revealed,
+      board2Revealed: table.board2Revealed,
+      revealAll: table.revealAll,
+      dealerIndex: table.dealerIndex,
+      result: table.lastResult
+        ? {
+            splitRule: table.lastResult.splitRule,
+            bestPot1: table.lastResult.bestPot1,
+            bestPot2: table.lastResult.bestPot2,
+            pot1Winners: table.lastResult.pot1Winners,
+            pot2Winners: table.lastResult.pot2Winners,
+          }
+        : null,
+      // Le carte entrano per identità (non solo per conteggio): così anche uno
+      // scambio a parità di numero (scarto/pesca) forza il rebuild.
+      players: table.players.map(p => ({
+        id: p.id,
+        chips: p.chips,
+        lastAction: p.lastAction,
+        folded: p.folded,
+        cards: p.cards,
+        roundBet: p.roundBet,
+      })),
+      // Log visibile completo + lunghezza totale: qualunque riga di log visibile
+      // cambi forza il rebuild. Durante il turno umano il log non cambia, quindi
+      // lo slider di rilancio resta stabile.
+      logLength: table.log.length,
+      log: table.log.slice(0, VISIBLE_LOG_LINES),
+    });
   }
 
   private render(table: TableState, screen: Screen) {
@@ -1697,7 +1718,7 @@ export class PokerUI {
     const logStack = new StackPanel("log-stack");
     logStack.width = "154px";
     viewer.addControl(logStack);
-    table.log.slice(0, 7).forEach((entry, index) => {
+    table.log.slice(0, VISIBLE_LOG_LINES).forEach((entry, index) => {
       const line = text(
         `log-line-${index}`,
         entry,
