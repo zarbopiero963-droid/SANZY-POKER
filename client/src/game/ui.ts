@@ -18,7 +18,7 @@ import {
 } from "@babylonjs/gui/2D";
 import { cardParts, type CardCode, type Variant } from "./rules";
 import { formatChips, t } from "./i18n";
-import { dotPulseAlpha, withPulseAlpha } from "./anim";
+import { dotPulseAlpha, pulse01, withPulseAlpha } from "./anim";
 import { VISIBLE_LOG_LINES, computeViewSignature } from "./viewSignature";
 import type { GameController, PlayerState, TableState } from "./state";
 
@@ -95,6 +95,9 @@ export class PokerUI {
   // Ultimo colore bordo applicato: se il valore quantizzato non cambia tra due
   // frame, tick() salta la riassegnazione (meno invalidazioni GUI su mobile).
   private lastBorderColor = "";
+  // Ultima pulsazione quantizzata (0..255) applicata ai pulseDots: idem, evita
+  // di riscrivere l'alpha dei punti quando il valore quantizzato non cambia.
+  private lastDotPulse = -1;
   private eventSerial = -1;
   // Firma di ciò che è VISIBILE nell'HUD: si ricostruisce solo quando cambia,
   // non a ogni evento. Evita il frame "strappato" durante le puntate e non
@@ -249,8 +252,9 @@ export class PokerUI {
     this.root.clearControls();
     this.pulseDots = [];
     this.activeBorders = [];
-    // Nuovi controlli dopo il rebuild: forza tick() a riapplicare il colore.
+    // Nuovi controlli dopo il rebuild: forza tick() a riapplicare colore/alpha.
     this.lastBorderColor = "";
+    this.lastDotPulse = -1;
     if (screen === "lobby")
       this.mobile ? this.renderLobbyMobile() : this.renderLobby();
     else this.mobile ? this.renderTableMobile(table) : this.renderTable(table);
@@ -2036,12 +2040,23 @@ export class PokerUI {
   /** Registra i controlli del posto attivo che tick() farà pulsare. */
   private registerActiveBorder(...controls: (Rectangle | Ellipse)[]) {
     this.activeBorders.push(...controls);
+    // Invalida la cache così tick() riapplica il colore ai nuovi controlli,
+    // anche se registrati fuori dal ciclo di rebuild.
+    this.lastBorderColor = "";
   }
 
   tick(elapsed: number) {
-    this.pulseDots.forEach((dot, index) => {
-      dot.alpha = dotPulseAlpha(elapsed, index);
-    });
+    // Punti di stato: aggiorna l'alpha SOLO se la pulsazione quantizzata (0..255)
+    // è cambiata dal frame precedente → niente invalidazioni GUI a vuoto.
+    if (this.pulseDots.length) {
+      const dotPulse = Math.round(pulse01(elapsed) * 255);
+      if (dotPulse !== this.lastDotPulse) {
+        this.lastDotPulse = dotPulse;
+        this.pulseDots.forEach((dot, index) => {
+          dot.alpha = dotPulseAlpha(elapsed, index);
+        });
+      }
+    }
     // Bordo del giocatore di turno: alpha arancione pulsante (respira senza
     // sparire). Solo colore del bordo, non alpha del pannello, così nome/stack
     // restano pienamente leggibili. Riassegna SOLO se il colore quantizzato è

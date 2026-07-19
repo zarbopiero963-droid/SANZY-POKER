@@ -30,8 +30,9 @@ export function activeBorderAlpha(elapsed: number): number {
 
 /** Converte una frazione [0, 1] nel byte alpha esadecimale a 2 cifre ("00".."ff"). */
 export function alphaByteHex(fraction: number): string {
-  // Guard su NaN/Infinito: senza, Math.round(NaN)→NaN e toString darebbe "NaN".
-  const safe = Number.isFinite(fraction) ? fraction : 0;
+  // Guard solo su NaN (che propagherebbe "NaN" nel colore): gli infiniti li
+  // gestisce il clamp naturale (+∞ → 1 → "ff", -∞ → 0 → "00").
+  const safe = Number.isNaN(fraction) ? 0 : fraction;
   const clamped = Math.max(0, Math.min(1, safe));
   return Math.round(clamped * 255)
     .toString(16)

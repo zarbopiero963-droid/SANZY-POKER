@@ -38,9 +38,9 @@ describe("anim — helper di pulsazione", () => {
     expect(alphaByteHex(0.5)).toBe("80");
     expect(alphaByteHex(-3)).toBe("00"); // clamp sotto
     expect(alphaByteHex(9)).toBe("ff"); // clamp sopra
-    // Guard su valori non finiti: mai "NaN" nel colore.
+    // Guard su NaN: mai "NaN" nel colore. Gli infiniti li gestisce il clamp.
     expect(alphaByteHex(NaN)).toBe("00");
-    expect(alphaByteHex(Infinity)).toBe("00");
+    expect(alphaByteHex(Infinity)).toBe("ff");
     expect(alphaByteHex(-Infinity)).toBe("00");
     // Sempre esattamente 2 caratteri, anche per valori piccoli.
     for (let i = 0; i <= 100; i += 1) {
@@ -67,6 +67,10 @@ describe("anim — helper di pulsazione", () => {
       expect(a0).toBeLessThanOrEqual(1);
       expect(a1).toBeLessThanOrEqual(a0);
     }
+    // Il floor 0.38 scatta davvero: al minimo della sinusoide (sin=-1) la
+    // formula grezza per indice 3 vale 0.325 < 0.38 → deve essere clampata.
+    const trough = (3 * Math.PI) / 2 / 3.4; // sin(3.4 * trough) = -1
+    expect(dotPulseAlpha(trough, 3)).toBeCloseTo(0.38, 10);
   });
 
   it("withPulseAlpha produce #RRGGBBAA valido e usa solo i primi 7 char del colore", () => {
