@@ -93,9 +93,9 @@ function placeTopLeft(control: Control, left: number, top: number) {
 export class PokerUI {
   private readonly root: Rectangle;
   private unsubscribe: (() => void) | null = null;
-  // NB: i pulseDots vanno popolati SOLO durante il rebuild (che azzera
-  // lastDotPulse). Aggiungerli fuori dal rebuild lascerebbe il nuovo punto con
-  // l'alpha iniziale finché la pulsazione quantizzata non cambia.
+  // Popolare SEMPRE via registerPulseDot(), che invalida lastDotPulse: così un
+  // punto aggiunto anche fuori dal rebuild riceve subito l'alpha corretto al
+  // prossimo tick (simmetrico a registerActiveBorder per i bordi).
   private pulseDots: Ellipse[] = [];
   // Bordi del posto di turno: pulsano nel loop tick() (per-frame), non nel
   // render gated. Ricostruiti a ogni rebuild insieme ai posti.
@@ -417,7 +417,7 @@ export class PokerUI {
       dot.color = dot.background;
       placeTopLeft(dot, 16, 18);
       row.addControl(dot);
-      this.pulseDots.push(dot);
+      this.registerPulseDot(dot);
       const name = text(`mobile-room-name-${index}`, room.name, 16, TEXT, 900);
       name.width = "238px";
       name.height = "30px";
@@ -513,7 +513,7 @@ export class PokerUI {
     dot.color = GREEN;
     dot.left = "-46px";
     online.addControl(dot);
-    this.pulseDots.push(dot);
+    this.registerPulseDot(dot);
     const onlineText = text("online-text", "12 ONLINE", 11, "#B9EEDB", 800);
     onlineText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     online.addControl(onlineText);
@@ -741,7 +741,7 @@ export class PokerUI {
       statusDot.color = statusDot.background;
       placeTopLeft(statusDot, 16, 22);
       row.addControl(statusDot);
-      this.pulseDots.push(statusDot);
+      this.registerPulseDot(statusDot);
       const roomName = text(`room-name-${index}`, room.name, 15, TEXT, 800);
       roomName.width = "230px";
       roomName.height = "28px";
@@ -2054,6 +2054,12 @@ export class PokerUI {
     this.lastBorderAlphaByte = -1;
   }
 
+  /** Registra un punto di stato pulsante; invalida la cache (simmetrico ai bordi). */
+  private registerPulseDot(dot: Ellipse) {
+    this.pulseDots.push(dot);
+    this.lastDotPulse = -1;
+  }
+
   tick(elapsed: number) {
     // Punti di stato: aggiorna l'alpha SOLO se la pulsazione quantizzata (0..255)
     // è cambiata dal frame precedente → niente invalidazioni GUI a vuoto.
@@ -2061,8 +2067,11 @@ export class PokerUI {
       const dotPulse = Math.round(pulse01(elapsed) * 255);
       if (dotPulse !== this.lastDotPulse) {
         this.lastDotPulse = dotPulse;
+        // Valore derivato dallo STESSO byte della chiave (coerenza per
+        // costruzione, come per il bordo): niente scarto chiave↔valore.
+        const pulse = dotPulse / 255;
         this.pulseDots.forEach((dot, index) => {
-          dot.alpha = dotPulseAlpha(elapsed, index);
+          dot.alpha = dotPulseAlpha(pulse, index);
         });
       }
     }

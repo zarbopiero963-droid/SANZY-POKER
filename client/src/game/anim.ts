@@ -12,13 +12,16 @@ export function pulse01(elapsed: number, speed = 3.4): number {
 }
 
 /**
- * Alpha del punto di stato `i`-esimo (i "pulseDots"): stessa matematica di
- * `pulse01` (unificata), sfalsata per indice e con un minimo di 0.38 così i
- * punti non spariscono. Equivale a `max(0.38, 0.7 + sin(elapsed*3.4)*0.3 - i*0.025)`
- * (il floor 0.38 fa parte dell'equivalenza).
+ * Alpha del punto di stato `i`-esimo (i "pulseDots") dato il valore di pulsazione
+ * `pulse` ∈ [0, 1]. Prende `pulse` (non `elapsed`) così il chiamante può passare
+ * il byte quantizzato/255 usato come chiave di cache: chiave e valore derivano
+ * dalla STESSA fonte (coerenza per costruzione, come per il bordo attivo).
+ * Sfalsato per indice, minimo 0.38 così i punti non spariscono. Equivale a
+ * `max(0.38, 0.4 + pulse*0.6 - i*0.025)`; con `pulse = pulse01(elapsed)` ridà la
+ * formula storica `max(0.38, 0.7 + sin(elapsed*3.4)*0.3 - i*0.025)`.
  */
-export function dotPulseAlpha(elapsed: number, index: number): number {
-  return Math.max(0.38, 0.4 + pulse01(elapsed) * 0.6 - index * 0.025);
+export function dotPulseAlpha(pulse: number, index: number): number {
+  return Math.max(0.38, 0.4 + pulse * 0.6 - index * 0.025);
 }
 
 /**

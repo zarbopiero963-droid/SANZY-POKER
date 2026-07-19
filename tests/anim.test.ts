@@ -62,29 +62,46 @@ describe("anim — helper di pulsazione", () => {
     }
   });
 
-  it("dotPulseAlpha: equivale alla formula storica, in [0.38, 1], cala con l'indice", () => {
-    // Deve coincidere con la vecchia formula 0.7 + sin(elapsed*3.4)*0.3 - i*0.025.
+  it("dotPulseAlpha(pulse, index): equivale alla formula storica, in [0.38, 1], cala con l'indice", () => {
+    // Con pulse = pulse01(elapsed) deve coincidere con 0.7 + sin(elapsed*3.4)*0.3 - i*0.025.
     for (let s = 0; s < 500; s += 1) {
       const elapsed = s * 0.031;
+      const pulse = pulse01(elapsed);
       const legacy = 0.7 + Math.sin(elapsed * 3.4) * 0.3;
       for (let i = 0; i < 4; i += 1) {
         const expected = Math.max(0.38, legacy - i * 0.025);
-        expect(dotPulseAlpha(elapsed, i)).toBeCloseTo(expected, 10);
+        expect(dotPulseAlpha(pulse, i)).toBeCloseTo(expected, 10);
       }
     }
-    // Intervallo e monotonia rispetto all'indice a t fisso.
-    for (let s = 0; s < 200; s += 1) {
-      const elapsed = s * 0.05;
-      const a0 = dotPulseAlpha(elapsed, 0);
-      const a1 = dotPulseAlpha(elapsed, 1);
+    // Intervallo e monotonia rispetto all'indice a pulse fisso.
+    for (let p = 0; p <= 100; p += 1) {
+      const pulse = p / 100;
+      const a0 = dotPulseAlpha(pulse, 0);
+      const a1 = dotPulseAlpha(pulse, 1);
       expect(a0).toBeGreaterThanOrEqual(0.38);
       expect(a0).toBeLessThanOrEqual(1);
       expect(a1).toBeLessThanOrEqual(a0);
     }
-    // Il floor 0.38 scatta davvero: al minimo della sinusoide (sin=-1) la
-    // formula grezza per indice 3 vale 0.325 < 0.38 → deve essere clampata.
-    const trough = (3 * Math.PI) / 2 / 3.4; // sin(3.4 * trough) = -1
-    expect(dotPulseAlpha(trough, 3)).toBeCloseTo(0.38, 10);
+    // Il floor 0.38 scatta al minimo (pulse=0): grezzo per indice 3 = 0.325 < 0.38.
+    expect(dotPulseAlpha(0, 3)).toBeCloseTo(0.38, 10);
+  });
+
+  it("dots: alpha applicato è funzione pura del byte quantizzato (coerenza chiave↔valore)", () => {
+    // In tick la chiave è round(pulse01(e)*255) e il valore dotPulseAlpha(byte/255, i):
+    // due elapsed con lo STESSO byte devono produrre lo stesso alpha applicato.
+    const applied = (elapsed: number, index: number) =>
+      dotPulseAlpha(Math.round(pulse01(elapsed) * 255) / 255, index);
+    const seen = new Map<string, number>();
+    for (let s = 0; s < 3000; s += 1) {
+      const elapsed = s * 0.011;
+      const byte = Math.round(pulse01(elapsed) * 255);
+      for (let i = 0; i < 4; i += 1) {
+        const key = `${byte}:${i}`;
+        const value = applied(elapsed, i);
+        if (seen.has(key)) expect(value).toBe(seen.get(key));
+        else seen.set(key, value);
+      }
+    }
   });
 
   it("withPulseAlpha produce #RRGGBBAA valido e usa solo i primi 7 char del colore", () => {
