@@ -64,6 +64,20 @@ describe("viewSignature — render-gate HUD", () => {
     expect(JSON.parse(JSON.stringify(t))).toEqual(structuredClone(t));
   });
 
+  it("turno umano: cue audio ripetuti non cambiano la firma (slider mai ricreato)", () => {
+    const t = baseTable();
+    const sig = computeViewSignature(t, UI);
+    // Simula l'attesa durante il turno del giocatore: arrivano più cue audio
+    // (eventSerial/lastEvent cambiano) ma nessun campo VISIBILE si muove. La
+    // firma DEVE restare identica a ogni render, altrimenti l'HUD si ricostruisce
+    // e lo slider di rilancio si azzera — è la ragion d'essere della PR.
+    for (const event of ["chips-to-pot", "winner", "showdown", "table-ready"]) {
+      t.eventSerial += 1;
+      t.lastEvent = event;
+      expect(computeViewSignature(t, UI)).toBe(sig);
+    }
+  });
+
   it("log: fuori dalla finestra visibile non conta, in testa e in lunghezza sì", () => {
     const t = baseTable();
     t.log = Array.from(
