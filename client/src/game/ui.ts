@@ -18,7 +18,7 @@ import {
 } from "@babylonjs/gui/2D";
 import { cardParts, type CardCode, type Variant } from "./rules";
 import { formatChips, t } from "./i18n";
-import { withPulseAlpha } from "./anim";
+import { dotPulseAlpha, withPulseAlpha } from "./anim";
 import { VISIBLE_LOG_LINES, computeViewSignature } from "./viewSignature";
 import type { GameController, PlayerState, TableState } from "./state";
 
@@ -92,6 +92,9 @@ export class PokerUI {
   // Bordi del posto di turno: pulsano nel loop tick() (per-frame), non nel
   // render gated. Ricostruiti a ogni rebuild insieme ai posti.
   private activeBorders: (Rectangle | Ellipse)[] = [];
+  // Ultimo colore bordo applicato: se il valore quantizzato non cambia tra due
+  // frame, tick() salta la riassegnazione (meno invalidazioni GUI su mobile).
+  private lastBorderColor = "";
   private eventSerial = -1;
   // Firma di ciò che è VISIBILE nell'HUD: si ricostruisce solo quando cambia,
   // non a ogni evento. Evita il frame "strappato" durante le puntate e non
@@ -246,6 +249,8 @@ export class PokerUI {
     this.root.clearControls();
     this.pulseDots = [];
     this.activeBorders = [];
+    // Nuovi controlli dopo il rebuild: forza tick() a riapplicare il colore.
+    this.lastBorderColor = "";
     if (screen === "lobby")
       this.mobile ? this.renderLobbyMobile() : this.renderLobby();
     else this.mobile ? this.renderTableMobile(table) : this.renderTable(table);
@@ -996,7 +1001,7 @@ export class PokerUI {
     avatar.color = active ? ORANGE : "#FFFFFF24";
     avatar.thickness = active ? 3 : 1;
     avatar.left = "-58px";
-    if (active) this.activeBorders.push(panel, avatar);
+    if (active) this.registerActiveBorder(panel, avatar);
     panel.addControl(avatar);
     const initial = text(
       `seat-initial-${player.id}`,
@@ -1085,7 +1090,7 @@ export class PokerUI {
       avatar.color = active ? ORANGE : "#FFFFFF24";
       avatar.left = "-58px";
       panel.addControl(avatar);
-      if (active) this.activeBorders.push(panel, avatar);
+      if (active) this.registerActiveBorder(panel, avatar);
       const initial = text(
         `mobile-seat-initial-${player.id}`,
         player.name.slice(0, 1).toUpperCase(),
@@ -1149,7 +1154,7 @@ export class PokerUI {
     avatar.color = active ? ORANGE : "#FFFFFF24";
     placeTopLeft(avatar, 8, 8);
     panel.addControl(avatar);
-    if (active) this.activeBorders.push(panel, avatar);
+    if (active) this.registerActiveBorder(panel, avatar);
     const initial = text(
       `mobile-seat-initial-${player.id}`,
       player.name.slice(0, 1).toUpperCase(),
@@ -2028,17 +2033,25 @@ export class PokerUI {
     overlay.addControl(close);
   }
 
+  /** Registra i controlli del posto attivo che tick() farà pulsare. */
+  private registerActiveBorder(...controls: (Rectangle | Ellipse)[]) {
+    this.activeBorders.push(...controls);
+  }
+
   tick(elapsed: number) {
-    const pulse = 0.7 + Math.sin(elapsed * 3.4) * 0.3;
     this.pulseDots.forEach((dot, index) => {
-      dot.alpha = Math.max(0.38, pulse - index * 0.025);
+      dot.alpha = dotPulseAlpha(elapsed, index);
     });
     // Bordo del giocatore di turno: alpha arancione pulsante (respira senza
     // sparire). Solo colore del bordo, non alpha del pannello, così nome/stack
-    // restano pienamente leggibili.
+    // restano pienamente leggibili. Riassegna SOLO se il colore quantizzato è
+    // cambiato dal frame precedente: evita invalidazioni GUI inutili su mobile.
     if (this.activeBorders.length) {
       const color = withPulseAlpha(ORANGE, elapsed);
-      this.activeBorders.forEach(border => (border.color = color));
+      if (color !== this.lastBorderColor) {
+        this.lastBorderColor = color;
+        this.activeBorders.forEach(border => (border.color = color));
+      }
     }
   }
 

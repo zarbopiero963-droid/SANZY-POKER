@@ -12,6 +12,15 @@ export function pulse01(elapsed: number, speed = 3.4): number {
 }
 
 /**
+ * Alpha del punto di stato `i`-esimo (i "pulseDots"): stessa matematica di
+ * `pulse01` (unificata), sfalsata per indice e con un minimo di 0.38 così i
+ * punti non spariscono. Equivale a `0.7 + sin(elapsed*3.4)*0.3 - i*0.025`.
+ */
+export function dotPulseAlpha(elapsed: number, index: number): number {
+  return Math.max(0.38, 0.4 + pulse01(elapsed) * 0.6 - index * 0.025);
+}
+
+/**
  * Alpha (frazione [0.55, 1]) del bordo attivo: pulsa senza mai sparire del
  * tutto, così il posto di turno "respira" restando sempre leggibile.
  */
@@ -21,7 +30,9 @@ export function activeBorderAlpha(elapsed: number): number {
 
 /** Converte una frazione [0, 1] nel byte alpha esadecimale a 2 cifre ("00".."ff"). */
 export function alphaByteHex(fraction: number): string {
-  const clamped = Math.max(0, Math.min(1, fraction));
+  // Guard su NaN/Infinito: senza, Math.round(NaN)→NaN e toString darebbe "NaN".
+  const safe = Number.isFinite(fraction) ? fraction : 0;
+  const clamped = Math.max(0, Math.min(1, safe));
   return Math.round(clamped * 255)
     .toString(16)
     .padStart(2, "0");

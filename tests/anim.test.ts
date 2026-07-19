@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   activeBorderAlpha,
   alphaByteHex,
+  dotPulseAlpha,
   pulse01,
   withPulseAlpha,
 } from "../client/src/game/anim";
@@ -37,9 +38,34 @@ describe("anim — helper di pulsazione", () => {
     expect(alphaByteHex(0.5)).toBe("80");
     expect(alphaByteHex(-3)).toBe("00"); // clamp sotto
     expect(alphaByteHex(9)).toBe("ff"); // clamp sopra
+    // Guard su valori non finiti: mai "NaN" nel colore.
+    expect(alphaByteHex(NaN)).toBe("00");
+    expect(alphaByteHex(Infinity)).toBe("00");
+    expect(alphaByteHex(-Infinity)).toBe("00");
     // Sempre esattamente 2 caratteri, anche per valori piccoli.
     for (let i = 0; i <= 100; i += 1) {
       expect(alphaByteHex(i / 100)).toHaveLength(2);
+    }
+  });
+
+  it("dotPulseAlpha: equivale alla formula storica, in [0.38, 1], cala con l'indice", () => {
+    // Deve coincidere con la vecchia formula 0.7 + sin(elapsed*3.4)*0.3 - i*0.025.
+    for (let s = 0; s < 500; s += 1) {
+      const elapsed = s * 0.031;
+      const legacy = 0.7 + Math.sin(elapsed * 3.4) * 0.3;
+      for (let i = 0; i < 4; i += 1) {
+        const expected = Math.max(0.38, legacy - i * 0.025);
+        expect(dotPulseAlpha(elapsed, i)).toBeCloseTo(expected, 10);
+      }
+    }
+    // Intervallo e monotonia rispetto all'indice a t fisso.
+    for (let s = 0; s < 200; s += 1) {
+      const elapsed = s * 0.05;
+      const a0 = dotPulseAlpha(elapsed, 0);
+      const a1 = dotPulseAlpha(elapsed, 1);
+      expect(a0).toBeGreaterThanOrEqual(0.38);
+      expect(a0).toBeLessThanOrEqual(1);
+      expect(a1).toBeLessThanOrEqual(a0);
     }
   });
 
