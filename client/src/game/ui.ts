@@ -17,7 +17,7 @@ import {
   TextBlock,
 } from "@babylonjs/gui/2D";
 import { cardParts, type CardCode, type Variant } from "./rules";
-import { formatChips, t } from "./i18n";
+import { formatChips, getLocale, t } from "./i18n";
 import type { GameController, PlayerState, TableState } from "./state";
 
 /** Etichetta breve e maiuscola della variante per le barre del tavolo. */
@@ -221,8 +221,12 @@ export class PokerUI {
     if (screen !== "table") return screen;
     const players = table.players
       .map(
+        // Valori esatti (niente Math.round): i gettoni sono interi, ma la firma
+        // deve rispecchiare lo stato reale senza approssimare. Le carte entrano
+        // per identità (join dei codici), non solo per conteggio: così anche uno
+        // scambio a parità di numero (scarto/pesca) forza il rebuild.
         p =>
-          `${p.id}:${Math.round(p.chips)}:${p.lastAction}:${p.folded ? 1 : 0}:${p.cards.length}:${Math.round(p.roundBet)}`
+          `${p.id}:${p.chips}:${p.lastAction}:${p.folded ? 1 : 0}:${p.cards.join(".")}:${p.roundBet}`
       )
       .join(",");
     const result = table.lastResult
@@ -236,12 +240,14 @@ export class PokerUI {
       : "-";
     return [
       screen,
+      // Lingua attiva: se cambia a runtime, tutti i testi t() vanno ridisegnati.
+      getLocale(),
       this.mobile ? "m" : "d",
       this.mobileHeight,
       table.status,
       table.phase,
       table.handNumber,
-      Math.round(table.pot),
+      table.pot,
       table.turnIndex,
       table.roundMaxBet,
       table.roundRaises,
