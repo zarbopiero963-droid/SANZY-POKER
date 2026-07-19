@@ -69,6 +69,26 @@ describe("i18n — interpolazione dei parametri", () => {
     expect(t("chiave.inesistente")).toBe("chiave.inesistente");
   });
 
+  it("i pulsanti azione risolvono in tutte le 4 lingue (niente literal hardcoded)", () => {
+    // Convenzione del progetto: termini poker inglesi identici in tutte le
+    // lingue (come action.callN/raiseN). Il test blinda che le chiavi esistano
+    // e risolvano ovunque, così i pulsanti FOLD/CHECK/ALL-IN/RAISE non tornino
+    // stringhe hardcoded fuori da t().
+    const expected: Record<string, string> = {
+      "action.fold": "FOLD",
+      "action.check": "CHECK",
+      "action.allin": "ALL-IN",
+      "action.raise": "RAISE",
+    };
+    for (const locale of LOCALES) {
+      for (const [key, value] of Object.entries(expected)) {
+        expect(t(key, {}, locale), `${key} (${locale})`).toBe(value);
+        // La chiave deve esistere davvero, non ripiegare sul proprio nome.
+        expect(t(key, {}, locale)).not.toBe(key);
+      }
+    }
+  });
+
   it("formatta i gettoni arrotondando all'intero (separatori dipendono dall'ICU)", () => {
     // In ambiente Node small-ICU i separatori possono mancare: verifichiamo le
     // cifre e l'arrotondamento, non la punteggiatura specifica della lingua.
