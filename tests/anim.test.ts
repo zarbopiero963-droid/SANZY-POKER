@@ -12,6 +12,7 @@ import {
   alphaByteHex,
   dotPulseAlpha,
   pulse01,
+  withAlphaByte,
   withPulseAlpha,
 } from "../client/src/game/anim";
 
@@ -94,5 +95,24 @@ describe("anim — helper di pulsazione", () => {
     expect(c).toBe("#F49A35c6");
     // Robusto se il colore arrivasse già con un byte alpha (usa i primi 7).
     expect(withPulseAlpha("#F49A35ff", 0)).toBe("#F49A35c6");
+  });
+
+  it("withAlphaByte: applica un byte, clamp/robustezza, e coerenza con withPulseAlpha", () => {
+    expect(withAlphaByte("#F49A35", 198)).toBe("#F49A35c6");
+    expect(withAlphaByte("#F49A35", 0)).toBe("#F49A3500");
+    expect(withAlphaByte("#F49A35", 255)).toBe("#F49A35ff");
+    // Clamp e guard: fuori range o non finiti non producono suffissi invalidi.
+    expect(withAlphaByte("#F49A35", 999)).toBe("#F49A35ff");
+    expect(withAlphaByte("#F49A35", -5)).toBe("#F49A3500");
+    expect(withAlphaByte("#F49A35", NaN)).toBe("#F49A3500");
+    expect(withAlphaByte("#F49A35ff", 198)).toBe("#F49A35c6"); // usa i primi 7
+    // Coerenza CHIAVE↔VALORE: la stringa costruita dal byte di cache coincide
+    // con withPulseAlpha per lo stesso elapsed (blinda l'ottimizzazione in tick).
+    for (let i = 0; i < 1000; i += 1) {
+      const elapsed = i * 0.023;
+      expect(withAlphaByte("#F49A35", activeBorderAlphaByte(elapsed))).toBe(
+        withPulseAlpha("#F49A35", elapsed)
+      );
+    }
   });
 });

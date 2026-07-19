@@ -22,7 +22,7 @@ import {
   activeBorderAlphaByte,
   dotPulseAlpha,
   pulse01,
-  withPulseAlpha,
+  withAlphaByte,
 } from "./anim";
 import { VISIBLE_LOG_LINES, computeViewSignature } from "./viewSignature";
 import type { GameController, PlayerState, TableState } from "./state";
@@ -93,6 +93,9 @@ function placeTopLeft(control: Control, left: number, top: number) {
 export class PokerUI {
   private readonly root: Rectangle;
   private unsubscribe: (() => void) | null = null;
+  // NB: i pulseDots vanno popolati SOLO durante il rebuild (che azzera
+  // lastDotPulse). Aggiungerli fuori dal rebuild lascerebbe il nuovo punto con
+  // l'alpha iniziale finché la pulsazione quantizzata non cambia.
   private pulseDots: Ellipse[] = [];
   // Bordi del posto di turno: pulsano nel loop tick() (per-frame), non nel
   // render gated. Ricostruiti a ogni rebuild insieme ai posti.
@@ -2071,8 +2074,10 @@ export class PokerUI {
       const alphaByte = activeBorderAlphaByte(elapsed);
       if (alphaByte !== this.lastBorderAlphaByte) {
         this.lastBorderAlphaByte = alphaByte;
-        // Stringa colore costruita SOLO sul cache-miss (niente alloc per-frame).
-        const color = withPulseAlpha(ORANGE, elapsed);
+        // Stringa colore costruita SOLO sul cache-miss (niente alloc per-frame) e
+        // derivata dallo STESSO byte della chiave → nessun doppio calcolo né
+        // dipendenza implicita di coerenza tra due formule.
+        const color = withAlphaByte(ORANGE, alphaByte);
         this.activeBorders.forEach(border => (border.color = color));
       }
     }
