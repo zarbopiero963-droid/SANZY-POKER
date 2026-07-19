@@ -282,22 +282,26 @@ const START_CSS = `
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 22px;
-  opacity: .55;
+  gap: 24px;
   margin: 2px 0;
 }
-.board-pot1 { display: flex; align-items: center; gap: 12px; }
-.board-group { display: flex; gap: 5px; }
-.board-pot2 { display: flex; flex-direction: column; gap: 5px; }
+.board-pot1 { display: flex; align-items: center; gap: 13px; }
+.board-group { display: flex; gap: 6px; }
+.board-pot2 { display: flex; flex-direction: column; gap: 6px; }
 .sanzy-board .slot {
-  width: 15px;
-  height: 21px;
+  width: 17px;
+  height: 24px;
   border-radius: 3px;
-  border: 1px solid rgba(247,244,236,.30);
-  background: rgba(255,255,255,.03);
-  box-shadow: inset 0 0 4px rgba(0,0,0,.25);
+  border: 1.5px solid rgba(247,244,236,.72);
+  background: rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.35);
 }
-.board-pot2 .slot { width: 21px; height: 15px; border-color: rgba(214,178,102,.4); }
+.board-pot2 .slot {
+  width: 24px;
+  height: 17px;
+  border-color: rgba(226,192,120,.9);
+  background: rgba(214,178,102,.16);
+}
 
 .sanzy-panel {
   width: 100%;
