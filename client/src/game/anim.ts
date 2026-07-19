@@ -28,6 +28,15 @@ export function activeBorderAlpha(elapsed: number): number {
   return 0.55 + pulse01(elapsed) * 0.45;
 }
 
+/**
+ * Byte alpha (0..255) del bordo attivo per il frame corrente. Usato come CHIAVE
+ * di cache in tick(): confrontando l'intero si evita di costruire la stringa
+ * colore quando il valore quantizzato non è cambiato (niente alloc per-frame).
+ */
+export function activeBorderAlphaByte(elapsed: number): number {
+  return Math.round(activeBorderAlpha(elapsed) * 255);
+}
+
 /** Converte una frazione [0, 1] nel byte alpha esadecimale a 2 cifre ("00".."ff"). */
 export function alphaByteHex(fraction: number): string {
   // Guard solo su NaN (che propagherebbe "NaN" nel colore): gli infiniti li

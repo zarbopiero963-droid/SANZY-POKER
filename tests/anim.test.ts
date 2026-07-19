@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import {
   activeBorderAlpha,
+  activeBorderAlphaByte,
   alphaByteHex,
   dotPulseAlpha,
   pulse01,
@@ -29,6 +30,18 @@ describe("anim — helper di pulsazione", () => {
       const a = activeBorderAlpha(i * 0.017);
       expect(a).toBeGreaterThanOrEqual(0.55);
       expect(a).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("activeBorderAlphaByte: intero in [140, 255], coerente con activeBorderAlpha", () => {
+    for (let i = 0; i < 2000; i += 1) {
+      const elapsed = i * 0.017;
+      const b = activeBorderAlphaByte(elapsed);
+      expect(Number.isInteger(b)).toBe(true);
+      // activeBorderAlpha ∈ [0.55, 1] → *255 → round ∈ [140, 255].
+      expect(b).toBeGreaterThanOrEqual(140);
+      expect(b).toBeLessThanOrEqual(255);
+      expect(b).toBe(Math.round(activeBorderAlpha(elapsed) * 255));
     }
   });
 

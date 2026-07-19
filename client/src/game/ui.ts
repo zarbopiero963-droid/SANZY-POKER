@@ -18,7 +18,12 @@ import {
 } from "@babylonjs/gui/2D";
 import { cardParts, type CardCode, type Variant } from "./rules";
 import { formatChips, t } from "./i18n";
-import { dotPulseAlpha, pulse01, withPulseAlpha } from "./anim";
+import {
+  activeBorderAlphaByte,
+  dotPulseAlpha,
+  pulse01,
+  withPulseAlpha,
+} from "./anim";
 import { VISIBLE_LOG_LINES, computeViewSignature } from "./viewSignature";
 import type { GameController, PlayerState, TableState } from "./state";
 
@@ -92,9 +97,10 @@ export class PokerUI {
   // Bordi del posto di turno: pulsano nel loop tick() (per-frame), non nel
   // render gated. Ricostruiti a ogni rebuild insieme ai posti.
   private activeBorders: (Rectangle | Ellipse)[] = [];
-  // Ultimo colore bordo applicato: se il valore quantizzato non cambia tra due
-  // frame, tick() salta la riassegnazione (meno invalidazioni GUI su mobile).
-  private lastBorderColor = "";
+  // Ultimo byte alpha bordo applicato (0..255): se non cambia tra due frame,
+  // tick() salta la riassegnazione E la costruzione della stringa colore (meno
+  // invalidazioni GUI e nessuna alloc per-frame su mobile). -1 = da riapplicare.
+  private lastBorderAlphaByte = -1;
   // Ultima pulsazione quantizzata (0..255) applicata ai pulseDots: idem, evita
   // di riscrivere l'alpha dei punti quando il valore quantizzato non cambia.
   private lastDotPulse = -1;
@@ -253,7 +259,7 @@ export class PokerUI {
     this.pulseDots = [];
     this.activeBorders = [];
     // Nuovi controlli dopo il rebuild: forza tick() a riapplicare colore/alpha.
-    this.lastBorderColor = "";
+    this.lastBorderAlphaByte = -1;
     this.lastDotPulse = -1;
     if (screen === "lobby")
       this.mobile ? this.renderLobbyMobile() : this.renderLobby();
@@ -2042,7 +2048,7 @@ export class PokerUI {
     this.activeBorders.push(...controls);
     // Invalida la cache così tick() riapplica il colore ai nuovi controlli,
     // anche se registrati fuori dal ciclo di rebuild.
-    this.lastBorderColor = "";
+    this.lastBorderAlphaByte = -1;
   }
 
   tick(elapsed: number) {
@@ -2062,9 +2068,11 @@ export class PokerUI {
     // restano pienamente leggibili. Riassegna SOLO se il colore quantizzato è
     // cambiato dal frame precedente: evita invalidazioni GUI inutili su mobile.
     if (this.activeBorders.length) {
-      const color = withPulseAlpha(ORANGE, elapsed);
-      if (color !== this.lastBorderColor) {
-        this.lastBorderColor = color;
+      const alphaByte = activeBorderAlphaByte(elapsed);
+      if (alphaByte !== this.lastBorderAlphaByte) {
+        this.lastBorderAlphaByte = alphaByte;
+        // Stringa colore costruita SOLO sul cache-miss (niente alloc per-frame).
+        const color = withPulseAlpha(ORANGE, elapsed);
         this.activeBorders.forEach(border => (border.color = color));
       }
     }
