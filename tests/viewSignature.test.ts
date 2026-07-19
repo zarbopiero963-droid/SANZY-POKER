@@ -46,6 +46,24 @@ describe("viewSignature — render-gate HUD", () => {
     expect(computeViewSignature(t2, UI)).toBe(sig);
   });
 
+  it("TableState resta JSON-serializzabile senza perdite (vincolo della firma)", () => {
+    const t = baseTable();
+    // Popola i rami annidati (risultato di showdown) per un round-trip completo.
+    t.lastResult = {
+      potTotal: 100,
+      pot1Winners: ["human"],
+      pot2Winners: ["bot-1"],
+      bestPot1: "Colore",
+      bestPot2: "Coppia",
+      payouts: { human: 50, "bot-1": 50 },
+      splitRule: "50/50",
+    };
+    // Se lo stato contenesse Map/Set/undefined/funzioni, JSON.stringify li
+    // ometterebbe silenziosamente e la firma diventerebbe inaffidabile: il
+    // round-trip lo intercetta (deep-equal contro structuredClone).
+    expect(JSON.parse(JSON.stringify(t))).toEqual(structuredClone(t));
+  });
+
   it("log: fuori dalla finestra visibile non conta, in testa e in lunghezza sì", () => {
     const t = baseTable();
     t.log = Array.from(

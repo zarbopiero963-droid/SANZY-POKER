@@ -35,9 +35,6 @@ export type ViewUiState = {
   mobileHeight: number;
 };
 
-/** Campi di stato che NON devono mai comparire nella firma (solo cue audio). */
-const AUDIO_ONLY_KEYS = new Set(["eventSerial", "lastEvent"]);
-
 export function computeViewSignature(
   table: TableState,
   ui: ViewUiState
@@ -51,14 +48,19 @@ export function computeViewSignature(
   };
   // Rami non-"table" (lobby): bastano schermo + lingua + layout.
   if (ui.screen !== "table") return JSON.stringify(head);
-  return JSON.stringify(
-    {
-      ...head,
-      table,
-      logLength: table.log.length,
-      logHead: table.log.slice(0, VISIBLE_LOG_LINES),
-    },
-    (key, value) =>
-      AUDIO_ONLY_KEYS.has(key) || key === "log" ? undefined : value
-  );
+  // Esclusione SOLO al livello top di TableState, via destrutturazione: i campi
+  // audio (eventSerial/lastEvent) e il log raw sono tolti qui, non con un
+  // replacer di JSON.stringify — che agirebbe a QUALSIASI profondità e potrebbe
+  // un domani escludere per sbaglio un campo omonimo annidato (es. in un player)
+  // reintroducendo il rischio di "HUD stantio" che questo modulo vuole azzerare.
+  // Vincolo di tipo: TableState deve restare JSON-serializzabile (solo POJO,
+  // array e primitivi) — nessun Map/Set/undefined/funzione, altrimenti la firma
+  // li ometterebbe silenziosamente. Un test di round-trip lo verifica.
+  const { eventSerial, lastEvent, log, ...visible } = table;
+  return JSON.stringify({
+    ...head,
+    table: visible,
+    logLength: log.length,
+    logHead: log.slice(0, VISIBLE_LOG_LINES),
+  });
 }
