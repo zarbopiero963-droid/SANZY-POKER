@@ -84,6 +84,11 @@ describe("anim — helper di pulsazione", () => {
     }
     // Il floor 0.38 scatta al minimo (pulse=0): grezzo per indice 3 = 0.325 < 0.38.
     expect(dotPulseAlpha(0, 3)).toBeCloseTo(0.38, 10);
+    // Clamp dell'input: un pulse fuori [0,1] (es. elapsed grezzo) non satura.
+    expect(dotPulseAlpha(5, 0)).toBeCloseTo(1, 10); // clamp a 1 → 0.4+0.6 = 1
+    expect(dotPulseAlpha(-5, 0)).toBeCloseTo(0.4, 10); // clamp a 0 → 0.4 (indice 0)
+    expect(dotPulseAlpha(-5, 3)).toBeCloseTo(0.38, 10); // clamp a 0 → floor a indice alto
+    expect(dotPulseAlpha(1000, 0)).toBeLessThanOrEqual(1);
   });
 
   it("dots: alpha applicato è funzione pura del byte quantizzato (coerenza chiave↔valore)", () => {
