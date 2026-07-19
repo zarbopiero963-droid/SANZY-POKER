@@ -12,7 +12,8 @@
 - [ ] Migliorare la grafica 3D del tavolo di gioco → passaggio di design a step (`HANDOFF-DESIGN.md`), **una PR alla volta dopo merge del proprietario**:
   - [x] Step 1 — distribuzione carte: le carte del board (flop/turn/river/Piatto 2) scivolano dal mazzo allo slot e poi si girano scoperte (`createCard` con origine `dealFrom` + stagger; `scene.ts`). Solo rendering, motore invariato.
   - [x] Step 2 — fiches che convergono al piatto su ogni puntata: le fiche nuove scivolano dal fronte del tavolo alla pila del piatto (`createChip` con origine + arco; solo le aggiunte si animano). Corretto anche il fix lampeggio separando carte e fiches del piatto.
-  - [ ] Step 3 — transizioni di fase/turno morbide (dissolvenze, bordo attivo, timer).
+  - [~] Step 3 — transizioni di fase/turno morbide: **bordo attivo pulsante** (il posto del giocatore di turno "respira" in arancione, animato nel loop `tick(elapsed)` via `client/src/game/anim.ts`, gate-safe) + **dissolvenza** delle carte appena scoperte (`visibility` 0.35→1 durante flip/slide in `createCard`, solo per le carte animate). Il **timer numerico è rimandato** perché a schermo cambierebbe ogni secondo → passerebbe dal render-gate e riattiverebbe lo sfarfallio/azzeramento slider (eventuale anello non-numerico via `tick` in un incremento successivo). Solo rendering, motore invariato.
+    - Smoke checklist (browser, WebGL non testabile offline): (1) all'inizio del turno di un giocatore il suo bordo/anello pulsa in arancione e si spegne quando il turno passa; (2) allo scoprire flop/turn/river/Piatto 2 le nuove carte si dissolvono entrando (le carte già in tavola NON ri-dissolvono a ogni puntata); (3) durante il turno umano lo slider di rilancio resta stabile (nessun rebuild per-frame); (4) verifica desktop e mobile.
   - [ ] Step 4 — stabilità/performance 60 fps, niente sfarfallio su mobile.
 
 ## Divisione dei piatti: regola definitiva 50/50 per piatto

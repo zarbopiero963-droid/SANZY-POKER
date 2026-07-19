@@ -414,6 +414,39 @@ function createCard(
     );
     lift.setEasingFunction(easing);
     animations.push(flip, lift);
+
+    // Dissolvenza (Step 3): la carta si "materializza" (visibility 0.35→1)
+    // mentre si gira. Parte da 0.35 e non da 0 così, anche se l'animazione non
+    // completasse, resta comunque visibile; a fine animazione è piena (1).
+    // Passano di qui SOLO le carte animate (appena scoperte/distribuite): quelle
+    // già presenti sono statiche e non vengono ri-dissolte a ogni rebuild.
+    const fadeKeys = [
+      { frame: 0, value: 0.35 },
+      { frame: flipStart, value: 0.35 },
+      { frame: middle, value: 1 },
+      { frame: end, value: 1 },
+    ];
+    const makeFade = (target: string) => {
+      const fade = new Animation(
+        `${name}-${target}-fade`,
+        "visibility",
+        60,
+        Animation.ANIMATIONTYPE_FLOAT,
+        Animation.ANIMATIONLOOPMODE_CONSTANT
+      );
+      fade.setKeys(fadeKeys);
+      fade.setEasingFunction(easing);
+      return fade;
+    };
+    card.visibility = 0.35;
+    facePlane.visibility = 0.35;
+    backPlane.visibility = 0.35;
+    animations.push(makeFade("card"));
+    facePlane.animations = [makeFade("face")];
+    backPlane.animations = [makeFade("back")];
+    scene.beginAnimation(facePlane, 0, end, false);
+    scene.beginAnimation(backPlane, 0, end, false);
+
     card.animations = animations;
     scene.beginAnimation(card, 0, end, false);
   }
