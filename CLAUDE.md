@@ -122,7 +122,7 @@ Su questo repository esistono due workflow di code review AI (`.github/workflows
 - **Prima di chiedere/dichiarare pronto il merge di una PR è OBBLIGATORIO applicare ENTRAMBE le label** `ai-review:fable` e `ai-review:gpt` e attendere che i due reviewer AI abbiano commentato il current-head.
 - Se una label non è ancora applicata, applicala (o chiedi al proprietario di applicarla); non considerare la PR pronta per il merge finché entrambe le review AI non sono presenti sull'ultimo commit.
 - Le review AI sono **informative**: leggile e, se sollevano problemi reali e azionabili, correggili con l'ordine operativo standard; i falsi positivi si chiudono nel thread con l'evidenza. Non bloccano il DONE se la CI è verde e i finding sono gestiti.
-- I due workflow richiedono i Secret `ANTHROPIC_API_KEY` e `OPENAI_API_KEY` e le Variable `ANTHROPIC_REVIEW_MODEL` / `OPENAI_REVIEW_MODEL` (setup una-tantum del proprietario). Senza chiave il workflow salta senza rompere la CI.
+- I due workflow richiedono i Secret `ANTHROPIC_API_KEY_2` e `OPENAI_API_KEY_2` e le Variable `ANTHROPIC_REVIEW_MODEL` / `OPENAI_REVIEW_MODEL` (setup una-tantum del proprietario). Senza chiave il workflow salta senza rompere la CI.
 
 ## MONITORAGGIO ATTIVO DELLA PR — OBBLIGATORIO
 

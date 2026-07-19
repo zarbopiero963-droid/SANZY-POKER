@@ -269,7 +269,7 @@ This repo has two AI code-review workflows (`.github/workflows/ai-review-fable.y
 - **Before asking for / declaring a PR ready to merge it is MANDATORY to apply BOTH labels** `ai-review:fable` and `ai-review:gpt` and wait for both AI reviewers to have commented the current head.
 - If a label is not yet applied, apply it (or ask the owner to); do not treat the PR as merge-ready until both AI reviews are present on the latest commit.
 - AI reviews are **informative**: read them and, if they raise real actionable issues, fix them via the standard operative sequence; close false positives in-thread with evidence. They do not block DONE if CI is green and findings are handled.
-- The two workflows need the Secrets `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` and the Variables `ANTHROPIC_REVIEW_MODEL` / `OPENAI_REVIEW_MODEL` (one-time owner setup). Without a key the workflow skips without breaking CI.
+- The two workflows need the Secrets `ANTHROPIC_API_KEY_2` and `OPENAI_API_KEY_2` and the Variables `ANTHROPIC_REVIEW_MODEL` / `OPENAI_REVIEW_MODEL` (one-time owner setup). Without a key the workflow skips without breaking CI.
 
 ### Active PR monitoring — required
 

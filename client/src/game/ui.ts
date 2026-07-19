@@ -251,7 +251,11 @@ export class PokerUI {
       table.dealerIndex,
       result,
       players,
-      table.log[0] ?? "",
+      // Rifletti l'intero log visibile (l'HUD mostra slice(0, 7)) + la lunghezza
+      // totale: qualunque riga di log visibile cambi forza il rebuild. Durante il
+      // turno umano il log non cambia, quindi lo slider di rilancio resta stabile.
+      table.log.length,
+      table.log.slice(0, 7).join("¦"),
     ].join("|");
   }
 
