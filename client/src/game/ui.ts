@@ -88,6 +88,10 @@ export class PokerUI {
   private unsubscribe: (() => void) | null = null;
   private pulseDots: Ellipse[] = [];
   private eventSerial = -1;
+  // Firma di ciò che è VISIBILE nell'HUD: si ricostruisce solo quando cambia,
+  // non a ogni evento. Evita il frame "strappato" durante le puntate e non
+  // ricrea (azzerando) lo slider di rilancio mentre il giocatore lo usa.
+  private lastViewSignature = "";
   private audioContext: AudioContext | null = null;
   private mobile = false;
   private mobileHeight = 900;
@@ -130,6 +134,7 @@ export class PokerUI {
     this.mobileHeight = nextMobileHeight;
     this.gui.idealWidth = mobile ? 420 : 1600;
     this.gui.idealHeight = mobile ? this.mobileHeight : 900;
+    this.lastViewSignature = ""; // forza il rebuild al cambio mobile/viewport
     if (this.currentTable) this.render(this.currentTable, this.currentScreen);
   }
 
@@ -207,18 +212,66 @@ export class PokerUI {
     return control;
   }
 
+  /**
+   * Firma dello stato VISIBILE dell'HUD. Se non cambia, non c'è nulla di nuovo
+   * da disegnare: durante il turno del giocatore (piatto/turno/stack fermi)
+   * resta costante, quindi lo slider non viene ricreato e non lampeggia.
+   */
+  private viewSignature(table: TableState, screen: Screen): string {
+    if (screen !== "table") return screen;
+    const players = table.players
+      .map(
+        p =>
+          `${p.id}:${Math.round(p.chips)}:${p.lastAction}:${p.folded ? 1 : 0}:${p.cards.length}:${Math.round(p.roundBet)}`
+      )
+      .join(",");
+    const result = table.lastResult
+      ? [
+          table.lastResult.splitRule,
+          table.lastResult.bestPot1,
+          table.lastResult.bestPot2,
+          table.lastResult.pot1Winners.join(">"),
+          table.lastResult.pot2Winners.join(">"),
+        ].join("~")
+      : "-";
+    return [
+      screen,
+      this.mobile ? "m" : "d",
+      this.mobileHeight,
+      table.status,
+      table.phase,
+      table.handNumber,
+      Math.round(table.pot),
+      table.turnIndex,
+      table.roundMaxBet,
+      table.roundRaises,
+      table.board1Revealed,
+      table.board2Revealed ? 1 : 0,
+      table.revealAll ? 1 : 0,
+      table.dealerIndex,
+      result,
+      players,
+      table.log[0] ?? "",
+    ].join("|");
+  }
+
   private render(table: TableState, screen: Screen) {
-    this.root.clearControls();
-    this.pulseDots = [];
-    if (screen === "lobby")
-      this.mobile ? this.renderLobbyMobile() : this.renderLobby();
-    else this.mobile ? this.renderTableMobile(table) : this.renderTable(table);
+    // Cue audio sugli eventi, indipendente dalla ricostruzione visiva.
     if (this.eventSerial !== table.eventSerial) {
       this.eventSerial = table.eventSerial;
       if (["chips-to-pot", "winner", "showdown"].includes(table.lastEvent)) {
         this.tone(table.lastEvent === "chips-to-pot" ? 340 : 560, 0.08, 0.024);
       }
     }
+    // Ricostruisci l'HUD SOLO se qualcosa di visibile è cambiato.
+    const signature = this.viewSignature(table, screen);
+    if (signature === this.lastViewSignature) return;
+    this.lastViewSignature = signature;
+    this.root.clearControls();
+    this.pulseDots = [];
+    if (screen === "lobby")
+      this.mobile ? this.renderLobbyMobile() : this.renderLobby();
+    else this.mobile ? this.renderTableMobile(table) : this.renderTable(table);
   }
 
   private brand(parent: Rectangle, compact = false) {
