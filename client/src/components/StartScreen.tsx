@@ -206,6 +206,10 @@ const START_CSS = `
 .sanzy-felt {
   position: fixed;
   inset: 0;
+  /* Strato puramente decorativo (aria-hidden): non deve mai catturare il
+     puntatore, così eventuali elementi interattivi fuori dall'ovale restano
+     cliccabili senza dipendere solo dallo z-index di .sanzy-table. */
+  pointer-events: none;
   background:
     radial-gradient(120% 90% at 50% 32%, #1c6a49 0%, #114a33 46%, #0a3122 74%, #072418 100%);
   box-shadow: inset 0 0 240px rgba(0,0,0,.55), inset 0 0 60px rgba(0,0,0,.35);
@@ -237,6 +241,9 @@ const START_CSS = `
 .sanzy-table {
   position: relative;
   z-index: 1;
+  /* border-box esplicito: con width:100% + padding + bordo, non dipendiamo dal
+     Preflight di Tailwind per evitare overflow orizzontale su viewport strette. */
+  box-sizing: border-box;
   /* margin:auto centra la superficie ma, a differenza di
      justify/align-items:center sul contenitore, non taglia il bordo alto del
      pannello quando è più alto della viewport: lo scroll resta raggiungibile. */
