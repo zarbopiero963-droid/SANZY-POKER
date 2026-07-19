@@ -17,14 +17,6 @@ export type Locale = "it" | "en" | "es" | "fr";
 
 export const LOCALES: Locale[] = ["it", "en", "es", "fr"];
 
-/** Nome della lingua nella lingua stessa, per il selettore iniziale. */
-export const LOCALE_NAMES: Record<Locale, string> = {
-  it: "Italiano",
-  en: "English",
-  es: "Español",
-  fr: "Français",
-};
-
 /** Emoji bandiera per il selettore (solo decorativa). */
 export const LOCALE_FLAG: Record<Locale, string> = {
   it: "🇮🇹",
@@ -67,6 +59,13 @@ const IT: Dict = {
   "start.tagline": "Due piatti, una sola lettura",
   "start.play": "GIOCA",
   "start.change": "Cambia",
+  "brand.name": "Sanzy Poker",
+  "brand.sanzy": "SANZY",
+  "brand.poker": "POKER",
+  "locale.it": "Italiano",
+  "locale.en": "English",
+  "locale.es": "Español",
+  "locale.fr": "Français",
   "loader.preparing": "Preparazione del tavolo…",
   "variant.standard.name": "Standard",
   "variant.hilow.name": "Hi/Low",
@@ -190,6 +189,13 @@ const EN: Dict = {
   "start.tagline": "Two pots, one read",
   "start.play": "PLAY",
   "start.change": "Change",
+  "brand.name": "Sanzy Poker",
+  "brand.sanzy": "SANZY",
+  "brand.poker": "POKER",
+  "locale.it": "Italiano",
+  "locale.en": "English",
+  "locale.es": "Español",
+  "locale.fr": "Français",
   "loader.preparing": "Preparing the table…",
   "variant.standard.name": "Standard",
   "variant.hilow.name": "Hi/Low",
@@ -304,6 +310,13 @@ const ES: Dict = {
   "start.tagline": "Dos botes, una sola lectura",
   "start.play": "JUGAR",
   "start.change": "Cambiar",
+  "brand.name": "Sanzy Poker",
+  "brand.sanzy": "SANZY",
+  "brand.poker": "POKER",
+  "locale.it": "Italiano",
+  "locale.en": "English",
+  "locale.es": "Español",
+  "locale.fr": "Français",
   "loader.preparing": "Preparando la mesa…",
   "variant.standard.name": "Standard",
   "variant.hilow.name": "Hi/Low",
@@ -419,6 +432,13 @@ const FR: Dict = {
   "start.tagline": "Deux pots, une seule lecture",
   "start.play": "JOUER",
   "start.change": "Changer",
+  "brand.name": "Sanzy Poker",
+  "brand.sanzy": "SANZY",
+  "brand.poker": "POKER",
+  "locale.it": "Italiano",
+  "locale.en": "English",
+  "locale.es": "Español",
+  "locale.fr": "Français",
   "loader.preparing": "Préparation de la table…",
   "variant.standard.name": "Standard",
   "variant.hilow.name": "Hi/Low",

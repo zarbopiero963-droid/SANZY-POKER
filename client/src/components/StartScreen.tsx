@@ -2,8 +2,14 @@
  * Schermata d'ingresso di Sanzy Poker.
  *
  * Flusso richiesto: appena si apre l'URL si sceglie prima la LINGUA
- * (IT/EN/ES/FR), poi compare il logo Sanzy Poker con i due pulsanti di
+ * (IT/EN/ES/FR), poi compare il marchio Sanzy Poker con i due pulsanti di
  * VARIANTE (Standard / Hi-Low). La variante scelta avvia la partita.
+ *
+ * Stile: fedele al tavolo fisico Sanzy — feltro verde, marchio tipografico
+ * SANZY (bianco) / POKER (rosso), bordo ottone, quattro semi negli angoli e il
+ * motivo dei due piatti (Piatto 1 orizzontale 3+2+1, Piatto 2 verticale a 2).
+ * NB: il logo vero e proprio verrà ridisegnato a parte; qui si usa un marchio
+ * tipografico come segnaposto, non l'SVG precedente.
  *
  * La logica di gioco non vive qui: questo componente sceglie solo lingua e
  * variante e le passa al canvas.
@@ -11,15 +17,7 @@
 
 import { useState } from "react";
 import type { Variant } from "@/game/rules";
-import {
-  LOCALES,
-  LOCALE_FLAG,
-  LOCALE_NAMES,
-  setLocale,
-  t,
-  type Locale,
-} from "@/game/i18n";
-import SanzyLogo from "./SanzyLogo";
+import { LOCALES, LOCALE_FLAG, setLocale, t, type Locale } from "@/game/i18n";
 
 const STORAGE_KEY = "sanzy.locale";
 
@@ -32,6 +30,53 @@ function readStoredLocale(): Locale {
     // localStorage può essere disabilitato: si ripiega sull'italiano.
   }
   return "it";
+}
+
+/**
+ * Marchio tipografico SANZY (bianco) / POKER (rosso) — segnaposto del logo.
+ * È un logo (role="img") con nome accessibile dall'i18n; anche il testo del
+ * marchio passa da t() (valori identici nelle 4 lingue: è un brand costante).
+ */
+function Wordmark({ locale }: { locale: Locale }) {
+  return (
+    <div
+      className="sanzy-wordmark"
+      role="img"
+      aria-label={t("brand.name", undefined, locale)}
+    >
+      <span className="wm-sanzy">{t("brand.sanzy", undefined, locale)}</span>
+      <span className="wm-poker">{t("brand.poker", undefined, locale)}</span>
+    </div>
+  );
+}
+
+/**
+ * Motivo del board dei due piatti, come sul tavolo reale: Piatto 1 orizzontale
+ * 3+2+1, Piatto 2 verticale a 2. Puramente decorativo (feltro inciso).
+ */
+function BoardMotif() {
+  return (
+    <div className="sanzy-board" aria-hidden>
+      <div className="board-pot1">
+        <div className="board-group">
+          <span className="slot" />
+          <span className="slot" />
+          <span className="slot" />
+        </div>
+        <div className="board-group">
+          <span className="slot" />
+          <span className="slot" />
+        </div>
+        <div className="board-group">
+          <span className="slot" />
+        </div>
+      </div>
+      <div className="board-pot2">
+        <span className="slot" />
+        <span className="slot" />
+      </div>
+    </div>
+  );
 }
 
 type StartScreenProps = {
@@ -62,16 +107,24 @@ export default function StartScreen({ onStart }: StartScreenProps) {
   return (
     <main className="sanzy-start">
       <style>{START_CSS}</style>
-      <div className="sanzy-start-inner">
+      <div className="sanzy-felt" aria-hidden>
+        <span className="felt-suit felt-suit--tl">♠</span>
+        <span className="felt-suit felt-suit--tr">♥</span>
+        <span className="felt-suit felt-suit--bl">♦</span>
+        <span className="felt-suit felt-suit--br">♣</span>
+      </div>
+
+      <div className="sanzy-table">
+        <p className="sanzy-tagline">{t("start.tagline", undefined, locale)}</p>
+        <Wordmark locale={locale} />
+        <BoardMotif />
+
         {step === "language" ? (
-          <section className="sanzy-start-panel" aria-label="language">
-            <p className="sanzy-start-tagline">
-              {t("start.tagline", undefined, locale)}
-            </p>
-            <div className="sanzy-start-logo sanzy-start-logo--small">
-              <SanzyLogo title="Sanzy Poker" />
-            </div>
-            <h1 className="sanzy-start-heading">
+          <section
+            className="sanzy-panel"
+            aria-label={t("start.chooseLanguage", undefined, locale)}
+          >
+            <h1 className="sanzy-heading">
               {t("start.chooseLanguage", undefined, locale)}
             </h1>
             <div className="sanzy-lang-grid">
@@ -85,25 +138,28 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                   <span className="sanzy-lang-flag" aria-hidden>
                     {LOCALE_FLAG[code]}
                   </span>
-                  <span className="sanzy-lang-name">{LOCALE_NAMES[code]}</span>
+                  <span className="sanzy-lang-name">
+                    {t(`locale.${code}`, undefined, code)}
+                  </span>
                 </button>
               ))}
             </div>
           </section>
         ) : (
-          <section className="sanzy-start-panel" aria-label="variant">
+          <section
+            className="sanzy-panel"
+            aria-label={t("start.chooseVariant", undefined, locale)}
+          >
             <button
               type="button"
-              className="sanzy-start-back"
+              className="sanzy-back"
               onClick={() => setStep("language")}
             >
-              {LOCALE_FLAG[locale]} {LOCALE_NAMES[locale]} ·{" "}
+              <span aria-hidden>{LOCALE_FLAG[locale]}</span>{" "}
+              {t(`locale.${locale}`, undefined, locale)} ·{" "}
               {t("start.change", undefined, locale)}
             </button>
-            <div className="sanzy-start-logo">
-              <SanzyLogo title="Sanzy Poker" />
-            </div>
-            <h2 className="sanzy-start-heading">
+            <h2 className="sanzy-heading">
               {t("start.chooseVariant", undefined, locale)}
             </h2>
             <div className="sanzy-variant-grid">
@@ -138,39 +194,148 @@ const START_CSS = `
   position: fixed;
   inset: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 24px;
-  background:
-    radial-gradient(120% 90% at 50% 12%, #1a2b25 0%, #0c1013 58%, #070a0c 100%);
-  color: #f3f5f7;
+  color: #f4efe4;
   font-family: "Manrope", system-ui, sans-serif;
   overflow-y: auto;
+  /* Legno/ottone scuro intorno al feltro, come il bordo del tavolo. */
+  background:
+    radial-gradient(140% 120% at 50% -10%, #2a1c10 0%, #150d07 55%, #0a0604 100%);
 }
-.sanzy-start-inner { width: 100%; max-width: 620px; }
-.sanzy-start-panel {
+/* Feltro verde a tutto schermo con vignettatura e trama leggera. */
+.sanzy-felt {
+  position: fixed;
+  inset: 0;
+  /* Strato puramente decorativo (aria-hidden): non deve mai catturare il
+     puntatore, così eventuali elementi interattivi fuori dall'ovale restano
+     cliccabili senza dipendere solo dallo z-index di .sanzy-table. */
+  pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 50% 32%, #1c6a49 0%, #114a33 46%, #0a3122 74%, #072418 100%);
+  box-shadow: inset 0 0 240px rgba(0,0,0,.55), inset 0 0 60px rgba(0,0,0,.35);
+}
+/* Trama del feltro: doppio reticolo diagonale molto tenue. */
+.sanzy-felt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: .5;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.020) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,.045) 0 2px, transparent 2px 4px);
+}
+.felt-suit {
+  position: absolute;
+  font-size: 64px;
+  line-height: 1;
+  color: rgba(255,255,255,.05);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.felt-suit--tl { top: 26px; left: 30px; }
+.felt-suit--tr { top: 26px; right: 30px; color: rgba(210,60,54,.09); }
+.felt-suit--bl { bottom: 26px; left: 30px; color: rgba(210,60,54,.09); }
+.felt-suit--br { bottom: 26px; right: 30px; }
+
+/* Superficie centrale: ovale di feltro con bordo ottone. */
+.sanzy-table {
+  position: relative;
+  z-index: 1;
+  /* border-box esplicito: con width:100% + padding + bordo, non dipendiamo dal
+     Preflight di Tailwind per evitare overflow orizzontale su viewport strette. */
+  box-sizing: border-box;
+  /* margin:auto centra la superficie ma, a differenza di
+     justify/align-items:center sul contenitore, non taglia il bordo alto del
+     pannello quando è più alto della viewport: lo scroll resta raggiungibile. */
+  margin: auto;
+  width: 100%;
+  max-width: 560px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 20px;
+  gap: 18px;
+  padding: 40px 34px 38px;
+  border-radius: 220px / 150px;
+  background:
+    radial-gradient(120% 100% at 50% 22%, #17573d 0%, #0e3f2b 60%, #0b3323 100%);
+  border: 2px solid rgba(214,178,102,.55);
+  box-shadow:
+    0 30px 70px rgba(0,0,0,.55),
+    inset 0 0 0 6px rgba(0,0,0,.18),
+    inset 0 0 70px rgba(0,0,0,.30),
+    inset 0 2px 0 rgba(255,255,255,.06);
 }
-.sanzy-start-tagline {
+.sanzy-tagline {
   margin: 0;
-  font-size: 13px;
-  letter-spacing: 3px;
+  font-size: 12px;
+  letter-spacing: 4px;
   text-transform: uppercase;
-  color: #f49a35;
+  color: #d6b466;
   font-weight: 800;
 }
-.sanzy-start-logo { width: 100%; max-width: 440px; filter: drop-shadow(0 18px 40px rgba(0,0,0,.55)); }
-.sanzy-start-logo--small { max-width: 300px; }
-.sanzy-start-logo svg { width: 100%; height: auto; display: block; }
-.sanzy-start-heading {
-  margin: 4px 0 0;
-  font-size: 22px;
+/* Marchio tipografico SANZY / POKER (segnaposto del logo). */
+.sanzy-wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: .92;
+  margin-top: 2px;
+}
+.wm-sanzy {
+  font-size: 62px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  color: #f7f4ec;
+  text-shadow: 0 2px 0 rgba(0,0,0,.35), 0 10px 26px rgba(0,0,0,.5);
+}
+.wm-poker {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 14px;
+  margin-left: 14px; /* compensa il tracking per centrare otticamente */
+  color: #d6342c;
+  text-shadow: 0 2px 0 rgba(0,0,0,.35), 0 8px 20px rgba(120,0,0,.35);
+}
+/* Motivo dei due piatti (feltro inciso). */
+.sanzy-board {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin: 2px 0;
+}
+.board-pot1 { display: flex; align-items: center; gap: 13px; }
+.board-group { display: flex; gap: 6px; }
+.board-pot2 { display: flex; flex-direction: column; gap: 6px; }
+.sanzy-board .slot {
+  width: 17px;
+  height: 24px;
+  border-radius: 3px;
+  border: 1.5px solid rgba(247,244,236,.72);
+  background: rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.35);
+}
+.board-pot2 .slot {
+  width: 24px;
+  height: 17px;
+  border-color: rgba(226,192,120,.9);
+  background: rgba(214,178,102,.16);
+}
+
+.sanzy-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.sanzy-heading {
+  margin: 2px 0 0;
+  font-size: 19px;
   font-weight: 800;
   letter-spacing: .3px;
+  color: #eef3ee;
 }
 .sanzy-lang-grid {
   width: 100%;
@@ -182,19 +347,28 @@ const START_CSS = `
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 18px;
+  padding: 15px 18px;
   border-radius: 12px;
-  border: 1px solid #ffffff1c;
-  background: #191e26;
-  color: #eef1f4;
+  border: 1px solid rgba(214,178,102,.28);
+  background: rgba(6,32,22,.55);
+  color: #eef3ee;
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
   transition: transform .12s ease, border-color .12s ease, background .12s ease;
 }
-.sanzy-lang:hover { transform: translateY(-2px); border-color: #f49a3577; background: #212833; }
-.sanzy-lang.is-active { border-color: #f49a35; background: #2a2013; }
+.sanzy-lang:hover {
+  transform: translateY(-2px);
+  border-color: #d6b466;
+  background: rgba(23,87,61,.7);
+}
+.sanzy-lang.is-active {
+  border-color: #d6b466;
+  background: rgba(214,178,102,.16);
+  box-shadow: 0 0 0 1px rgba(214,178,102,.35) inset;
+}
 .sanzy-lang-flag { font-size: 24px; line-height: 1; }
+
 .sanzy-variant-grid {
   width: 100%;
   display: grid;
@@ -209,30 +383,58 @@ const START_CSS = `
   gap: 8px;
   padding: 20px;
   border-radius: 14px;
-  border: 1px solid #ffffff1c;
-  background: #191e26;
-  color: #eef1f4;
+  border: 1px solid rgba(214,178,102,.28);
+  background: rgba(6,32,22,.55);
+  color: #eef3ee;
   cursor: pointer;
   transition: transform .12s ease, border-color .12s ease, background .12s ease;
 }
-.sanzy-variant:hover { transform: translateY(-3px); border-color: #f49a35; background: #212833; }
-.sanzy-variant-name { font-size: 20px; font-weight: 800; }
-.sanzy-variant-desc { font-size: 13px; color: #9da4ae; line-height: 1.4; }
-.sanzy-variant-cta { margin-top: 4px; font-size: 13px; font-weight: 800; color: #f49a35; letter-spacing: .5px; }
-.sanzy-start-back {
+.sanzy-variant:hover {
+  transform: translateY(-3px);
+  border-color: #d6b466;
+  background: rgba(23,87,61,.7);
+  box-shadow: 0 14px 30px rgba(0,0,0,.4);
+}
+.sanzy-variant-name { font-size: 20px; font-weight: 800; color: #f7f4ec; }
+.sanzy-variant-desc { font-size: 13px; color: #b7cabf; line-height: 1.4; }
+.sanzy-variant-cta {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #d6b466;
+  letter-spacing: .5px;
+}
+.sanzy-back {
   align-self: center;
   padding: 8px 14px;
   border-radius: 999px;
-  border: 1px solid #ffffff1c;
-  background: #161b22;
-  color: #c7ccd3;
+  border: 1px solid rgba(214,178,102,.28);
+  background: rgba(6,32,22,.5);
+  color: #d8e3db;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  transition: border-color .12s ease, color .12s ease;
 }
-.sanzy-start-back:hover { border-color: #f49a3577; color: #f3f5f7; }
-@media (max-width: 520px) {
+.sanzy-back:hover { border-color: #d6b466; color: #f7f4ec; }
+
+@media (max-width: 540px) {
+  .sanzy-table { padding: 32px 20px 30px; border-radius: 140px / 120px; }
+  .wm-sanzy { font-size: 46px; letter-spacing: 6px; }
+  .wm-poker { font-size: 26px; letter-spacing: 10px; margin-left: 10px; }
   .sanzy-lang-grid, .sanzy-variant-grid { grid-template-columns: 1fr; }
-  .sanzy-start-heading { font-size: 19px; }
+  .sanzy-heading { font-size: 18px; }
+  .felt-suit { font-size: 44px; }
+}
+/* Viewport basse (paesaggio su telefono, finestre corte): compatta il pannello
+   così l'intero flusso lingua → variante resta raggiungibile senza tagli. */
+@media (max-height: 640px) {
+  .sanzy-start { padding: 14px; }
+  .sanzy-table { gap: 12px; padding: 22px 26px 20px; border-radius: 160px / 96px; }
+  .sanzy-wordmark { margin-top: 0; }
+  .wm-sanzy { font-size: 40px; letter-spacing: 5px; }
+  .wm-poker { font-size: 22px; letter-spacing: 9px; margin-left: 8px; }
+  .sanzy-board { margin: 0; }
+  .sanzy-panel { gap: 12px; }
 }
 `;

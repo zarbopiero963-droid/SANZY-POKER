@@ -89,6 +89,42 @@ describe("i18n — interpolazione dei parametri", () => {
     }
   });
 
+  it("le chiavi del marchio (brand.*) risolvono via t() in tutte le 4 lingue", () => {
+    // SANZY/POKER sono un brand costante: stessi valori in ogni lingua, ma passano
+    // comunque da t() così anche il marchio rispetta l'invariante i18n. Il test
+    // blinda solo che le chiavi esistano e risolvano (non ispeziona il componente
+    // React, quindi non prova l'assenza di literal nel JSX).
+    const expected: Record<string, string> = {
+      "brand.name": "Sanzy Poker",
+      "brand.sanzy": "SANZY",
+      "brand.poker": "POKER",
+    };
+    for (const locale of LOCALES) {
+      for (const [key, value] of Object.entries(expected)) {
+        expect(t(key, {}, locale), `${key} (${locale})`).toBe(value);
+        expect(t(key, {}, locale)).not.toBe(key);
+      }
+    }
+  });
+
+  it("gli endonimi delle lingue (locale.*) risolvono via t() in tutte le 4 lingue", () => {
+    // Il selettore di lingua della StartScreen mostra il nome di ogni lingua nella
+    // lingua stessa: sono endonimi costanti, ma passano da t() così anche il
+    // selettore non usa literal hardcoded fuori da i18n.
+    const expected: Record<string, string> = {
+      "locale.it": "Italiano",
+      "locale.en": "English",
+      "locale.es": "Español",
+      "locale.fr": "Français",
+    };
+    for (const locale of LOCALES) {
+      for (const [key, value] of Object.entries(expected)) {
+        expect(t(key, {}, locale), `${key} (${locale})`).toBe(value);
+        expect(t(key, {}, locale)).not.toBe(key);
+      }
+    }
+  });
+
   it("formatta i gettoni arrotondando all'intero (separatori dipendono dall'ICU)", () => {
     // In ambiente Node small-ICU i separatori possono mancare: verifichiamo le
     // cifre e l'arrotondamento, non la punteggiatura specifica della lingua.

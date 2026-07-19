@@ -116,11 +116,24 @@ Verifica reale del rendering 3D: va fatta **nel browser** (Babylon/WebGL,
 animazioni, layout mobile/desktop). Documentare i controlli manuali; la logica
 pura è già coperta dai test offline.
 
+## 9-bis. Stato: schermata d'ingresso (redesign "tavolo fisico")
+
+Rifatta la entry screen (`client/src/components/StartScreen.tsx`, CSS inline
+`START_CSS`) in stile **fedele al tavolo Sanzy**: feltro verde a tutto schermo
+con vignettatura e trama, superficie ovale centrale con **bordo ottone**, quattro
+semi sfumati negli angoli, **motivo dei due piatti** inciso (Piatto 1 orizzontale
+3+2+1, Piatto 2 verticale a 2), accenti ottone (`#d6b466`) al posto dell'arancione.
+Il flusso resta lingua → variante e ogni testo passa da `t()` nelle 4 lingue.
+
+**Logo:** al posto dell'SVG `SanzyLogo` (da ridisegnare a parte, decisione del
+proprietario) si usa un **marchio tipografico** SANZY (bianco) / POKER (rosso)
+come segnaposto. `SanzyLogo.tsx` resta nel repo per il futuro redesign del logo.
+
 ## 10. Checklist di consegna del design
 
 - [ ] Tavolo 3D fluido (animazioni carte/fiches/fasi, luce e feltro, nessun
       scatto percepibile su mobile).
-- [ ] Schermata d'ingresso rifinita (logo + lingua + varianti) da vero client.
+- [ ] Schermata d'ingresso rifinita (lingua + varianti) da vero client — (parziale) redesign feltro fatto (§9-bis); logo ancora segnaposto tipografico, SVG da ridisegnare a parte.
 - [ ] Logo migliorato mantenendo l'identità (§5).
 - [ ] Zero testi hardcoded: tutto via `t()` nelle 4 lingue.
 - [ ] `pnpm check`, `pnpm test`, `pnpm build` verdi.
