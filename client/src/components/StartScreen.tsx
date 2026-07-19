@@ -160,8 +160,8 @@ export default function StartScreen({ onStart }: StartScreenProps) {
               className="sanzy-back"
               onClick={() => setStep("language")}
             >
-              {LOCALE_FLAG[locale]} {LOCALE_NAMES[locale]} ·{" "}
-              {t("start.change", undefined, locale)}
+              <span aria-hidden>{LOCALE_FLAG[locale]}</span>{" "}
+              {LOCALE_NAMES[locale]} · {t("start.change", undefined, locale)}
             </button>
             <h2 className="sanzy-heading">
               {t("start.chooseVariant", undefined, locale)}
