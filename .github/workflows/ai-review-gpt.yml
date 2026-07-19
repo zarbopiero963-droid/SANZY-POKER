@@ -1,0 +1,51 @@
+# Code review AI con OpenAI (modello configurabile via Variable).
+# Si attiva SOLO se la PR ha la label `ai-review:gpt`, e gira a ogni nuovo
+# commit finché la label è presente (commenta ogni commit). La review è un
+# COMMENTO, non un check bloccante: il merge resta manuale del proprietario.
+name: AI Review — GPT
+
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ai-review-gpt-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: contains(github.event.pull_request.labels.*.name, 'ai-review:gpt')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepara la diff della PR (solo file cambiati, esclusi rumori)
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          git diff "origin/${{ github.base_ref }}...HEAD" -- . \
+            ':(exclude)pnpm-lock.yaml' \
+            ':(exclude)dist/**' \
+            ':(exclude)**/*.lock' > /tmp/pr.diff || true
+          echo "Diff bytes:"; wc -c /tmp/pr.diff
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Review (OpenAI)
+        env:
+          PROVIDER: openai
+          # Imposta il modello nella Variable OPENAI_REVIEW_MODEL del repo.
+          # Default: gpt-5.6-sol (verifica l'ID esatto su platform.openai.com/docs/models).
+          MODEL: ${{ vars.OPENAI_REVIEW_MODEL || 'gpt-5.6-sol' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REVIEWER_NAME: "OpenAI GPT"
+          DIFF_FILE: /tmp/pr.diff
+        run: node .github/scripts/ai-review.mjs

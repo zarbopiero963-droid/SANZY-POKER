@@ -115,6 +115,15 @@ Su questo repository i reviewer che compaiono sulle PR sono **CodeRabbit**, **So
 
 Ogni push consuma minuti CI. Sii parsimonioso: accorpa i fix di review in un solo push per giro; non pushare per cleanup puramente cosmetici o per rincorrere falsi positivi da diff-per-push (un reviewer che ha visto solo l'ultimo commit e crede «mancante» un'implementazione che sta in un commit precedente della stessa PR) — a quelli rispondi nel thread con l'evidenza, mai con un commit.
 
+## AI REVIEW A DUE MODELLI — LABEL OBBLIGATORIE
+
+Su questo repository esistono due workflow di code review AI (`.github/workflows/ai-review-fable.yml` → Anthropic Fable 5; `.github/workflows/ai-review-gpt.yml` → OpenAI). Si attivano **solo tramite label** e commentano la PR a ogni commit; **non sono check bloccanti** e il merge resta manuale del proprietario.
+
+- **Prima di chiedere/dichiarare pronto il merge di una PR è OBBLIGATORIO applicare ENTRAMBE le label** `ai-review:fable` e `ai-review:gpt` e attendere che i due reviewer AI abbiano commentato il current-head.
+- Se una label non è ancora applicata, applicala (o chiedi al proprietario di applicarla); non considerare la PR pronta per il merge finché entrambe le review AI non sono presenti sull'ultimo commit.
+- Le review AI sono **informative**: leggile e, se sollevano problemi reali e azionabili, correggili con l'ordine operativo standard; i falsi positivi si chiudono nel thread con l'evidenza. Non bloccano il DONE se la CI è verde e i finding sono gestiti.
+- I due workflow richiedono i Secret `ANTHROPIC_API_KEY` e `OPENAI_API_KEY` e le Variable `ANTHROPIC_REVIEW_MODEL` / `OPENAI_REVIEW_MODEL` (setup una-tantum del proprietario). Senza chiave il workflow salta senza rompere la CI.
+
 ## MONITORAGGIO ATTIVO DELLA PR — OBBLIGATORIO
 
 Non basta leggere i commenti una volta: dopo aver aperto o aggiornato una PR devi **seguirla attivamente** finché non è mergiata o chiusa.
