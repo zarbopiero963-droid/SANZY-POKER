@@ -1443,14 +1443,14 @@ export class PokerUI {
       humanTurn &&
       table.roundRaises === 0 &&
       human.chips > callAmount + table.bigBlind;
-    const fold = this.button("FOLD", 88, 44, () =>
+    const fold = this.button(t("action.fold"), 88, 44, () =>
       this.controller.humanAction("fold")
     );
     placeTopLeft(fold, 12, 10);
     fold.isEnabled = humanTurn;
     panel.addControl(fold);
     const checkCall = this.button(
-      callAmount ? t("action.callN", { n: callAmount }) : "CHECK",
+      callAmount ? t("action.callN", { n: callAmount }) : t("action.check"),
       128,
       44,
       () => this.controller.humanAction(callAmount ? "call" : "check"),
@@ -1459,7 +1459,7 @@ export class PokerUI {
     placeTopLeft(checkCall, 106, 10);
     checkCall.isEnabled = humanTurn;
     panel.addControl(checkCall);
-    const allIn = this.button("ALL-IN", 88, 44, () =>
+    const allIn = this.button(t("action.allin"), 88, 44, () =>
       this.controller.humanAction("allin")
     );
     placeTopLeft(allIn, 240, 10);
@@ -1884,14 +1884,14 @@ export class PokerUI {
       humanTurn &&
       table.roundRaises === 0 &&
       human.chips > callAmount + table.bigBlind;
-    const fold = this.button("FOLD", 84, 46, () =>
+    const fold = this.button(t("action.fold"), 84, 46, () =>
       this.controller.humanAction("fold")
     );
     placeTopLeft(fold, 16, 48);
     fold.isEnabled = humanTurn;
     panel.addControl(fold);
     const checkCall = this.button(
-      callAmount ? t("action.callN", { n: callAmount }) : "CHECK",
+      callAmount ? t("action.callN", { n: callAmount }) : t("action.check"),
       102,
       46,
       () => this.controller.humanAction(callAmount ? "call" : "check"),
@@ -1900,7 +1900,7 @@ export class PokerUI {
     placeTopLeft(checkCall, 105, 48);
     checkCall.isEnabled = humanTurn;
     panel.addControl(checkCall);
-    const allIn = this.button("ALL-IN", 84, 46, () =>
+    const allIn = this.button(t("action.allin"), 84, 46, () =>
       this.controller.humanAction("allin")
     );
     placeTopLeft(allIn, 212, 48);
@@ -1926,7 +1926,7 @@ export class PokerUI {
     placeTopLeft(slider, 16, 126);
     panel.addControl(slider);
     const raise = this.button(
-      "RAISE",
+      t("action.raise"),
       94,
       44,
       () => this.controller.humanAction("raise", Math.round(slider.value)),
