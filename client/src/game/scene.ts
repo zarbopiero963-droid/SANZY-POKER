@@ -451,7 +451,9 @@ function createChip(
   x: number,
   y: number,
   z: number,
-  color: Color3
+  color: Color3,
+  from?: { x: number; z: number },
+  delayFrames = -1
 ) {
   const chip = MeshBuilder.CreateCylinder(
     name,
@@ -461,6 +463,46 @@ function createChip(
   chip.parent = root;
   chip.position.set(x, y, z);
   chip.material = material(scene, `${name}-mat`, color, 0.4);
+
+  // Convergenza al piatto: la fiche nuova entra dal fronte del tavolo e scivola
+  // (con un piccolo arco) fino alla sua posizione nella pila del piatto.
+  if (from && delayFrames >= 0) {
+    const delay = Math.max(0, delayFrames);
+    const end = delay + 12;
+    chip.position.set(from.x, y + 0.55, from.z);
+    const easing = new CubicEase();
+    easing.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
+    const track = (
+      property: string,
+      hold: number,
+      target: number,
+      peak?: number
+    ) => {
+      const anim = new Animation(
+        `${name}-${property}`,
+        property,
+        60,
+        Animation.ANIMATIONTYPE_FLOAT,
+        Animation.ANIMATIONLOOPMODE_CONSTANT
+      );
+      const keys = [
+        { frame: 0, value: hold },
+        { frame: delay, value: hold },
+      ];
+      if (peak !== undefined)
+        keys.push({ frame: (delay + end) / 2, value: peak });
+      keys.push({ frame: end, value: target });
+      anim.setKeys(keys);
+      anim.setEasingFunction(easing);
+      return anim;
+    };
+    chip.animations = [
+      track("position.x", from.x, x),
+      track("position.z", from.z, z),
+      track("position.y", y + 0.55, y, y + 0.75),
+    ];
+    scene.beginAnimation(chip, 0, end, false);
+  }
   return chip;
 }
 
@@ -481,6 +523,7 @@ class PokerRoom3D {
   // niente più lampeggio o texture "grigie" durante i movimenti.
   private lastCardSignature = "";
   private lastChipSignature = "";
+  private renderedChipCount = 0;
 
   constructor(
     private scene: Scene,
@@ -675,6 +718,7 @@ class PokerRoom3D {
     this.stations.forEach(station => station.setEnabled(!mobile));
     this.lastCardSignature = "";
     this.lastChipSignature = "";
+    this.renderedChipCount = 0;
     this.update(this.controller.table, this.controller.screen);
   }
 
@@ -871,21 +915,30 @@ class PokerRoom3D {
       : Math.min(18, Math.max(4, Math.ceil(table.pot / 50)));
     const chipSignature = `${chipCount}`;
     if (chipSignature === this.lastChipSignature) return;
+    // Solo le fiche AGGIUNTE (piatto cresciuto) convergono con animazione; le
+    // altre restano ferme. Se il conteggio cala (nuova mano) niente animazione.
+    const previousChipCount = this.renderedChipCount;
     this.lastChipSignature = chipSignature;
+    this.renderedChipCount = chipCount;
     this.chipsRoot.dispose(false, true);
     this.chipsRoot = new TransformNode("dynamic-pot-chips", this.scene);
     this.chipsRoot.parent = this.tableRoot;
     for (let index = 0; index < chipCount; index += 1) {
       const column = index % 6;
       const row = Math.floor(index / 6);
+      const x = -0.75 + column * 0.3;
+      const z = 1.28 + (column % 2) * 0.12;
+      const isNew = index >= previousChipCount && chipCount > previousChipCount;
       createChip(
         this.scene,
         this.chipsRoot,
         `pot-chip-${index}`,
-        -0.75 + column * 0.3,
+        x,
         1.84 + row * 0.064,
-        1.28 + (column % 2) * 0.12,
-        index % 2 ? GOLD : new Color3(0.82, 0.12, 0.12)
+        z,
+        index % 2 ? GOLD : new Color3(0.82, 0.12, 0.12),
+        isNew ? { x: x * 0.4, z: 2.9 } : undefined,
+        isNew ? (index - previousChipCount) * 4 : -1
       );
     }
   }
