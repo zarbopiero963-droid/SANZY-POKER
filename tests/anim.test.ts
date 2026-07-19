@@ -8,8 +8,11 @@
 import { describe, expect, it } from "vitest";
 import {
   activeBorderAlpha,
+  activeBorderAlphaByte,
   alphaByteHex,
+  dotPulseAlpha,
   pulse01,
+  withAlphaByte,
   withPulseAlpha,
 } from "../client/src/game/anim";
 
@@ -31,16 +34,57 @@ describe("anim — helper di pulsazione", () => {
     }
   });
 
+  it("activeBorderAlphaByte: intero in [140, 255], coerente con activeBorderAlpha", () => {
+    for (let i = 0; i < 2000; i += 1) {
+      const elapsed = i * 0.017;
+      const b = activeBorderAlphaByte(elapsed);
+      expect(Number.isInteger(b)).toBe(true);
+      // activeBorderAlpha ∈ [0.55, 1] → *255 → round ∈ [140, 255].
+      expect(b).toBeGreaterThanOrEqual(140);
+      expect(b).toBeLessThanOrEqual(255);
+      expect(b).toBe(Math.round(activeBorderAlpha(elapsed) * 255));
+    }
+  });
+
   it("alphaByteHex: 2 cifre, clamp e valori noti", () => {
     expect(alphaByteHex(0)).toBe("00");
     expect(alphaByteHex(1)).toBe("ff");
     expect(alphaByteHex(0.5)).toBe("80");
     expect(alphaByteHex(-3)).toBe("00"); // clamp sotto
     expect(alphaByteHex(9)).toBe("ff"); // clamp sopra
+    // Guard su NaN: mai "NaN" nel colore. Gli infiniti li gestisce il clamp.
+    expect(alphaByteHex(NaN)).toBe("00");
+    expect(alphaByteHex(Infinity)).toBe("ff");
+    expect(alphaByteHex(-Infinity)).toBe("00");
     // Sempre esattamente 2 caratteri, anche per valori piccoli.
     for (let i = 0; i <= 100; i += 1) {
       expect(alphaByteHex(i / 100)).toHaveLength(2);
     }
+  });
+
+  it("dotPulseAlpha: equivale alla formula storica, in [0.38, 1], cala con l'indice", () => {
+    // Deve coincidere con la vecchia formula 0.7 + sin(elapsed*3.4)*0.3 - i*0.025.
+    for (let s = 0; s < 500; s += 1) {
+      const elapsed = s * 0.031;
+      const legacy = 0.7 + Math.sin(elapsed * 3.4) * 0.3;
+      for (let i = 0; i < 4; i += 1) {
+        const expected = Math.max(0.38, legacy - i * 0.025);
+        expect(dotPulseAlpha(elapsed, i)).toBeCloseTo(expected, 10);
+      }
+    }
+    // Intervallo e monotonia rispetto all'indice a t fisso.
+    for (let s = 0; s < 200; s += 1) {
+      const elapsed = s * 0.05;
+      const a0 = dotPulseAlpha(elapsed, 0);
+      const a1 = dotPulseAlpha(elapsed, 1);
+      expect(a0).toBeGreaterThanOrEqual(0.38);
+      expect(a0).toBeLessThanOrEqual(1);
+      expect(a1).toBeLessThanOrEqual(a0);
+    }
+    // Il floor 0.38 scatta davvero: al minimo della sinusoide (sin=-1) la
+    // formula grezza per indice 3 vale 0.325 < 0.38 → deve essere clampata.
+    const trough = (3 * Math.PI) / 2 / 3.4; // sin(3.4 * trough) = -1
+    expect(dotPulseAlpha(trough, 3)).toBeCloseTo(0.38, 10);
   });
 
   it("withPulseAlpha produce #RRGGBBAA valido e usa solo i primi 7 char del colore", () => {
@@ -51,5 +95,24 @@ describe("anim — helper di pulsazione", () => {
     expect(c).toBe("#F49A35c6");
     // Robusto se il colore arrivasse già con un byte alpha (usa i primi 7).
     expect(withPulseAlpha("#F49A35ff", 0)).toBe("#F49A35c6");
+  });
+
+  it("withAlphaByte: applica un byte, clamp/robustezza, e coerenza con withPulseAlpha", () => {
+    expect(withAlphaByte("#F49A35", 198)).toBe("#F49A35c6");
+    expect(withAlphaByte("#F49A35", 0)).toBe("#F49A3500");
+    expect(withAlphaByte("#F49A35", 255)).toBe("#F49A35ff");
+    // Clamp e guard: fuori range o non finiti non producono suffissi invalidi.
+    expect(withAlphaByte("#F49A35", 999)).toBe("#F49A35ff");
+    expect(withAlphaByte("#F49A35", -5)).toBe("#F49A3500");
+    expect(withAlphaByte("#F49A35", NaN)).toBe("#F49A3500");
+    expect(withAlphaByte("#F49A35ff", 198)).toBe("#F49A35c6"); // usa i primi 7
+    // Coerenza CHIAVE↔VALORE: la stringa costruita dal byte di cache coincide
+    // con withPulseAlpha per lo stesso elapsed (blinda l'ottimizzazione in tick).
+    for (let i = 0; i < 1000; i += 1) {
+      const elapsed = i * 0.023;
+      expect(withAlphaByte("#F49A35", activeBorderAlphaByte(elapsed))).toBe(
+        withPulseAlpha("#F49A35", elapsed)
+      );
+    }
   });
 });

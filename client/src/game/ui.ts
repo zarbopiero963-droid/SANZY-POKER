@@ -18,7 +18,12 @@ import {
 } from "@babylonjs/gui/2D";
 import { cardParts, type CardCode, type Variant } from "./rules";
 import { formatChips, t } from "./i18n";
-import { withPulseAlpha } from "./anim";
+import {
+  activeBorderAlphaByte,
+  dotPulseAlpha,
+  pulse01,
+  withAlphaByte,
+} from "./anim";
 import { VISIBLE_LOG_LINES, computeViewSignature } from "./viewSignature";
 import type { GameController, PlayerState, TableState } from "./state";
 
@@ -88,10 +93,20 @@ function placeTopLeft(control: Control, left: number, top: number) {
 export class PokerUI {
   private readonly root: Rectangle;
   private unsubscribe: (() => void) | null = null;
+  // NB: i pulseDots vanno popolati SOLO durante il rebuild (che azzera
+  // lastDotPulse). Aggiungerli fuori dal rebuild lascerebbe il nuovo punto con
+  // l'alpha iniziale finché la pulsazione quantizzata non cambia.
   private pulseDots: Ellipse[] = [];
   // Bordi del posto di turno: pulsano nel loop tick() (per-frame), non nel
   // render gated. Ricostruiti a ogni rebuild insieme ai posti.
   private activeBorders: (Rectangle | Ellipse)[] = [];
+  // Ultimo byte alpha bordo applicato (0..255): se non cambia tra due frame,
+  // tick() salta la riassegnazione E la costruzione della stringa colore (meno
+  // invalidazioni GUI e nessuna alloc per-frame su mobile). -1 = da riapplicare.
+  private lastBorderAlphaByte = -1;
+  // Ultima pulsazione quantizzata (0..255) applicata ai pulseDots: idem, evita
+  // di riscrivere l'alpha dei punti quando il valore quantizzato non cambia.
+  private lastDotPulse = -1;
   private eventSerial = -1;
   // Firma di ciò che è VISIBILE nell'HUD: si ricostruisce solo quando cambia,
   // non a ogni evento. Evita il frame "strappato" durante le puntate e non
@@ -246,6 +261,9 @@ export class PokerUI {
     this.root.clearControls();
     this.pulseDots = [];
     this.activeBorders = [];
+    // Nuovi controlli dopo il rebuild: forza tick() a riapplicare colore/alpha.
+    this.lastBorderAlphaByte = -1;
+    this.lastDotPulse = -1;
     if (screen === "lobby")
       this.mobile ? this.renderLobbyMobile() : this.renderLobby();
     else this.mobile ? this.renderTableMobile(table) : this.renderTable(table);
@@ -996,7 +1014,7 @@ export class PokerUI {
     avatar.color = active ? ORANGE : "#FFFFFF24";
     avatar.thickness = active ? 3 : 1;
     avatar.left = "-58px";
-    if (active) this.activeBorders.push(panel, avatar);
+    if (active) this.registerActiveBorder(panel, avatar);
     panel.addControl(avatar);
     const initial = text(
       `seat-initial-${player.id}`,
@@ -1085,7 +1103,7 @@ export class PokerUI {
       avatar.color = active ? ORANGE : "#FFFFFF24";
       avatar.left = "-58px";
       panel.addControl(avatar);
-      if (active) this.activeBorders.push(panel, avatar);
+      if (active) this.registerActiveBorder(panel, avatar);
       const initial = text(
         `mobile-seat-initial-${player.id}`,
         player.name.slice(0, 1).toUpperCase(),
@@ -1149,7 +1167,7 @@ export class PokerUI {
     avatar.color = active ? ORANGE : "#FFFFFF24";
     placeTopLeft(avatar, 8, 8);
     panel.addControl(avatar);
-    if (active) this.activeBorders.push(panel, avatar);
+    if (active) this.registerActiveBorder(panel, avatar);
     const initial = text(
       `mobile-seat-initial-${player.id}`,
       player.name.slice(0, 1).toUpperCase(),
@@ -2028,17 +2046,40 @@ export class PokerUI {
     overlay.addControl(close);
   }
 
+  /** Registra i controlli del posto attivo che tick() farà pulsare. */
+  private registerActiveBorder(...controls: (Rectangle | Ellipse)[]) {
+    this.activeBorders.push(...controls);
+    // Invalida la cache così tick() riapplica il colore ai nuovi controlli,
+    // anche se registrati fuori dal ciclo di rebuild.
+    this.lastBorderAlphaByte = -1;
+  }
+
   tick(elapsed: number) {
-    const pulse = 0.7 + Math.sin(elapsed * 3.4) * 0.3;
-    this.pulseDots.forEach((dot, index) => {
-      dot.alpha = Math.max(0.38, pulse - index * 0.025);
-    });
+    // Punti di stato: aggiorna l'alpha SOLO se la pulsazione quantizzata (0..255)
+    // è cambiata dal frame precedente → niente invalidazioni GUI a vuoto.
+    if (this.pulseDots.length) {
+      const dotPulse = Math.round(pulse01(elapsed) * 255);
+      if (dotPulse !== this.lastDotPulse) {
+        this.lastDotPulse = dotPulse;
+        this.pulseDots.forEach((dot, index) => {
+          dot.alpha = dotPulseAlpha(elapsed, index);
+        });
+      }
+    }
     // Bordo del giocatore di turno: alpha arancione pulsante (respira senza
     // sparire). Solo colore del bordo, non alpha del pannello, così nome/stack
-    // restano pienamente leggibili.
+    // restano pienamente leggibili. Riassegna SOLO se il colore quantizzato è
+    // cambiato dal frame precedente: evita invalidazioni GUI inutili su mobile.
     if (this.activeBorders.length) {
-      const color = withPulseAlpha(ORANGE, elapsed);
-      this.activeBorders.forEach(border => (border.color = color));
+      const alphaByte = activeBorderAlphaByte(elapsed);
+      if (alphaByte !== this.lastBorderAlphaByte) {
+        this.lastBorderAlphaByte = alphaByte;
+        // Stringa colore costruita SOLO sul cache-miss (niente alloc per-frame) e
+        // derivata dallo STESSO byte della chiave → nessun doppio calcolo né
+        // dipendenza implicita di coerenza tra due formule.
+        const color = withAlphaByte(ORANGE, alphaByte);
+        this.activeBorders.forEach(border => (border.color = color));
+      }
     }
   }
 
