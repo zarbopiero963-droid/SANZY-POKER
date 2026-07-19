@@ -441,9 +441,11 @@ function createCard(
     card.visibility = 0.35;
     facePlane.visibility = 0.35;
     backPlane.visibility = 0.35;
+    // push (non sovrascrittura): oggi i plane non hanno altre animazioni, ma
+    // così non si cancellerebbero eventuali animazioni future.
     animations.push(makeFade("card"));
-    facePlane.animations = [makeFade("face")];
-    backPlane.animations = [makeFade("back")];
+    facePlane.animations.push(makeFade("face"));
+    backPlane.animations.push(makeFade("back"));
     scene.beginAnimation(facePlane, 0, end, false);
     scene.beginAnimation(backPlane, 0, end, false);
 

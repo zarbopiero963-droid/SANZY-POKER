@@ -2045,6 +2045,10 @@ export class PokerUI {
   dispose() {
     this.unsubscribe?.();
     this.unsubscribe = null;
+    // Svuota gli array animati da tick(): se il loop girasse dopo il dispose non
+    // scriverebbe su controlli già distrutti.
+    this.pulseDots = [];
+    this.activeBorders = [];
     this.audioContext?.close().catch(() => undefined);
     this.gui.dispose();
   }
