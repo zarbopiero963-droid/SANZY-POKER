@@ -17,14 +17,7 @@
 
 import { useState } from "react";
 import type { Variant } from "@/game/rules";
-import {
-  LOCALES,
-  LOCALE_FLAG,
-  LOCALE_NAMES,
-  setLocale,
-  t,
-  type Locale,
-} from "@/game/i18n";
+import { LOCALES, LOCALE_FLAG, setLocale, t, type Locale } from "@/game/i18n";
 
 const STORAGE_KEY = "sanzy.locale";
 
@@ -145,7 +138,9 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                   <span className="sanzy-lang-flag" aria-hidden>
                     {LOCALE_FLAG[code]}
                   </span>
-                  <span className="sanzy-lang-name">{LOCALE_NAMES[code]}</span>
+                  <span className="sanzy-lang-name">
+                    {t(`locale.${code}`, undefined, code)}
+                  </span>
                 </button>
               ))}
             </div>
@@ -161,7 +156,8 @@ export default function StartScreen({ onStart }: StartScreenProps) {
               onClick={() => setStep("language")}
             >
               <span aria-hidden>{LOCALE_FLAG[locale]}</span>{" "}
-              {LOCALE_NAMES[locale]} · {t("start.change", undefined, locale)}
+              {t(`locale.${locale}`, undefined, locale)} ·{" "}
+              {t("start.change", undefined, locale)}
             </button>
             <h2 className="sanzy-heading">
               {t("start.chooseVariant", undefined, locale)}
@@ -198,8 +194,6 @@ const START_CSS = `
   position: fixed;
   inset: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 24px;
   color: #f4efe4;
   font-family: "Manrope", system-ui, sans-serif;
@@ -243,6 +237,10 @@ const START_CSS = `
 .sanzy-table {
   position: relative;
   z-index: 1;
+  /* margin:auto centra la superficie ma, a differenza di
+     justify/align-items:center sul contenitore, non taglia il bordo alto del
+     pannello quando è più alto della viewport: lo scroll resta raggiungibile. */
+  margin: auto;
   width: 100%;
   max-width: 560px;
   display: flex;
@@ -420,5 +418,16 @@ const START_CSS = `
   .sanzy-lang-grid, .sanzy-variant-grid { grid-template-columns: 1fr; }
   .sanzy-heading { font-size: 18px; }
   .felt-suit { font-size: 44px; }
+}
+/* Viewport basse (paesaggio su telefono, finestre corte): compatta il pannello
+   così l'intero flusso lingua → variante resta raggiungibile senza tagli. */
+@media (max-height: 640px) {
+  .sanzy-start { padding: 14px; }
+  .sanzy-table { gap: 12px; padding: 22px 26px 20px; border-radius: 160px / 96px; }
+  .sanzy-wordmark { margin-top: 0; }
+  .wm-sanzy { font-size: 40px; letter-spacing: 5px; }
+  .wm-poker { font-size: 22px; letter-spacing: 9px; margin-left: 8px; }
+  .sanzy-board { margin: 0; }
+  .sanzy-panel { gap: 12px; }
 }
 `;
