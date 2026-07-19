@@ -133,7 +133,7 @@ come segnaposto. `SanzyLogo.tsx` resta nel repo per il futuro redesign del logo.
 
 - [ ] Tavolo 3D fluido (animazioni carte/fiches/fasi, luce e feltro, nessun
       scatto percepibile su mobile).
-- [~] Schermata d'ingresso rifinita (lingua + varianti) da vero client — redesign feltro fatto (§9-bis); logo ancora segnaposto tipografico, SVG da ridisegnare a parte.
+- [ ] Schermata d'ingresso rifinita (lingua + varianti) da vero client — (parziale) redesign feltro fatto (§9-bis); logo ancora segnaposto tipografico, SVG da ridisegnare a parte.
 - [ ] Logo migliorato mantenendo l'identità (§5).
 - [ ] Zero testi hardcoded: tutto via `t()` nelle 4 lingue.
 - [ ] `pnpm check`, `pnpm test`, `pnpm build` verdi.

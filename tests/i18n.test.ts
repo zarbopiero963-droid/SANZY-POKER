@@ -89,6 +89,22 @@ describe("i18n — interpolazione dei parametri", () => {
     }
   });
 
+  it("il marchio (brand.*) risolve in tutte le 4 lingue senza literal hardcoded", () => {
+    // SANZY/POKER sono un brand costante: stessi valori in ogni lingua, ma passano
+    // comunque da t() così anche il marchio rispetta l'invariante i18n.
+    const expected: Record<string, string> = {
+      "brand.name": "Sanzy Poker",
+      "brand.sanzy": "SANZY",
+      "brand.poker": "POKER",
+    };
+    for (const locale of LOCALES) {
+      for (const [key, value] of Object.entries(expected)) {
+        expect(t(key, {}, locale), `${key} (${locale})`).toBe(value);
+        expect(t(key, {}, locale)).not.toBe(key);
+      }
+    }
+  });
+
   it("formatta i gettoni arrotondando all'intero (separatori dipendono dall'ICU)", () => {
     // In ambiente Node small-ICU i separatori possono mancare: verifichiamo le
     // cifre e l'arrotondamento, non la punteggiatura specifica della lingua.

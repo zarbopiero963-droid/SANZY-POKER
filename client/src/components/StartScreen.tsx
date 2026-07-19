@@ -39,12 +39,20 @@ function readStoredLocale(): Locale {
   return "it";
 }
 
-/** Marchio tipografico SANZY (bianco) / POKER (rosso) — segnaposto del logo. */
-function Wordmark() {
+/**
+ * Marchio tipografico SANZY (bianco) / POKER (rosso) — segnaposto del logo.
+ * È un logo (role="img") con nome accessibile dall'i18n; anche il testo del
+ * marchio passa da t() (valori identici nelle 4 lingue: è un brand costante).
+ */
+function Wordmark({ locale }: { locale: Locale }) {
   return (
-    <div className="sanzy-wordmark" aria-label="Sanzy Poker">
-      <span className="wm-sanzy">SANZY</span>
-      <span className="wm-poker">POKER</span>
+    <div
+      className="sanzy-wordmark"
+      role="img"
+      aria-label={t("brand.name", undefined, locale)}
+    >
+      <span className="wm-sanzy">{t("brand.sanzy", undefined, locale)}</span>
+      <span className="wm-poker">{t("brand.poker", undefined, locale)}</span>
     </div>
   );
 }
@@ -115,11 +123,14 @@ export default function StartScreen({ onStart }: StartScreenProps) {
 
       <div className="sanzy-table">
         <p className="sanzy-tagline">{t("start.tagline", undefined, locale)}</p>
-        <Wordmark />
+        <Wordmark locale={locale} />
         <BoardMotif />
 
         {step === "language" ? (
-          <section className="sanzy-panel" aria-label="language">
+          <section
+            className="sanzy-panel"
+            aria-label={t("start.chooseLanguage", undefined, locale)}
+          >
             <h1 className="sanzy-heading">
               {t("start.chooseLanguage", undefined, locale)}
             </h1>
@@ -140,7 +151,10 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             </div>
           </section>
         ) : (
-          <section className="sanzy-panel" aria-label="variant">
+          <section
+            className="sanzy-panel"
+            aria-label={t("start.chooseVariant", undefined, locale)}
+          >
             <button
               type="button"
               className="sanzy-back"
@@ -196,7 +210,7 @@ const START_CSS = `
 }
 /* Feltro verde a tutto schermo con vignettatura e trama leggera. */
 .sanzy-felt {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background:
     radial-gradient(120% 90% at 50% 32%, #1c6a49 0%, #114a33 46%, #0a3122 74%, #072418 100%);
@@ -217,6 +231,7 @@ const START_CSS = `
   font-size: 64px;
   line-height: 1;
   color: rgba(255,255,255,.05);
+  -webkit-user-select: none;
   user-select: none;
 }
 .felt-suit--tl { top: 26px; left: 30px; }
