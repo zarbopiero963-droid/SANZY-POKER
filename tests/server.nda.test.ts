@@ -30,7 +30,12 @@ import {
   extractClientIp,
   maskEmail,
 } from "../server/nda/router";
-import { sendNdaEmail, buildEmailText } from "../server/nda/email";
+import {
+  sendNdaEmail,
+  buildEmailText,
+  buildEmailSubject,
+  stripControl,
+} from "../server/nda/email";
 
 const VALID_BODY = {
   fullName: "John Doe",
@@ -258,6 +263,34 @@ describe("NDA — email (degradazione senza chiave)", () => {
     expect(text).toContain("snz_nda_x");
     expect(text).toContain("john@acme.com");
     expect(text).toContain("1.2.3.4");
+  });
+
+  it("stripControl rimuove CR/LF/TAB e altri caratteri di controllo", () => {
+    // Difesa anti header-injection: nessun \r \n \t o C0/DEL può sopravvivere.
+    expect(stripControl("ACME\r\nBcc: evil@x.com")).toBe("ACMEBcc: evil@x.com");
+    expect(stripControl("a\tb\x00c\x1fd\x7fe")).toBe("abcde");
+    expect(stripControl("pulita")).toBe("pulita");
+  });
+
+  it("buildEmailSubject è a riga singola anche con input malevolo", () => {
+    const subject = buildEmailSubject({
+      ...emailInput,
+      companyName: "ACME\r\nBcc: evil@x.com",
+    });
+    expect(subject).not.toMatch(/[\r\n]/);
+    expect(subject).toContain("ACMEBcc: evil@x.com");
+    expect(subject).toContain(emailInput.signatureId);
+  });
+
+  it("buildEmailText non contiene mai newline iniettate dai campi", () => {
+    const text = buildEmailText({
+      ...emailInput,
+      fullName: "John\r\nX-Injected: 1",
+    });
+    // La riga del nome resta una sola: nessuna newline extra dal payload.
+    const nameLines = text.split("\n").filter(l => l.startsWith("Nome:"));
+    expect(nameLines).toHaveLength(1);
+    expect(nameLines[0]).toBe("Nome: JohnX-Injected: 1");
   });
 });
 

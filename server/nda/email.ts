@@ -47,8 +47,8 @@ export async function sendNdaEmail(
     // chiave, così dev/test/CI non dipendono dal pacchetto a runtime.
     const { Resend } = await import("resend");
     const resend = new Resend(apiKey);
-    const subject = `NDA firmato — ${input.companyName} (${input.signatureId})`;
-    const filename = `NDA-SanzyPoker-${input.signatureId}.pdf`;
+    const subject = buildEmailSubject(input);
+    const filename = `NDA-SanzyPoker-${stripControl(input.signatureId)}.pdf`;
     const { data, error } = await resend.emails.send({
       from,
       to: [OWNER_EMAIL],
@@ -76,19 +76,36 @@ export async function sendNdaEmail(
   }
 }
 
+/**
+ * Rimuove i caratteri di controllo (`< 0x20` e `0x7F`) da una stringa.
+ * Difesa in profondità: a monte lo schema zod già li vieta, ma `sendNdaEmail`
+ * è esportata e potrebbe essere chiamata con input non validati — un `\n` nel
+ * subject/campi consentirebbe header injection nell'email.
+ */
+export function stripControl(value: string): string {
+  // eslint-disable-next-line no-control-regex -- rimozione voluta dei controlli
+  return value.replace(/[\x00-\x1f\x7f]/g, "");
+}
+
+/** Subject dell'email, sanitizzato (niente header injection). */
+export function buildEmailSubject(input: NdaEmailInput): string {
+  return `NDA firmato — ${stripControl(input.companyName)} (${stripControl(input.signatureId)})`;
+}
+
 /** Corpo testuale dell'email (riassunto della firma; il PDF è in allegato). */
 export function buildEmailText(input: NdaEmailInput): string {
+  const s = stripControl;
   return [
     "Nuova firma NDA per la demo di Sanzy Poker.",
     "",
-    `Nome: ${input.fullName}`,
-    `Azienda: ${input.companyName}`,
-    `Ruolo: ${input.jobTitle}`,
-    `Email aziendale: ${input.businessEmail}`,
-    `ID firma: ${input.signatureId}`,
-    `IP: ${input.ip}`,
-    `Timestamp (UTC): ${input.acceptedAt}`,
-    `Versione NDA: ${input.ndaVersion}`,
+    `Nome: ${s(input.fullName)}`,
+    `Azienda: ${s(input.companyName)}`,
+    `Ruolo: ${s(input.jobTitle)}`,
+    `Email aziendale: ${s(input.businessEmail)}`,
+    `ID firma: ${s(input.signatureId)}`,
+    `IP: ${s(input.ip)}`,
+    `Timestamp (UTC): ${s(input.acceptedAt)}`,
+    `Versione NDA: ${s(input.ndaVersion)}`,
     "",
     "Il PDF dell'NDA firmato è in allegato.",
   ].join("\n");

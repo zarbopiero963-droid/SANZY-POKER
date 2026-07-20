@@ -129,6 +129,12 @@ export async function processNdaSign(
         console.error(
           `[nda] email error ${signatureId}: ${email.detail ?? "?"}`
         );
+      } else {
+        // no-api-key + requireEmail: config strict senza Secret impostato →
+        // diagnostica esplicita (altrimenti un 503 senza causa confonde l'owner).
+        console.error(
+          `[nda] email_unavailable ${signatureId}: NDA_REQUIRE_EMAIL attivo ma RESEND_API_KEY assente`
+        );
       }
       return { status: 503, body: { ok: false, error: "email_unavailable" } };
     }
