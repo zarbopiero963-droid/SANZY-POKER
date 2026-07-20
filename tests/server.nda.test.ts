@@ -29,7 +29,12 @@ import {
   processNdaSign,
   extractClientIp,
   maskEmail,
+  createNdaRouter,
 } from "../server/nda/router";
+import express from "express";
+import { createServer, type Server } from "http";
+import type { AddressInfo } from "net";
+import type { RateLimiter } from "../server/nda/rateLimit";
 import {
   sendNdaEmail,
   buildEmailText,
@@ -299,6 +304,12 @@ describe("NDA — maskEmail (audit senza PII in chiaro)", () => {
     expect(maskEmail("john.doe@softswiss.com")).toBe("j***@softswiss.com");
     expect(maskEmail("bad")).toBe("***");
   });
+
+  it("local-part di 1 carattere non viene rivelato", () => {
+    // `a@x.com` NON deve diventare `a***@x.com` (rivelerebbe l'unico carattere).
+    expect(maskEmail("a@x.com")).toBe("***@x.com");
+    expect(maskEmail("@nolocal.com")).toBe("***");
+  });
 });
 
 describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
@@ -452,5 +463,67 @@ describe("NDA — rate limiter (anti-abuso)", () => {
     expect(rl.size()).toBe(3);
     rl.sweep(2000); // oltre la finestra → tutte scadute
     expect(rl.size()).toBe(0);
+  });
+});
+
+/**
+ * Integrazione HTTP reale del router NDA (server http effimero su porta 0):
+ * verifica la catena middleware — rate limit PRIMA del parse, error handler del
+ * parser JSON con risposta coerente col contratto API — che non è testabile su
+ * `processNdaSign` (puro). Nessun mock: si esercita `createNdaRouter` reale.
+ */
+describe("NDA — router HTTP (contratto API: JSON error handler, rate limit)", () => {
+  async function withServer(
+    rateLimiter: RateLimiter | undefined,
+    fn: (base: string) => Promise<void>
+  ) {
+    const app = express();
+    app.use(
+      "/api/nda",
+      createNdaRouter({ store: createInMemorySignatureStore(), rateLimiter })
+    );
+    const server: Server = createServer(app);
+    await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      await fn(`http://127.0.0.1:${port}`);
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+  }
+
+  it("JSON malformato → 400 JSON {ok:false,error:invalid_request} (non HTML)", async () => {
+    await withServer(undefined, async base => {
+      const res = await fetch(`${base}/api/nda/sign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{ questo non è json valido",
+      });
+      expect(res.status).toBe(400);
+      expect(res.headers.get("content-type")).toMatch(/application\/json/);
+      expect(await res.json()).toEqual({
+        ok: false,
+        error: "invalid_request",
+      });
+    });
+  });
+
+  it("rate limit scatta PRIMA del parse: body malformato ma 429 (non 400)", async () => {
+    // Limiter che rifiuta sempre: se il 429 arriva anche con JSON invalido,
+    // il rate limit gira prima di `express.json` (non paga il parse).
+    const denyAll: RateLimiter = {
+      check: () => false,
+      sweep: () => {},
+      size: () => 0,
+    };
+    await withServer(denyAll, async base => {
+      const res = await fetch(`${base}/api/nda/sign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{ malformato",
+      });
+      expect(res.status).toBe(429);
+      expect(await res.json()).toEqual({ ok: false, error: "rate_limited" });
+    });
   });
 });

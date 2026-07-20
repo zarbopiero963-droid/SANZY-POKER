@@ -68,16 +68,20 @@ export async function submitNda(
   if (!res.ok || !data.ok) {
     return FAIL(data.error ?? "submit");
   }
-  // Validazione rigorosa: niente stringhe vuote, niente NaN/Infinity, timestamp
-  // positivo (altrimenti `new Date(startedAt).toISOString()` a valle lancerebbe).
+  // Validazione rigorosa: niente stringhe vuote, timestamp intero positivo E
+  // rappresentabile da `Date` (|t| ≤ 8.64e15). Senza il limite superiore un
+  // `startedAt` enorme supererebbe `Number.isFinite`/`>0` ma farebbe lanciare
+  // `new Date(startedAt).toISOString()` a valle (RangeError) → schermata rotta.
+  const MAX_TIME = 8.64e15; // Date massima rappresentabile (ECMAScript)
   if (
     typeof data.signatureId !== "string" ||
     data.signatureId.length === 0 ||
     typeof data.password !== "string" ||
     data.password.length === 0 ||
     typeof data.startedAt !== "number" ||
-    !Number.isFinite(data.startedAt) ||
-    data.startedAt <= 0
+    !Number.isSafeInteger(data.startedAt) ||
+    data.startedAt <= 0 ||
+    data.startedAt > MAX_TIME
   ) {
     return FAIL("bad_response");
   }

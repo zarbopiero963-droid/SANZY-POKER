@@ -11,7 +11,12 @@
  * imporli. Anti-replay: una demo per email aziendale, con prenotazione ATOMICA
  * (`tryRecord`) e rollback (`release`) se non si produce un artefatto durevole.
  */
-import express, { type Request, type Router } from "express";
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+  type Router,
+} from "express";
 import {
   ndaSignRequestSchema,
   isSupportedNdaVersion,
@@ -160,10 +165,12 @@ export async function processNdaSign(
   }
 }
 
-/** Maschera l'email per l'audit log (GDPR): `j***@dominio.com`. */
+/** Maschera l'email per l'audit log (GDPR): `j***@dominio.com`. Con local-part
+ * di 1 solo carattere non se ne rivela nemmeno quello (`***@dominio.com`). */
 export function maskEmail(email: string): string {
   const at = email.indexOf("@");
   if (at <= 0) return "***";
+  if (at === 1) return `***${email.slice(at)}`;
   return `${email[0]}***${email.slice(at)}`;
 }
 
@@ -198,25 +205,52 @@ export function createNdaRouter(deps: {
   // Fail-closed opt-in (produzione strict): senza email consegnata → 503.
   const requireEmail = /^(1|true)$/i.test(process.env.NDA_REQUIRE_EMAIL ?? "");
   const router = express.Router();
-  router.post("/sign", express.json({ limit: "16kb" }), async (req, res) => {
-    try {
-      const ip = extractClientIp(req);
-      if (!limiter.check(ip, Date.now())) {
+  router.post(
+    "/sign",
+    // 1) Rate limit PRIMA del parsing: un IP oltre soglia viene respinto senza
+    // pagare il parse (fino a 16kb) di questo endpoint pubblico e costoso.
+    (req: Request, res: Response, next: NextFunction) => {
+      if (!limiter.check(extractClientIp(req), Date.now())) {
         res.status(429).json({ ok: false, error: "rate_limited" });
         return;
       }
-      const result = await processNdaSign(req.body, {
-        store: deps.store,
-        ip,
-        now: Date.now(),
-        requireEmail,
-      });
-      res.status(result.status).json(result.body);
-    } catch (err) {
-      console.error("[nda] errore interno:", err);
-      res.status(500).json({ ok: false, error: "internal_error" });
+      next();
+    },
+    // 2) Parser JSON con tetto di dimensione.
+    express.json({ limit: "16kb" }),
+    // 3) Error handler DEL PARSER (4 arg): body malformato o troppo grande →
+    // JSON coerente col contratto API, non l'HTML del default handler Express.
+    (err: unknown, _req: Request, res: Response, next: NextFunction) => {
+      if (err) {
+        const tooLarge =
+          typeof err === "object" &&
+          err !== null &&
+          (err as { type?: string }).type === "entity.too.large";
+        res.status(tooLarge ? 413 : 400).json({
+          ok: false,
+          error: tooLarge ? "payload_too_large" : "invalid_request",
+        });
+        return;
+      }
+      next();
+    },
+    // 4) Handler della firma.
+    async (req: Request, res: Response) => {
+      try {
+        const ip = extractClientIp(req);
+        const result = await processNdaSign(req.body, {
+          store: deps.store,
+          ip,
+          now: Date.now(),
+          requireEmail,
+        });
+        res.status(result.status).json(result.body);
+      } catch (err) {
+        console.error("[nda] errore interno:", err);
+        res.status(500).json({ ok: false, error: "internal_error" });
+      }
     }
-  });
+  );
   return router;
 }
 

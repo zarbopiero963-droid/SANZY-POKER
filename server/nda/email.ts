@@ -52,7 +52,7 @@ export async function sendNdaEmail(
     const { data, error } = await resend.emails.send({
       from,
       to: [OWNER_EMAIL],
-      replyTo: input.businessEmail,
+      replyTo: stripControl(input.businessEmail),
       subject,
       text: buildEmailText(input),
       attachments: [
