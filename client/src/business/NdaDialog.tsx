@@ -457,6 +457,7 @@ const NDA_CSS = `
 .sanzy-nda__close:hover { color: #f7f4ec; }
 .sanzy-nda__body { display: flex; flex-direction: column; gap: 14px; animation: sanzy-slidein .22s ease; }
 @keyframes sanzy-slidein { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .sanzy-nda__body { animation: none; } }
 .sanzy-nda__text { margin: 0; font-size: 15px; line-height: 1.5; }
 .sanzy-nda__text--red { color: #ffd7d2; border-left: 3px solid #d8342c; padding-left: 12px; }
 .sanzy-nda__text--gold { color: #f4e6c2; border-left: 3px solid #d6b466; padding-left: 12px; }

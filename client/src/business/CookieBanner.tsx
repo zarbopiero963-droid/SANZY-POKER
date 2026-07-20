@@ -7,7 +7,7 @@
  * apre la Cookie Policy nel modal legale (gestito dal genitore). Nessun testo
  * hardcoded fuori da `tb()`.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { loadCookieConsent, saveCookieConsent } from "./demoSession";
 import { tb, type BizLocale } from "./landingI18n";
 
@@ -21,10 +21,9 @@ export default function CookieBanner({
   onOpenPolicy,
 }: CookieBannerProps) {
   // Visibile solo se la scelta non è ancora stata fatta (consenso === null).
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    setVisible(loadCookieConsent() === null);
-  }, []);
+  // Lazy initializer: niente flash del banner al primo paint (SPA, `loadCookieConsent`
+  // è protetta da try/catch quindi sicura anche senza storage).
+  const [visible, setVisible] = useState(() => loadCookieConsent() === null);
 
   if (!visible) return null;
 
