@@ -31,17 +31,22 @@ export default function DemoTimer({
   );
   // Evita di richiamare onExpire più di una volta.
   const firedRef = useRef(false);
-  // onExpire in un ref: l'effect NON dipende dalla sua identità, così il reset
-  // di firedRef avviene solo su cambio sessione (startedAt/totalMs) e onExpire
-  // non può scattare due volte anche se il consumer passa una callback nuova.
+  // Chiave della sessione: firedRef si azzera SOLO quando cambia davvero, non a
+  // ogni setup dell'effect. Così il doppio setup/cleanup/setup di React Strict
+  // Mode al mount non fa scattare onExpire due volte per la stessa scadenza.
+  const sessionKeyRef = useRef<string>("");
+  // onExpire in un ref: l'effect NON dipende dalla sua identità.
   const onExpireRef = useRef(onExpire);
   useEffect(() => {
     onExpireRef.current = onExpire;
   }, [onExpire]);
 
   useEffect(() => {
-    // Nuova sessione (startedAt/totalMs cambiati): riabilita onExpire.
-    firedRef.current = false;
+    const key = `${startedAt}:${totalMs}`;
+    if (sessionKeyRef.current !== key) {
+      sessionKeyRef.current = key;
+      firedRef.current = false; // nuova sessione reale: riabilita onExpire
+    }
     const tick = () => {
       const ms = computeRemainingMs(startedAt, Date.now(), totalMs);
       setRemaining(ms);

@@ -134,11 +134,13 @@ export default function NdaDialog({
   useEffect(() => {
     if (session) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      // Non chiudere durante l'invio: eviteremmo uno smontaggio mentre submitNda
+      // è pendente (nel PR2, con fetch reale, produrrebbe set-state su unmount).
+      if (e.key === "Escape" && !submitting) onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [session, onClose]);
+  }, [session, submitting, onClose]);
 
   // Al montaggio memorizza l'elemento a fuoco e lo ripristina alla chiusura,
   // così la navigazione da tastiera non resta "persa" dopo il dialog.
@@ -147,8 +149,9 @@ export default function NdaDialog({
     return () => prevFocusRef.current?.focus?.();
   }, []);
 
-  // Focus trap: il Tab resta dentro il dialog (WCAG 2.4.3). Ricalcola i
-  // focusable a ogni cambio slide o al passaggio alla schermata di sblocco.
+  // Focus trap: il Tab resta dentro il dialog (WCAG 2.4.3). Il set di elementi
+  // focusabili è letto dal DOM al momento del keydown, quindi il listener resta
+  // valido per ogni slide/schermata senza bisogno di dipendenze.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
@@ -176,14 +179,14 @@ export default function NdaDialog({
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [step, session]);
+  }, []);
 
   return (
     <div
       className="sanzy-nda-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label={tb("landing.tryDemo", locale)}
+      aria-label={tb("nda.dialogTitle", locale)}
     >
       <div className="sanzy-nda" ref={dialogRef}>
         {session ? (

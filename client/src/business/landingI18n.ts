@@ -47,6 +47,7 @@ export const BIZ_STRINGS = {
     it: "Accesso su firma NDA · 15 minuti di gioco reale",
     en: "Access on NDA signature · 15 minutes of real play",
   },
+  // Mostra la lingua di DESTINAZIONE del toggle (in IT il pulsante offre "EN").
   "landing.localeToggle": {
     it: "EN",
     en: "IT",
@@ -60,6 +61,10 @@ export const BIZ_STRINGS = {
   "brand.sanzy": { it: "SANZY", en: "SANZY" },
   "brand.poker": { it: "POKER", en: "POKER" },
   // --- Popup NDA (3 slide) ---
+  "nda.dialogTitle": {
+    it: "Accordo di riservatezza",
+    en: "Confidentiality agreement",
+  },
   "nda.step": {
     it: "Passo {n} di 3",
     en: "Step {n} of 3",
@@ -117,8 +122,8 @@ export const BIZ_STRINGS = {
     en: "You are about to step onto a table that changes the rules of the game. This software is protected by international copyright. To unlock the Babylon.js 3D core, please accept the confidentiality agreement.",
   },
   "nda.body": {
-    it: "Accordo di riservatezza (NDA). Le informazioni, il gameplay e il codice mostrati nella demo di Sanzy Poker sono riservati e di proprietà dell'autore. Il destinatario si impegna a non divulgare, copiare o riprodurre quanto mostrato senza consenso scritto. L'accordo si intende accettato digitalmente tramite selezione della casella e invio del modulo; all'invio verrà registrato con data, ora e indirizzo IP.",
-    en: "Confidentiality agreement (NDA). The information, gameplay and code shown in the Sanzy Poker demo are confidential and owned by the author. The recipient agrees not to disclose, copy or reproduce anything shown without written consent. This agreement is deemed accepted digitally by ticking the checkbox and submitting the form; upon submission it will be recorded with date, time and IP address.",
+    it: "Accordo di riservatezza (NDA). Le informazioni, il gameplay e il codice mostrati nella demo di Sanzy Poker sono riservati e di proprietà dell'autore. Il destinatario si impegna a non divulgare, copiare o riprodurre quanto mostrato senza consenso scritto. L'accordo si intende accettato digitalmente tramite selezione della casella e invio del modulo.",
+    en: "Confidentiality agreement (NDA). The information, gameplay and code shown in the Sanzy Poker demo are confidential and owned by the author. The recipient agrees not to disclose, copy or reproduce anything shown without written consent. This agreement is deemed accepted digitally by ticking the checkbox and submitting the form.",
   },
   "nda.checkbox": {
     it: "Accetto i termini dell'accordo di non divulgazione (NDA) sopra riportato.",
@@ -129,8 +134,8 @@ export const BIZ_STRINGS = {
     en: "Enter the future",
   },
   "nda.submitting": {
-    it: "Registrazione della firma…",
-    en: "Recording your signature…",
+    it: "Sblocco della demo…",
+    en: "Unlocking the demo…",
   },
   "nda.error.submit": {
     it: "Registrazione non riuscita. Riprova.",
@@ -142,8 +147,8 @@ export const BIZ_STRINGS = {
     en: "Demo access unlocked",
   },
   "unlock.body": {
-    it: "All'invio, il tuo consenso verrà registrato con data, ora e indirizzo IP e associato alla tutela del software. Sanzy Poker™ è un asset commerciale di fascia alta, con codice 3D nativo in TypeScript/Babylon.js.",
-    en: "Upon submission, your consent will be recorded with date, time and IP address and linked to the software's protection. Sanzy Poker™ is a high-tier commercial asset, with native 3D code in TypeScript/Babylon.js.",
+    it: "Il tuo consenso è stato acquisito per questa sessione demo. Sanzy Poker™ è un asset commerciale di fascia alta, con codice 3D nativo in TypeScript/Babylon.js.",
+    en: "Your consent has been captured for this demo session. Sanzy Poker™ is a high-tier commercial asset, with native 3D code in TypeScript/Babylon.js.",
   },
   "unlock.notice": {
     it: "Questo prototipo è mostrato a partner in grado di valutare l'acquisizione dell'asset o licenze di distribuzione. Le basi di trattativa prevedono buyout totale (valutazione a partire da 500.000€) o licenza B2B con minimo garantito e royalty sul GGR.",
