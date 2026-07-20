@@ -218,6 +218,22 @@ export function timerPhase(remainingMs: number): TimerPhase {
   return "calm";
 }
 
+/**
+ * Secondi (residui) a cui lo screen reader annuncia il tempo. Solo soglie
+ * significative: annunciare OGNI secondo dell'ultimo minuto con `aria-live`
+ * intasa lo screen reader mentre l'utente agisce sul tavolo.
+ */
+export const TIMER_ANNOUNCE_SECONDS = [300, 60, 30, 15, 10, 5, 3, 2, 1, 0];
+
+/**
+ * True se, ai secondi residui correnti, va emesso un annuncio screen-reader
+ * (una delle soglie di `TIMER_ANNOUNCE_SECONDS`). Pura e deterministica.
+ */
+export function isTimerAnnounceTick(remainingMs: number): boolean {
+  const seconds = Math.ceil(Math.max(0, remainingMs) / 1000);
+  return TIMER_ANNOUNCE_SECONDS.includes(seconds);
+}
+
 // --- Persistenza (isolata, best-effort) -----------------------------------
 
 const STORAGE_KEY = "sanzy.demo.session";

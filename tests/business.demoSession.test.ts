@@ -18,6 +18,7 @@ import {
   generateSessionPassword,
   isExpired,
   isNdaFormValid,
+  isTimerAnnounceTick,
   isValidEmail,
   loadCookieConsent,
   loadDemoSession,
@@ -200,6 +201,20 @@ describe("demoSession — fasi colore del timer (idea #12)", () => {
     expect(timerPhase(TIMER_URGENT_MS + 1)).toBe("warn"); // 1:00 + 1ms
     expect(timerPhase(TIMER_URGENT_MS)).toBe("urgent"); // esattamente 1:00
     expect(timerPhase(0)).toBe("urgent");
+  });
+
+  it("annuncia allo screen reader solo a soglie, non ogni secondo", () => {
+    // Soglie annunciate (secondi residui): 5', 60/30/15/10/5/3/2/1/0.
+    expect(isTimerAnnounceTick(60_000)).toBe(true); // 60s
+    expect(isTimerAnnounceTick(30_000)).toBe(true); // 30s
+    expect(isTimerAnnounceTick(10_000)).toBe(true); // 10s
+    expect(isTimerAnnounceTick(5 * 60_000)).toBe(true); // 5:00
+    expect(isTimerAnnounceTick(0)).toBe(true); // scaduto
+    // Secondi non-soglia: nessun annuncio (niente spam nell'ultimo minuto).
+    expect(isTimerAnnounceTick(59_000)).toBe(false);
+    expect(isTimerAnnounceTick(45_000)).toBe(false);
+    expect(isTimerAnnounceTick(9_000)).toBe(false);
+    expect(isTimerAnnounceTick(4_000)).toBe(false);
   });
 });
 

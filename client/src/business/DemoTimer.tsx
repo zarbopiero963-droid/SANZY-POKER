@@ -10,6 +10,7 @@ import {
   computeRemainingMs,
   DEMO_DURATION_MS,
   formatCountdown,
+  isTimerAnnounceTick,
   timerPhase,
 } from "./demoSession";
 import { tb, type BizLocale } from "./landingI18n";
@@ -73,7 +74,9 @@ export default function DemoTimer({
   // Fase visiva (idea #12): calma (bianco/verde) → ambra (ultimi 5') → rosso
   // lampeggiante (ultimo minuto). L'urgenza sale con l'avvicinarsi della scadenza.
   const phase = timerPhase(remaining);
-  const isUrgent = phase === "urgent";
+  // Annuncio screen-reader solo a soglie (5', 60/30/15/10/5/3/2/1/0 s): evita di
+  // intasare la live region ogni secondo mentre l'utente agisce sul tavolo.
+  const announce = isTimerAnnounceTick(remaining);
   const formatted = formatCountdown(remaining);
   const label = tb("timer.label", locale);
 
@@ -96,7 +99,7 @@ export default function DemoTimer({
         aria-live="polite"
         aria-atomic="true"
       >
-        {isUrgent ? `${label} ${formatted}` : ""}
+        {announce ? `${label} ${formatted}` : ""}
       </span>
       <style>{TIMER_CSS}</style>
     </div>
