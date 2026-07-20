@@ -86,6 +86,22 @@ export function renderSignedNdaText(record: SignedNdaRecord): string {
   });
 }
 
+/**
+ * Rende una stringa sicura per il font WinAnsi (Helvetica standard di pdf-lib):
+ * i caratteri non codificabili (es. CJK/cirillico/emoji in un nome aziendale
+ * estero) farebbero LANCIARE `drawText` → 500. Vengono sostituiti con `?`.
+ */
+export function toWinAnsiSafe(text: string): string {
+  let out = "";
+  for (const ch of text) {
+    const cp = ch.codePointAt(0) ?? 0;
+    const undefinedWinAnsi =
+      cp === 0x81 || cp === 0x8d || cp === 0x8f || cp === 0x90 || cp === 0x9d;
+    out += cp < 0x20 || cp > 0xff || undefinedWinAnsi ? "?" : ch;
+  }
+  return out;
+}
+
 /** Spezza un paragrafo in righe che stanno entro `maxWidth` alla dimensione data. */
 function wrapLine(
   text: string,
@@ -149,7 +165,7 @@ export async function renderNdaPdf(
   let y = height - margin;
   const maxWidth = width - margin * 2;
 
-  const body = renderSignedNdaText(record);
+  const body = toWinAnsiSafe(renderSignedNdaText(record));
   const paragraphs = body.split("\n");
 
   for (const paragraph of paragraphs) {

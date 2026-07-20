@@ -68,10 +68,16 @@ export async function submitNda(
   if (!res.ok || !data.ok) {
     return FAIL(data.error ?? "submit");
   }
+  // Validazione rigorosa: niente stringhe vuote, niente NaN/Infinity, timestamp
+  // positivo (altrimenti `new Date(startedAt).toISOString()` a valle lancerebbe).
   if (
     typeof data.signatureId !== "string" ||
+    data.signatureId.length === 0 ||
     typeof data.password !== "string" ||
-    typeof data.startedAt !== "number"
+    data.password.length === 0 ||
+    typeof data.startedAt !== "number" ||
+    !Number.isFinite(data.startedAt) ||
+    data.startedAt <= 0
   ) {
     return FAIL("bad_response");
   }

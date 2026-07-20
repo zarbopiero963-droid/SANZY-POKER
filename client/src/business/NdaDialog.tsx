@@ -21,6 +21,7 @@ import {
 import { submitNda } from "./ndaService";
 import { tb, type BizLocale } from "./landingI18n";
 import { useFocusTrap } from "./useFocusTrap";
+import { fillNdaText } from "@shared/ndaText";
 
 type NdaDialogProps = {
   locale: BizLocale;
@@ -48,7 +49,7 @@ export default function NdaDialog({
   const [session, setSession] = useState<DemoSession | null>(null);
   // null = nessun errore; altrimenti la chiave i18n del messaggio da mostrare.
   const [submitError, setSubmitError] = useState<
-    null | "submit" | "alreadySigned"
+    null | "submit" | "alreadySigned" | "outdated"
   >(null);
   const [copied, setCopied] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -99,7 +100,11 @@ export default function NdaDialog({
       const result = await submitNda(form, locale);
       if (!result.ok) {
         setSubmitError(
-          result.error === "already_signed" ? "alreadySigned" : "submit"
+          result.error === "already_signed"
+            ? "alreadySigned"
+            : result.error === "unsupported_nda_version"
+              ? "outdated"
+              : "submit"
         );
         return;
       }
@@ -250,8 +255,19 @@ export default function NdaDialog({
                   <p className="sanzy-nda__text sanzy-nda__text--green">
                     {tb("nda.slide3.text", locale)}
                   </p>
+                  {/* Testo NDA CANONICO (fonte condivisa col PDF del server):
+                      riempito coi dati dell'utente; IP/timestamp/ID mostrati come
+                      "registrati all'invio". È lo STESSO testo che finirà nel PDF
+                      firmato — accettato = registrato. */}
                   <div className="sanzy-nda__ndabox">
-                    {tb("nda.body", locale)}
+                    {fillNdaText(locale, {
+                      NOME: form.fullName.trim() || "—",
+                      AZIENDA: form.companyName.trim() || "—",
+                      EMAIL: form.businessEmail.trim() || "—",
+                      IP: tb("nda.recordedOnSubmit", locale),
+                      TIMESTAMP: tb("nda.recordedOnSubmit", locale),
+                      SIGNATURE_ID: tb("nda.recordedOnSubmit", locale),
+                    })}
                   </div>
                   <label className="sanzy-nda__check">
                     <input

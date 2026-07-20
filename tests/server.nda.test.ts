@@ -2,7 +2,8 @@
  * Test hard dell'endpoint NDA server (PR2, tracking #26).
  *
  * Esercitano il codice REALE del backend senza rete: validazione zod,
- * generazione server-authoritative, PDF, anti-replay, degradazione email.
+ * generazione server-authoritative, PDF, anti-replay atomico (+ rollback),
+ * concorrenza, degradazione email, sanitizzazione PDF, allineamento versione.
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -12,14 +13,21 @@ import {
   isSupportedNdaVersion,
   renderNdaPdf,
   renderSignedNdaText,
+  toWinAnsiSafe,
   type SignedNdaRecord,
 } from "../server/nda/signing";
-import { NDA_VERSION, fillNdaText } from "../server/nda/ndaText";
+import { NDA_VERSION } from "../server/nda/ndaText";
+import { NDA_VERSION as SHARED_VERSION, ndaTemplate } from "../shared/ndaText";
+import { NDA_VERSION as CLIENT_VERSION } from "../client/src/business/demoSession";
 import {
   createInMemorySignatureStore,
   normalizeEmail,
 } from "../server/nda/store";
-import { processNdaSign, extractClientIp } from "../server/nda/router";
+import {
+  processNdaSign,
+  extractClientIp,
+  maskEmail,
+} from "../server/nda/router";
 import { sendNdaEmail, buildEmailText } from "../server/nda/email";
 
 const VALID_BODY = {
@@ -43,6 +51,24 @@ const RECORD: SignedNdaRecord = {
   ip: "203.0.113.7",
   acceptedAt: "2026-07-20T10:00:00.000Z",
 };
+
+const emailSent = async () => ({ sent: true as const, id: "e1" });
+const emailDegraded = async () => ({
+  sent: false as const,
+  reason: "no-api-key" as const,
+});
+
+function ctx(sendEmail: ProcessSendEmail) {
+  return {
+    store: createInMemorySignatureStore(),
+    ip: "198.51.100.9",
+    now: 1_800_000_000_000,
+    newSignatureId: () => "snz_nda_fixedid00000000",
+    newPassword: () => "SANZY-ABCD-EFGH",
+    sendEmail,
+  };
+}
+type ProcessSendEmail = Parameters<typeof processNdaSign>[1]["sendEmail"];
 
 describe("NDA — validazione richiesta (zod)", () => {
   it("accetta un corpo valido", () => {
@@ -99,57 +125,77 @@ describe("NDA — generazione server-authoritative", () => {
   });
 });
 
+describe("NDA — versione: fonte unica client↔shared↔server", () => {
+  it("NDA_VERSION coincide ovunque (nessuna divergenza possibile)", () => {
+    expect(NDA_VERSION).toBe(SHARED_VERSION);
+    expect(CLIENT_VERSION).toBe(SHARED_VERSION);
+  });
+});
+
 describe("NDA — testo e PDF", () => {
-  it("fillNdaText riempie tutti i segnaposto senza lasciarne", () => {
-    const text = fillNdaText("it", {
-      NOME: "Mario Rossi",
-      AZIENDA: "ACME",
-      EMAIL: "m@acme.com",
-      IP: "1.2.3.4",
-      TIMESTAMP: "2026-07-20T10:00:00.000Z",
-      SIGNATURE_ID: "snz_nda_abc",
-    });
-    expect(text).toContain("Mario Rossi");
-    expect(text).toContain("1.2.3.4");
-    expect(text).toContain("snz_nda_abc");
+  it("renderSignedNdaText deriva dal template condiviso (stesse clausole)", () => {
+    const text = renderSignedNdaText(RECORD);
+    // Il titolo e le clausole canoniche del template condiviso sono presenti.
+    expect(text).toContain(ndaTemplate("en").split("\n")[0]);
+    expect(text).toContain("strictest confidentiality");
+    // Segnaposto riempiti coi valori firmati (IP/timestamp/ID reali).
+    expect(text).toContain("203.0.113.7");
+    expect(text).toContain("2026-07-20T10:00:00.000Z");
+    expect(text).toContain("snz_nda_deadbeef");
     expect(text).not.toMatch(
       /\{(NOME|AZIENDA|EMAIL|IP|TIMESTAMP|SIGNATURE_ID)\}/
     );
   });
 
-  it("renderSignedNdaText inserisce IP e timestamp autorevoli", () => {
-    const text = renderSignedNdaText(RECORD);
-    expect(text).toContain("203.0.113.7");
-    expect(text).toContain("2026-07-20T10:00:00.000Z");
-    expect(text).toContain("snz_nda_deadbeef");
+  it("toWinAnsiSafe tiene gli accenti Latin-1 e sostituisce il resto con ?", () => {
+    expect(toWinAnsiSafe("Café Zürich")).toBe("Café Zürich");
+    expect(toWinAnsiSafe("株式会社")).toBe("????");
+    expect(toWinAnsiSafe("emoji🎰x")).toBe("emoji?x");
   });
 
   it("renderNdaPdf produce un PDF valido (header %PDF) e non vuoto", async () => {
     const pdf = await renderNdaPdf(RECORD);
     expect(pdf.byteLength).toBeGreaterThan(500);
-    const header = new TextDecoder().decode(pdf.slice(0, 5));
-    expect(header).toBe("%PDF-");
+    expect(new TextDecoder().decode(pdf.slice(0, 5))).toBe("%PDF-");
+  });
+
+  it("renderNdaPdf NON lancia con nomi non-latini (sanitizzati)", async () => {
+    const pdf = await renderNdaPdf({
+      ...RECORD,
+      fullName: "山田太郎",
+      companyName: "株式会社テスト",
+    });
+    expect(new TextDecoder().decode(pdf.slice(0, 5))).toBe("%PDF-");
   });
 });
 
-describe("NDA — store anti-replay", () => {
+describe("NDA — store anti-replay (async, atomico, rollback)", () => {
   it("normalizeEmail: trim + lowercase", () => {
     expect(normalizeEmail("  A@B.COM ")).toBe("a@b.com");
   });
 
-  it("registra e deduplica per email; record duplicato lancia", () => {
+  it("tryRecord registra e deduplica; release libera", async () => {
     const store = createInMemorySignatureStore();
-    expect(store.has("a@b.com")).toBe(false);
-    store.record({ signatureId: "s1", businessEmail: "A@B.com", startedAt: 1 });
-    expect(store.has("a@b.com")).toBe(true);
-    expect(store.get("a@b.com")?.signatureId).toBe("s1");
-    expect(() =>
-      store.record({
+    expect(await store.has("a@b.com")).toBe(false);
+    expect(
+      await store.tryRecord({
+        signatureId: "s1",
+        businessEmail: "A@B.com",
+        startedAt: 1,
+      })
+    ).toBe(true);
+    expect(await store.has("a@b.com")).toBe(true);
+    expect((await store.get("a@b.com"))?.signatureId).toBe("s1");
+    // duplicato → false (nessuna eccezione)
+    expect(
+      await store.tryRecord({
         signatureId: "s2",
         businessEmail: "a@b.com",
         startedAt: 2,
       })
-    ).toThrow();
+    ).toBe(false);
+    await store.release("a@b.com");
+    expect(await store.has("a@b.com")).toBe(false);
   });
 });
 
@@ -167,8 +213,10 @@ describe("NDA — email (degradazione senza chiave)", () => {
   };
 
   it("senza RESEND_API_KEY ritorna sent:false reason no-api-key (no throw)", async () => {
-    const res = await sendNdaEmail(emailInput, { apiKey: "" });
-    expect(res).toEqual({ sent: false, reason: "no-api-key" });
+    expect(await sendNdaEmail(emailInput, { apiKey: "" })).toEqual({
+      sent: false,
+      reason: "no-api-key",
+    });
   });
 
   it("buildEmailText contiene i dati chiave della firma", () => {
@@ -179,67 +227,79 @@ describe("NDA — email (degradazione senza chiave)", () => {
   });
 });
 
-describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
-  const ctxBase = () => ({
-    store: createInMemorySignatureStore(),
-    ip: "198.51.100.9",
-    now: 1_800_000_000_000,
-    newSignatureId: () => "snz_nda_fixedid00000000",
-    newPassword: () => "SANZY-ABCD-EFGH",
-    sendEmail: async () => ({
-      sent: false as const,
-      reason: "no-api-key" as const,
-    }),
+describe("NDA — maskEmail (audit senza PII in chiaro)", () => {
+  it("nasconde il local part", () => {
+    expect(maskEmail("john.doe@softswiss.com")).toBe("j***@softswiss.com");
+    expect(maskEmail("bad")).toBe("***");
   });
+});
 
-  it("firma valida → 200 con credenziali del server e startedAt=now", async () => {
-    const ctx = ctxBase();
-    const res = await processNdaSign(VALID_BODY, ctx);
+describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
+  it("firma con email inviata → 200, credenziali server, anti-replay REGISTRATO", async () => {
+    const c = ctx(emailSent);
+    const res = await processNdaSign(VALID_BODY, c);
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
     expect(res.body.signatureId).toBe("snz_nda_fixedid00000000");
     expect(res.body.password).toBe("SANZY-ABCD-EFGH");
     expect(res.body.startedAt).toBe(1_800_000_000_000);
-    // email degradata → serverAcknowledged false, ma firma comunque registrata
-    expect(res.body.serverAcknowledged).toBe(false);
-    expect(ctx.store.has(VALID_BODY.businessEmail)).toBe(true);
-  });
-
-  it("serverAcknowledged true solo se l'email è stata inviata", async () => {
-    const ctx = {
-      ...ctxBase(),
-      sendEmail: async () => ({ sent: true as const, id: "e1" }),
-    };
-    const res = await processNdaSign(VALID_BODY, ctx);
     expect(res.body.serverAcknowledged).toBe(true);
+    // email inviata → prenotazione mantenuta (anti-replay attivo)
+    expect(await c.store.has(VALID_BODY.businessEmail)).toBe(true);
   });
 
-  it("anti-replay: seconda firma stessa email → 409", async () => {
-    const ctx = ctxBase();
-    await processNdaSign(VALID_BODY, ctx);
-    const res2 = await processNdaSign(VALID_BODY, ctx);
+  it("email degradata → 200 serverAcknowledged:false e prenotazione RILASCIATA", async () => {
+    const c = ctx(emailDegraded);
+    const res = await processNdaSign(VALID_BODY, c);
+    expect(res.status).toBe(200);
+    expect(res.body.serverAcknowledged).toBe(false);
+    // nessun artefatto durevole → rilasciata: l'utente può ritentare (no 409)
+    expect(await c.store.has(VALID_BODY.businessEmail)).toBe(false);
+    const res2 = await processNdaSign(VALID_BODY, c);
+    expect(res2.status).toBe(200);
+  });
+
+  it("anti-replay: seconda firma stessa email (prima inviata) → 409", async () => {
+    const c = ctx(emailSent);
+    await processNdaSign(VALID_BODY, c);
+    const res2 = await processNdaSign(VALID_BODY, c);
     expect(res2.status).toBe(409);
     expect(res2.body.error).toBe("already_signed");
+  });
+
+  it("concorrenza: due firme simultanee stessa email → una 200 e una 409", async () => {
+    const store = createInMemorySignatureStore();
+    const mk = () => ({
+      store,
+      ip: "1.1.1.1",
+      now: 1_800_000_000_000,
+      newSignatureId: generateSignatureId,
+      newPassword: () => "SANZY-ABCD-EFGH",
+      sendEmail: emailSent,
+    });
+    const [r1, r2] = await Promise.all([
+      processNdaSign(VALID_BODY, mk()),
+      processNdaSign(VALID_BODY, mk()),
+    ]);
+    expect([r1.status, r2.status].sort()).toEqual([200, 409]);
   });
 
   it("versione NDA non supportata → 422", async () => {
     const res = await processNdaSign(
       { ...VALID_BODY, ndaVersion: "vecchia" },
-      ctxBase()
+      ctx(emailSent)
     );
     expect(res.status).toBe(422);
     expect(res.body.error).toBe("unsupported_nda_version");
   });
 
-  it("body non valido → 400 senza registrare nulla", async () => {
-    const ctx = ctxBase();
-    const res = await processNdaSign({ fullName: "x" }, ctx);
+  it("body non valido → 400", async () => {
+    const res = await processNdaSign({ fullName: "x" }, ctx(emailSent));
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_request");
   });
 
   it("il client NON può imporre signatureId/password (ignorati dallo schema)", async () => {
-    const ctx = ctxBase();
     const res = await processNdaSign(
       {
         ...VALID_BODY,
@@ -247,7 +307,7 @@ describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
         password: "hacked",
         startedAt: 0,
       },
-      ctx
+      ctx(emailSent)
     );
     expect(res.status).toBe(200);
     expect(res.body.signatureId).toBe("snz_nda_fixedid00000000");
@@ -256,16 +316,25 @@ describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
   });
 });
 
-describe("NDA — extractClientIp", () => {
-  it("prende il primo IP di X-Forwarded-For", () => {
+describe("NDA — extractClientIp (non spoofabile)", () => {
+  it("usa req.ip (calcolato da Express con trust proxy)", () => {
     const req = {
-      headers: { "x-forwarded-for": "203.0.113.1, 10.0.0.1" },
+      ip: "203.0.113.5",
+      headers: { "x-forwarded-for": "1.2.3.4, 203.0.113.5" },
       socket: { remoteAddress: "10.0.0.2" },
     } as unknown as import("express").Request;
-    expect(extractClientIp(req)).toBe("203.0.113.1");
+    expect(extractClientIp(req)).toBe("203.0.113.5");
   });
 
-  it("fallback su remoteAddress se manca XFF", () => {
+  it("fallback: ULTIMO elemento di XFF (aggiunto dal proxy, non prependibile)", () => {
+    const req = {
+      headers: { "x-forwarded-for": "1.2.3.4, 203.0.113.9" },
+      socket: { remoteAddress: "10.0.0.2" },
+    } as unknown as import("express").Request;
+    expect(extractClientIp(req)).toBe("203.0.113.9");
+  });
+
+  it("fallback finale su remoteAddress", () => {
     const req = {
       headers: {},
       socket: { remoteAddress: "10.0.0.2" },

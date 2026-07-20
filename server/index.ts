@@ -12,8 +12,11 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Dietro il proxy Railway: fa sì che req.ip/X-Forwarded-For siano affidabili.
-  app.set("trust proxy", true);
+  // Dietro l'edge proxy Railway (1 hop): con `trust proxy: 1` `req.ip` è l'IP
+  // reale del client e NON è spoofabile (il primo elemento di X-Forwarded-For,
+  // controllabile dal client, viene ignorato). Se la topologia avesse più hop,
+  // adeguare questo numero.
+  app.set("trust proxy", 1);
 
   // Serve static files from dist/public in production
   const staticPath =
