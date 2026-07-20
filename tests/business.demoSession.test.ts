@@ -14,6 +14,7 @@ import {
   createDemoSession,
   DEMO_DURATION_MS,
   formatCountdown,
+  NDA_VERSION,
   generateSessionPassword,
   isExpired,
   isNdaFormValid,
@@ -106,10 +107,11 @@ describe("demoSession — password di sessione", () => {
 });
 
 describe("demoSession — payload e sessione firmata", () => {
-  it("il payload rifila i campi e porta signatureId + acceptedAt", () => {
+  it("il payload rifila i campi e porta signatureId + acceptedAt + versione/locale NDA", () => {
     const payload = buildNdaPayload(VALID_FORM, {
       signatureId: "sig_123",
       acceptedAt: "2026-07-20T10:00:00.000Z",
+      ndaLocale: "en",
     });
     expect(payload.fullName).toBe("Mario Rossi"); // trim
     expect(payload.businessEmail).toBe("mario@softswiss.com");
@@ -117,22 +119,27 @@ describe("demoSession — payload e sessione firmata", () => {
     expect(payload.jobTitle).toBe("Product Manager");
     expect(payload.signatureId).toBe("sig_123");
     expect(payload.acceptedAt).toBe("2026-07-20T10:00:00.000Z");
+    // Auditabilità del click-wrap: registra QUALE testo (versione) e in che lingua.
+    expect(payload.ndaVersion).toBe(NDA_VERSION);
+    expect(payload.ndaLocale).toBe("en");
   });
 
   it("createDemoSession fissa startedAt = now e produce firma/password/payload", () => {
     const now = 1_800_000_000_000;
-    const session = createDemoSession(VALID_FORM, now);
+    const session = createDemoSession(VALID_FORM, now, "it");
     expect(session.startedAt).toBe(now);
     expect(session.signatureId.length).toBeGreaterThan(0);
     expect(session.password).toMatch(/^SANZY-/);
     expect(session.payload.signatureId).toBe(session.signatureId);
     expect(session.payload.acceptedAt).toBe(new Date(now).toISOString());
     expect(session.payload.companyName).toBe("Softswiss");
+    expect(session.payload.ndaVersion).toBe(NDA_VERSION);
+    expect(session.payload.ndaLocale).toBe("it");
   });
 
   it("due sessioni hanno firme diverse", () => {
-    const a = createDemoSession(VALID_FORM, 1);
-    const b = createDemoSession(VALID_FORM, 1);
+    const a = createDemoSession(VALID_FORM, 1, "it");
+    const b = createDemoSession(VALID_FORM, 1, "it");
     expect(a.signatureId).not.toBe(b.signatureId);
   });
 });
@@ -206,7 +213,7 @@ describe("demoSession — persistenza minimale (no PII)", () => {
   });
 
   it("salva SOLO signatureId/password/startedAt, mai la PII del payload", () => {
-    const session = createDemoSession(VALID_FORM, 1_800_000_000_000);
+    const session = createDemoSession(VALID_FORM, 1_800_000_000_000, "it");
     saveDemoSession(session);
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
     expect(raw).toEqual({
@@ -227,7 +234,7 @@ describe("demoSession — persistenza minimale (no PII)", () => {
 
   it("round-trip: loadDemoSession rilegge esattamente ciò che è stato salvato", () => {
     // startedAt nel passato: il guard rifiuta i timestamp futuri manomessi.
-    const session = createDemoSession(VALID_FORM, Date.now() - 60_000);
+    const session = createDemoSession(VALID_FORM, Date.now() - 60_000, "it");
     saveDemoSession(session);
     expect(loadDemoSession()).toEqual({
       signatureId: session.signatureId,
@@ -271,8 +278,33 @@ describe("demoSession — persistenza minimale (no PII)", () => {
     expect(loadDemoSession()).toBeNull();
   });
 
+  it("iniettando now, rifiuta anche un startedAt di pochi minuti nel futuro (niente tolleranza)", () => {
+    // now iniettabile → funzione pura, e nessuna vecchia tolleranza di clock
+    // skew: un startedAt anche solo 3 minuti oltre `now` viene scartato.
+    const now = 1_800_000_000_000;
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        signatureId: "s",
+        password: "p",
+        startedAt: now + 3 * 60 * 1000,
+      })
+    );
+    expect(loadDemoSession(now)).toBeNull();
+    // Esattamente `now` (bordo) è invece accettato.
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ signatureId: "s", password: "p", startedAt: now })
+    );
+    expect(loadDemoSession(now)).toEqual({
+      signatureId: "s",
+      password: "p",
+      startedAt: now,
+    });
+  });
+
   it("clearDemoSession rimuove la sessione salvata", () => {
-    saveDemoSession(createDemoSession(VALID_FORM, 1));
+    saveDemoSession(createDemoSession(VALID_FORM, 1, "it"));
     clearDemoSession();
     expect(loadDemoSession()).toBeNull();
   });

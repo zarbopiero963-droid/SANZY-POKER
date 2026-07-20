@@ -11,9 +11,19 @@
  * arriva nel PR backend (vedi #26).
  */
 import { nanoid } from "nanoid";
+import type { BizLocale } from "./landingI18n";
 
 /** Durata della demo: 15 minuti, come richiesto nell'idea #12. */
 export const DEMO_DURATION_MS = 15 * 60 * 1000;
+
+/**
+ * Versione del testo NDA presentato all'utente. Fa parte del payload firmato:
+ * un click-wrap è verificabile solo se registra QUALE testo è stato accettato.
+ * Va incrementata a ogni modifica sostanziale del testo dell'NDA. Nel PR1 il
+ * testo è ammorbidito (nulla è ancora registrato lato server); il PR2 (#26)
+ * ripristina il testo legale pieno e alza questa versione.
+ */
+export const NDA_VERSION = "pr1-draft-1";
 
 /** Dati raccolti dal manager nelle 3 slide del popup NDA. */
 export type NdaForm = {
@@ -32,6 +42,8 @@ export type NdaPayload = {
   jobTitle: string;
   signatureId: string;
   acceptedAt: string; // ISO 8601 (UTC)
+  ndaVersion: string; // versione del testo NDA accettato (auditabilità)
+  ndaLocale: BizLocale; // lingua in cui l'NDA è stato mostrato e accettato
 };
 
 /** Sessione demo persistita: prova della firma + istante di avvio del timer. */
@@ -107,11 +119,23 @@ export function generateSessionPassword(): string {
 
 /**
  * Costruisce il payload firmato a partire dal modulo. `acceptedAt` è l'istante
- * (ISO) del consenso; `signatureId` identifica univocamente la firma.
+ * (ISO) del consenso; `signatureId` identifica univocamente la firma;
+ * `ndaVersion`/`ndaLocale` registrano QUALE testo (e in che lingua) è stato
+ * accettato, requisito minimo di auditabilità di un click-wrap.
  */
 export function buildNdaPayload(
   form: NdaForm,
-  { signatureId, acceptedAt }: { signatureId: string; acceptedAt: string }
+  {
+    signatureId,
+    acceptedAt,
+    ndaLocale,
+    ndaVersion = NDA_VERSION,
+  }: {
+    signatureId: string;
+    acceptedAt: string;
+    ndaLocale: BizLocale;
+    ndaVersion?: string;
+  }
 ): NdaPayload {
   return {
     fullName: form.fullName.trim(),
@@ -120,21 +144,28 @@ export function buildNdaPayload(
     jobTitle: form.jobTitle.trim(),
     signatureId,
     acceptedAt,
+    ndaVersion,
+    ndaLocale,
   };
 }
 
 /**
  * Crea una nuova sessione demo al momento della firma. `now` è iniettabile per
- * i test; in produzione si passa `Date.now()`.
+ * i test; in produzione si passa `Date.now()`. `ndaLocale` è la lingua in cui
+ * l'utente ha letto e accettato l'NDA (registrata nel payload).
  */
-export function createDemoSession(form: NdaForm, now: number): DemoSession {
+export function createDemoSession(
+  form: NdaForm,
+  now: number,
+  ndaLocale: BizLocale
+): DemoSession {
   const signatureId = nanoid();
   const acceptedAt = new Date(now).toISOString();
   return {
     signatureId,
     password: generateSessionPassword(),
     startedAt: now,
-    payload: buildNdaPayload(form, { signatureId, acceptedAt }),
+    payload: buildNdaPayload(form, { signatureId, acceptedAt, ndaLocale }),
   };
 }
 
@@ -185,16 +216,17 @@ export type PersistedSession = {
   startedAt: number;
 };
 
-/** Tolleranza sull'orologio (5 min) per accettare un `startedAt` quasi-attuale. */
-const CLOCK_SKEW_MS = 5 * 60 * 1000;
-
 /**
  * Type guard della sessione minimale ricaricata da storage. Oltre ai tipi,
- * rifiuta stringhe vuote e un `startedAt` nel futuro (oltre la tolleranza): non
- * rende il gate inviolabile — resta client-side, vedi #26 — ma scarta i dati
- * palesemente manomessi che allungherebbero la demo.
+ * rifiuta stringhe vuote e un `startedAt` nel futuro: non rende il gate
+ * inviolabile — resta client-side, vedi #26 — ma scarta i dati palesemente
+ * manomessi che allungherebbero la demo. `now` è iniettato dal chiamante così
+ * la funzione resta pura (nessuna lettura implicita dell'orologio).
  */
-function isPersistedSession(value: unknown): value is PersistedSession {
+function isPersistedSession(
+  value: unknown,
+  now: number
+): value is PersistedSession {
   if (!value || typeof value !== "object") return false;
   const s = value as Record<string, unknown>;
   if (
@@ -207,12 +239,18 @@ function isPersistedSession(value: unknown): value is PersistedSession {
   ) {
     return false;
   }
-  return s.startedAt <= Date.now() + CLOCK_SKEW_MS;
+  // Uno `startedAt` futuro allungherebbe la demo oltre i 15 minuti: si scarta.
+  return s.startedAt <= now;
 }
 
 /**
  * Salva SOLO i campi minimi necessari (no PII). Best-effort: se lo storage è
  * disabilitato non lancia, la demo resta valida per la sessione corrente.
+ *
+ * TODO(PR2 #26): la `password` è qui in chiaro in `localStorage`. Va bene per il
+ * PR1 (è solo una chiave di sblocco lato client, non una credenziale reale), ma
+ * quando il PR2 renderà la password server-authoritative NON va persistita in
+ * chiaro: conservare solo il `signatureId` e riconvalidare col server.
  */
 export function saveDemoSession(session: DemoSession | PersistedSession): void {
   try {
@@ -227,13 +265,18 @@ export function saveDemoSession(session: DemoSession | PersistedSession): void {
   }
 }
 
-/** Ricarica la sessione demo minimale salvata, o `null` se assente/illeggibile. */
-export function loadDemoSession(): PersistedSession | null {
+/**
+ * Ricarica la sessione demo minimale salvata, o `null` se assente/illeggibile.
+ * `now` è iniettabile per i test; in produzione si passa `Date.now()`.
+ */
+export function loadDemoSession(
+  now: number = Date.now()
+): PersistedSession | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    return isPersistedSession(parsed) ? parsed : null;
+    return isPersistedSession(parsed, now) ? parsed : null;
   } catch {
     return null;
   }

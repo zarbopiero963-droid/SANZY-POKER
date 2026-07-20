@@ -71,21 +71,29 @@ export default function DemoTimer({
 
   const isLow = remaining <= 60_000; // ultimo minuto: evidenzia
   const formatted = formatCountdown(remaining);
+  const label = tb("timer.label", locale);
 
   return (
     <div
       className="sanzy-demo-timer"
       role="timer"
-      // Il valore fa parte del nome accessibile; nell'ultimo minuto lo annunciamo
-      // (polite) così gli screen reader segnalano l'avvicinarsi della scadenza.
-      aria-live={isLow ? "polite" : "off"}
-      aria-label={`${tb("timer.label", locale)} ${formatted}`}
+      aria-label={`${label} ${formatted}`}
       data-low={isLow ? "true" : "false"}
     >
-      <span className="sanzy-demo-timer__label">
-        {tb("timer.label", locale)}
-      </span>
+      <span className="sanzy-demo-timer__label">{label}</span>
       <span className="sanzy-demo-timer__value">{formatted}</span>
+      {/* Region live STABILE (sempre presente): gli screen reader annunciano solo
+          quando il testo cambia. Restando vuota fuori dall'ultimo minuto evita
+          gli annunci al secondo; nell'ultimo minuto annuncia il tempo residuo.
+          Un toggle di aria-live sullo stesso nodo è invece inaffidabile. */}
+      <span
+        className="sanzy-demo-timer__sr"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {isLow ? `${label} ${formatted}` : ""}
+      </span>
       <style>{TIMER_CSS}</style>
     </div>
   );
@@ -124,6 +132,18 @@ const TIMER_CSS = `
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+}
+.sanzy-demo-timer__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .sanzy-demo-timer[data-low="true"] {
   border-color: rgba(216, 52, 44, 0.8);

@@ -90,7 +90,7 @@ export default function NdaDialog({
     setSubmitError(false);
     setSubmitting(true);
     try {
-      const created = createDemoSession(form, Date.now());
+      const created = createDemoSession(form, Date.now(), locale);
       // PR1: stub locale. PR2 userà la risposta autorevole del server (fetch).
       const result = await submitNda(created);
       if (!result.ok) {
