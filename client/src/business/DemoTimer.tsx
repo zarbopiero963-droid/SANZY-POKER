@@ -33,6 +33,8 @@ export default function DemoTimer({
   const firedRef = useRef(false);
 
   useEffect(() => {
+    // Se startedAt/totalMs cambiano (nuova sessione), riabilita onExpire.
+    firedRef.current = false;
     const tick = () => {
       const ms = computeRemainingMs(startedAt, Date.now(), totalMs);
       setRemaining(ms);

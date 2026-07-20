@@ -165,50 +165,54 @@ export function formatCountdown(remainingMs: number): string {
 
 const STORAGE_KEY = "sanzy.demo.session";
 
-/** Type guard per una sessione ricaricata da storage (valida anche il payload). */
-function isDemoSession(value: unknown): value is DemoSession {
+/**
+ * Sottoinsieme persistito della sessione: il MINIMO per riprendere la demo dopo
+ * un refresh (firma, password, avvio del timer). NON contiene la PII del
+ * payload (nome/email/azienda/ruolo): quella resta in memoria e verrà inviata
+ * al server al momento della firma (PR2), non salvata in `localStorage`.
+ */
+export type PersistedSession = {
+  signatureId: string;
+  password: string;
+  startedAt: number;
+};
+
+/** Type guard della sessione minimale ricaricata da storage. */
+function isPersistedSession(value: unknown): value is PersistedSession {
   if (!value || typeof value !== "object") return false;
   const s = value as Record<string, unknown>;
-  if (
-    typeof s.signatureId !== "string" ||
-    typeof s.password !== "string" ||
-    typeof s.startedAt !== "number" ||
-    !Number.isFinite(s.startedAt) ||
-    typeof s.payload !== "object" ||
-    s.payload === null
-  ) {
-    return false;
-  }
-  // Il payload deve avere tutti i campi stringa attesi: evita sessioni corrotte
-  // semi-valide che passerebbero il solo check "è un oggetto".
-  const p = s.payload as Record<string, unknown>;
-  const stringFields: (keyof NdaPayload)[] = [
-    "fullName",
-    "businessEmail",
-    "companyName",
-    "jobTitle",
-    "signatureId",
-    "acceptedAt",
-  ];
-  return stringFields.every(field => typeof p[field] === "string");
+  return (
+    typeof s.signatureId === "string" &&
+    typeof s.password === "string" &&
+    typeof s.startedAt === "number" &&
+    Number.isFinite(s.startedAt)
+  );
 }
 
-/** Salva la sessione demo (best-effort: se lo storage è off, non lancia). */
-export function saveDemoSession(session: DemoSession): void {
+/**
+ * Salva SOLO i campi minimi necessari (no PII). Best-effort: se lo storage è
+ * disabilitato non lancia, la demo resta valida per la sessione corrente.
+ */
+export function saveDemoSession(session: DemoSession | PersistedSession): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    const persisted: PersistedSession = {
+      signatureId: session.signatureId,
+      password: session.password,
+      startedAt: session.startedAt,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
   } catch {
     // Storage non disponibile: la demo resta valida per la sessione corrente.
   }
 }
 
-/** Ricarica la sessione demo salvata, o `null` se assente/illeggibile. */
-export function loadDemoSession(): DemoSession | null {
+/** Ricarica la sessione demo minimale salvata, o `null` se assente/illeggibile. */
+export function loadDemoSession(): PersistedSession | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    return isDemoSession(parsed) ? parsed : null;
+    return isPersistedSession(parsed) ? parsed : null;
   } catch {
     return null;
   }

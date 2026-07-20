@@ -199,10 +199,14 @@ export function tb(
   let text = entry ? entry[locale] : key;
   if (params) {
     for (const [name, value] of Object.entries(params)) {
-      // Replacement a funzione: un valore contenente `$&`/`$1` resta letterale
-      // (con la forma a stringa verrebbe interpretato come pattern di replace).
+      // Escape del nome parametro (difesa se un domani contenesse metacaratteri
+      // regex) e replacement a funzione: un valore con `$&`/`$1` resta letterale.
+      const safeName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const stringValue = String(value);
-      text = text.replace(new RegExp(`\\{${name}\\}`, "g"), () => stringValue);
+      text = text.replace(
+        new RegExp(`\\{${safeName}\\}`, "g"),
+        () => stringValue
+      );
     }
   }
   return text;

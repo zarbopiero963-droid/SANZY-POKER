@@ -24,6 +24,7 @@ import {
   loadDemoSession,
   saveDemoSession,
   type DemoSession,
+  type PersistedSession,
 } from "@/business/demoSession";
 import {
   BIZ_LOCALES,
@@ -50,7 +51,9 @@ function readBizLocale(): BizLocale {
 
 export default function Home() {
   const [bizLocale, setBizLocale] = useState<BizLocale>(readBizLocale);
-  const [session, setSession] = useState<DemoSession | null>(null);
+  // Dopo la firma teniamo solo il minimo (no PII): startedAt per il timer,
+  // signatureId/password per riferimento. Il payload completo resta in NdaDialog.
+  const [session, setSession] = useState<PersistedSession | null>(null);
   const [variant, setVariant] = useState<Variant | null>(null);
   const [stage, setStage] = useState<Stage>("landing");
 
@@ -116,12 +119,21 @@ export default function Home() {
   }
 
   if (stage === "nda") {
+    // La landing resta sotto il dialog: il backdrop sfocato ha così un contenuto
+    // reale da sfumare, invece dello sfondo nudo del body.
     return (
-      <NdaDialog
-        locale={bizLocale}
-        onClose={() => setStage("landing")}
-        onSigned={onSigned}
-      />
+      <>
+        <BusinessLanding
+          locale={bizLocale}
+          onToggleLocale={toggleLocale}
+          onTryDemo={() => setStage("nda")}
+        />
+        <NdaDialog
+          locale={bizLocale}
+          onClose={() => setStage("landing")}
+          onSigned={onSigned}
+        />
+      </>
     );
   }
 

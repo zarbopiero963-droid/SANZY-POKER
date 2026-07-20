@@ -9,7 +9,7 @@
  * La validazione e la creazione della sessione stanno in `demoSession.ts` (pure
  * e testate). Qui c'è solo la UI. Nessun testo hardcoded fuori da `tb()`.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   createDemoSession,
   validateNdaForm,
@@ -111,6 +111,17 @@ export default function NdaDialog({
 
   const err = (key: keyof typeof errors) =>
     showErrors && errors[key] ? tb(`nda.error.${errors[key]}`, locale) : "";
+
+  // Esc chiude il dialog durante la compilazione; a firma avvenuta (schermata di
+  // sblocco) NON chiude, per non perdere la password mostrata.
+  useEffect(() => {
+    if (session) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [session, onClose]);
 
   return (
     <div
