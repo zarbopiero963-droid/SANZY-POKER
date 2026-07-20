@@ -37,6 +37,20 @@ describe("landingI18n — completezza IT/EN", () => {
       expect(Object.keys(BIZ_STRINGS[key]).sort()).toEqual(["en", "it"]);
     }
   });
+
+  it("la privacy NON afferma più che i dati restano nel browser (backend attivo)", () => {
+    // Regressione: con il backend PR2 i dati VENGONO inviati al server; la vecchia
+    // nota «i dati non lasciano il browser» sarebbe materialmente falsa.
+    const it = tb("legal.privacy.body", "it");
+    const en = tb("legal.privacy.body", "en");
+    expect(it).not.toMatch(/NON vengono inviati ad alcun server/i);
+    expect(en).not.toMatch(/NOT sent to any server/i);
+    // …e deve dichiarare l'invio al server e il destinatario email (Resend).
+    expect(it).toMatch(/inviati al nostro server/i);
+    expect(it).toMatch(/Resend/);
+    expect(en).toMatch(/sent to our server/i);
+    expect(en).toMatch(/Resend/);
+  });
 });
 
 describe("landingI18n — risoluzione e interpolazione di tb()", () => {
