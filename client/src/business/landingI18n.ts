@@ -187,6 +187,69 @@ export const BIZ_STRINGS = {
     it: "Torna alla home",
     en: "Back to home",
   },
+  // --- Banner cookie (GDPR) ---
+  "cookie.text": {
+    it: "Usiamo cookie tecnici necessari al funzionamento della demo (gestione della sessione e del timer di gioco) e cookie analitici anonimi. Cliccando su «Accetta» acconsenti al loro utilizzo.",
+    en: "We use technical cookies required to run the demo (session and game-timer handling) and anonymous analytics cookies. By clicking “Accept” you consent to their use.",
+  },
+  "cookie.accept": {
+    it: "Accetta tutti",
+    en: "Accept all",
+  },
+  "cookie.decline": {
+    it: "Rifiuta",
+    en: "Decline",
+  },
+  "cookie.policyLink": {
+    it: "Leggi la Cookie Policy",
+    en: "Read the Cookie Policy",
+  },
+  // --- Footer legale ---
+  "footer.terms": {
+    it: "Termini e Condizioni",
+    en: "Terms & Conditions",
+  },
+  "footer.privacy": {
+    it: "Privacy Policy",
+    en: "Privacy Policy",
+  },
+  "footer.cookie": {
+    it: "Cookie Policy",
+    en: "Cookie Policy",
+  },
+  "footer.rights": {
+    it: "© Piero Zambo — Sanzy Poker. Tutti i diritti riservati.",
+    en: "© Piero Zambo — Sanzy Poker. All rights reserved.",
+  },
+  // --- Documenti legali (modal) ---
+  "legal.close": {
+    it: "Chiudi",
+    en: "Close",
+  },
+  "legal.terms.title": {
+    it: "Termini e Condizioni (Piattaforma demo B2B)",
+    en: "Terms & Conditions (B2B demo platform)",
+  },
+  "legal.terms.body": {
+    it: "1. Proprietà. Questo sito e il laboratorio Sanzy Poker sono di proprietà di Piero Zambo.\n\n2. Idoneità B2B. L'accesso alla demo 3D è riservato esclusivamente a entità aziendali, operatori iGaming e professionisti del settore autorizzati.\n\n3. Limitazioni d'uso. La demo è fornita a soli fini di valutazione. Lo sfruttamento commerciale, la messa in produzione o il reverse engineering del software presentato sono severamente vietati ai sensi delle leggi internazionali sul copyright.\n\n4. Esclusione di responsabilità. La variante software è un prototipo. Lo sviluppatore non è responsabile di interruzioni temporanee del servizio o di incompatibilità con il sistema locale durante la finestra di valutazione di 15 minuti.",
+    en: "1. Ownership. This website and the Sanzy Poker laboratory are owned by Piero Zambo.\n\n2. B2B Eligibility. Access to the 3D demo is strictly reserved for corporate entities, iGaming operators, and authorized industry professionals.\n\n3. Usage Limitation. The demo is provided for evaluation purposes only. Commercial exploitation, staging, or reverse-engineering of the presented software is strictly prohibited under International Copyright laws.\n\n4. Disclaimer. The software variant is a prototype. The developer is not liable for temporary service interruptions or local system incompatibilities during the 15-minute evaluation slot.",
+  },
+  "legal.privacy.title": {
+    it: "Informativa sulla privacy",
+    en: "Privacy Policy",
+  },
+  "legal.privacy.body": {
+    it: "Titolare del trattamento: Piero Zambo (pier.zar69@gmail.com).\n\nDati raccolti. Nel modulo NDA raccogliamo nome e cognome, email aziendale, nome dell'azienda e ruolo. Alla firma vengono associati un identificativo di firma e la data/ora; l'indirizzo IP viene registrato lato server al momento dell'invio (fase backend).\n\nFinalità. I dati sono trattati per gestire l'accordo di riservatezza, dare accesso alla demo e per contatti commerciali conseguenti.\n\nBase giuridica. Esecuzione di misure precontrattuali e legittimo interesse dell'azienda.\n\nConservazione. I dati sono conservati per il tempo necessario alla trattativa e agli obblighi legali connessi all'NDA.\n\nDiritti. Puoi chiedere accesso, rettifica o cancellazione dei tuoi dati scrivendo a pier.zar69@gmail.com.\n\nNota. In questa fase (frontend) i dati NON vengono inviati ad alcun server: restano nel tuo browser per la durata della sessione. L'invio via email e la registrazione dell'IP avvengono nella fase backend successiva.",
+    en: "Data controller: Piero Zambo (pier.zar69@gmail.com).\n\nData collected. In the NDA form we collect full name, business email, company name and job title. On signature a signature ID and a timestamp are associated; the IP address is logged server-side at submission time (backend phase).\n\nPurpose. Data is processed to manage the confidentiality agreement, grant demo access and for the resulting business contact.\n\nLegal basis. Performance of pre-contractual measures and the company's legitimate interest.\n\nRetention. Data is kept for as long as needed for the negotiation and the legal obligations tied to the NDA.\n\nRights. You may request access, rectification or erasure of your data by writing to pier.zar69@gmail.com.\n\nNote. In this (frontend) phase data is NOT sent to any server: it stays in your browser for the duration of the session. Email delivery and IP logging happen in the later backend phase.",
+  },
+  "legal.cookie.title": {
+    it: "Cookie Policy",
+    en: "Cookie Policy",
+  },
+  "legal.cookie.body": {
+    it: "Cookie tecnici. Usiamo l'archiviazione locale del browser (localStorage) per ricordare il consenso ai cookie, la lingua scelta e — dopo la firma dell'NDA — l'avvio della sessione demo, così che il timer di 15 minuti non riparta al refresh. Sono necessari al funzionamento della demo.\n\nCookie analitici. Eventuali cookie analitici sono anonimi e servono solo a misurare l'uso in forma aggregata.\n\nGestione. Puoi rifiutare i cookie non necessari dal banner; puoi inoltre cancellare i dati locali svuotando l'archiviazione del sito dal tuo browser.",
+    en: "Technical cookies. We use the browser's local storage (localStorage) to remember your cookie consent, your chosen language and — after signing the NDA — the start of the demo session, so the 15-minute timer does not restart on refresh. These are required for the demo to work.\n\nAnalytics cookies. Any analytics cookies are anonymous and only measure usage in aggregate form.\n\nManagement. You can decline non-essential cookies from the banner; you can also clear local data by emptying this site's storage in your browser.",
+  },
 } satisfies Record<string, Entry>;
 
 /** Unione letterale delle chiavi del dizionario business: typo = errore a compile-time. */

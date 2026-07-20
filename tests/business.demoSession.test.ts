@@ -19,8 +19,13 @@ import {
   isExpired,
   isNdaFormValid,
   isValidEmail,
+  loadCookieConsent,
   loadDemoSession,
+  saveCookieConsent,
   saveDemoSession,
+  timerPhase,
+  TIMER_URGENT_MS,
+  TIMER_WARN_MS,
   validateNdaForm,
   type NdaForm,
 } from "../client/src/business/demoSession";
@@ -186,6 +191,18 @@ describe("demoSession — timer 15 minuti", () => {
   });
 });
 
+describe("demoSession — fasi colore del timer (idea #12)", () => {
+  it("calma sopra i 5 minuti, ambra fino a 1 minuto, rosso nell'ultimo minuto", () => {
+    expect(timerPhase(10 * 60_000)).toBe("calm");
+    expect(timerPhase(TIMER_WARN_MS + 1)).toBe("calm"); // 5:00 + 1ms
+    expect(timerPhase(TIMER_WARN_MS)).toBe("warn"); // esattamente 5:00
+    expect(timerPhase(3 * 60_000)).toBe("warn");
+    expect(timerPhase(TIMER_URGENT_MS + 1)).toBe("warn"); // 1:00 + 1ms
+    expect(timerPhase(TIMER_URGENT_MS)).toBe("urgent"); // esattamente 1:00
+    expect(timerPhase(0)).toBe("urgent");
+  });
+});
+
 // Stub minimale di Web Storage: l'ambiente di test è "node" (niente
 // localStorage), ma vogliamo esercitare le funzioni REALI di persistenza.
 class MemoryStorage {
@@ -307,5 +324,25 @@ describe("demoSession — persistenza minimale (no PII)", () => {
     saveDemoSession(createDemoSession(VALID_FORM, 1, "it"));
     clearDemoSession();
     expect(loadDemoSession()).toBeNull();
+  });
+});
+
+describe("demoSession — consenso cookie (GDPR)", () => {
+  beforeEach(() => {
+    (globalThis as unknown as { localStorage: Storage }).localStorage =
+      new MemoryStorage() as unknown as Storage;
+  });
+
+  it("null finché l'utente non sceglie, poi persiste accetta/rifiuta", () => {
+    expect(loadCookieConsent()).toBeNull(); // banner ancora da mostrare
+    saveCookieConsent(true);
+    expect(loadCookieConsent()).toBe(true);
+    saveCookieConsent(false);
+    expect(loadCookieConsent()).toBe(false);
+  });
+
+  it("un valore non riconosciuto è trattato come 'non deciso' (null)", () => {
+    localStorage.setItem("sanzy.cookies.accepted", "maybe");
+    expect(loadCookieConsent()).toBeNull();
   });
 });

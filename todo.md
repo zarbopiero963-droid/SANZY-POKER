@@ -174,6 +174,8 @@
 - [x] Timer demo persistito: dipende da `startedAt` (localStorage), **non riparte al refresh**; blocco a scadenza.
 - [x] i18n business IT/EN separato dal gioco (`landingI18n.ts`), invariante 4-lingue del gioco intatto.
 - [x] `submitNda()` stub del contratto `POST /api/nda/sign` (backend nel PR2).
-- [x] Test hard offline: 13 su `demoSession` + 7 su `landingI18n` (177 totali verdi); `pnpm check`/`prettier` PASS.
-- [ ] **PR2 (backend):** Express `POST /api/nda/sign` → PDF (pdf-lib) + log IP/timestamp + email a pier.zar69@gmail.com via Resend (`RESEND_API_KEY` Secret). Password/timer ancorati al server.
+- [x] **Pacchetto legale GDPR** (richiesto dall'owner nei commenti #26): footer con Termini/Privacy/Cookie in `LegalModal` + `CookieBanner` (consenso persistito, non blocca la landing).
+- [x] **Fasi colore del timer** (idea #12): `timerPhase()` calma → ambra (≤5') → rosso lampeggiante (≤1'), rispetta `prefers-reduced-motion`.
+- [x] Test hard offline aggiornati: `demoSession` (timer-phase + consenso cookie) + `landingI18n` (188 totali verdi); `pnpm check`/`build`/`prettier` PASS.
+- [ ] **PR2 (backend):** Express `POST /api/nda/sign` → PDF (pdf-lib) + log IP/timestamp + email a pier.zar69@gmail.com via Resend (`RESEND_API_KEY` Secret). Password/timer ancorati al server. Ripristino del testo NDA legale pieno «blindato» + `NDA_VERSION` alzata.
 - [ ] Verifica browser reale del flusso (viewport mobile/desktop) — smoke manuale (WebGL/CSS non profilabili offline).

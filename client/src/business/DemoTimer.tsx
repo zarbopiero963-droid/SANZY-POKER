@@ -10,6 +10,7 @@ import {
   computeRemainingMs,
   DEMO_DURATION_MS,
   formatCountdown,
+  timerPhase,
 } from "./demoSession";
 import { tb, type BizLocale } from "./landingI18n";
 
@@ -69,7 +70,10 @@ export default function DemoTimer({
     };
   }, [startedAt, totalMs]);
 
-  const isLow = remaining <= 60_000; // ultimo minuto: evidenzia
+  // Fase visiva (idea #12): calma (bianco/verde) → ambra (ultimi 5') → rosso
+  // lampeggiante (ultimo minuto). L'urgenza sale con l'avvicinarsi della scadenza.
+  const phase = timerPhase(remaining);
+  const isUrgent = phase === "urgent";
   const formatted = formatCountdown(remaining);
   const label = tb("timer.label", locale);
 
@@ -78,7 +82,7 @@ export default function DemoTimer({
       className="sanzy-demo-timer"
       role="timer"
       aria-label={`${label} ${formatted}`}
-      data-low={isLow ? "true" : "false"}
+      data-phase={phase}
     >
       <span className="sanzy-demo-timer__label">{label}</span>
       <span className="sanzy-demo-timer__value">{formatted}</span>
@@ -92,7 +96,7 @@ export default function DemoTimer({
         aria-live="polite"
         aria-atomic="true"
       >
-        {isLow ? `${label} ${formatted}` : ""}
+        {isUrgent ? `${label} ${formatted}` : ""}
       </span>
       <style>{TIMER_CSS}</style>
     </div>
@@ -145,10 +149,26 @@ const TIMER_CSS = `
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.sanzy-demo-timer[data-low="true"] {
-  border-color: rgba(216, 52, 44, 0.8);
+.sanzy-demo-timer[data-phase="warn"] {
+  border-color: rgba(230, 168, 60, 0.85);
 }
-.sanzy-demo-timer[data-low="true"] .sanzy-demo-timer__value {
-  color: #ff6a5f;
+.sanzy-demo-timer[data-phase="warn"] .sanzy-demo-timer__value {
+  color: #f2b23c;
+}
+.sanzy-demo-timer[data-phase="urgent"] {
+  border-color: rgba(216, 52, 44, 0.9);
+}
+.sanzy-demo-timer[data-phase="urgent"] .sanzy-demo-timer__value {
+  color: #ff5a4f;
+  animation: sanzy-timer-pulse 1s ease-in-out infinite;
+}
+@keyframes sanzy-timer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sanzy-demo-timer[data-phase="urgent"] .sanzy-demo-timer__value {
+    animation: none;
+  }
 }
 `;

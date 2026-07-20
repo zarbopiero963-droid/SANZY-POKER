@@ -3,10 +3,14 @@
  *
  * Vetrina B2B: slogan, pitch del doppio piatto, marchio tipografico (segnaposto,
  * come nella StartScreen), tre "scatti" mock del tavolo e la CTA "For Business /
- * Prova la demo" che apre il popup NDA. Toggle lingua IT/EN. Ogni testo passa
- * da `tb()`; nessun testo hardcoded.
+ * Prova la demo" che apre il popup NDA. Toggle lingua IT/EN. Include il footer
+ * legale (T&C / Privacy / Cookie) e il banner cookie GDPR. Ogni testo passa da
+ * `tb()`; nessun testo hardcoded.
  */
+import { useState } from "react";
 import { tb, type BizLocale } from "./landingI18n";
+import CookieBanner from "./CookieBanner";
+import LegalModal, { type LegalDoc } from "./LegalModal";
 
 type BusinessLandingProps = {
   locale: BizLocale;
@@ -19,6 +23,7 @@ export default function BusinessLanding({
   onToggleLocale,
   onTryDemo,
 }: BusinessLandingProps) {
+  const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null);
   return (
     <main className="sanzy-biz">
       <div className="sanzy-biz__felt" aria-hidden />
@@ -66,6 +71,51 @@ export default function BusinessLanding({
           </span>
         </div>
       </section>
+
+      <footer className="sanzy-biz__footer">
+        <nav
+          className="sanzy-biz__legal"
+          aria-label={tb("footer.privacy", locale)}
+        >
+          <button
+            type="button"
+            className="sanzy-biz__legal-link"
+            onClick={() => setLegalDoc("terms")}
+          >
+            {tb("footer.terms", locale)}
+          </button>
+          <span aria-hidden>·</span>
+          <button
+            type="button"
+            className="sanzy-biz__legal-link"
+            onClick={() => setLegalDoc("privacy")}
+          >
+            {tb("footer.privacy", locale)}
+          </button>
+          <span aria-hidden>·</span>
+          <button
+            type="button"
+            className="sanzy-biz__legal-link"
+            onClick={() => setLegalDoc("cookie")}
+          >
+            {tb("footer.cookie", locale)}
+          </button>
+        </nav>
+        <p className="sanzy-biz__rights">{tb("footer.rights", locale)}</p>
+      </footer>
+
+      <CookieBanner
+        locale={locale}
+        onOpenPolicy={() => setLegalDoc("cookie")}
+      />
+
+      {legalDoc && (
+        <LegalModal
+          locale={locale}
+          doc={legalDoc}
+          onClose={() => setLegalDoc(null)}
+        />
+      )}
 
       <style>{LANDING_CSS}</style>
     </main>
@@ -132,4 +182,15 @@ const LANDING_CSS = `
 }
 .sanzy-biz__demo:hover { transform: translateY(-2px); box-shadow: 0 20px 42px rgba(0,0,0,.5); }
 .sanzy-biz__cta-sub { font-size: 12.5px; color: #b7cabf; }
+.sanzy-biz__footer {
+  position: relative; z-index: 1; margin-top: auto; padding-top: 22px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+}
+.sanzy-biz__legal { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; color: #7f938a; }
+.sanzy-biz__legal-link {
+  background: none; border: none; padding: 0; cursor: pointer; font-family: inherit;
+  font-size: 12px; font-weight: 700; color: #b7cabf; text-decoration: underline;
+}
+.sanzy-biz__legal-link:hover { color: #f4efe4; }
+.sanzy-biz__rights { margin: 0; font-size: 11px; color: #6d8177; }
 `;

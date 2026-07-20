@@ -200,6 +200,24 @@ export function formatCountdown(remainingMs: number): string {
   return `${pad(minutes)}:${pad(seconds)}`;
 }
 
+/** Soglia della fase "warn" (ambra): ultimi 5 minuti. */
+export const TIMER_WARN_MS = 5 * 60 * 1000;
+/** Soglia della fase "urgent" (rosso lampeggiante): ultimo minuto. */
+export const TIMER_URGENT_MS = 60 * 1000;
+
+/** Fase visiva del timer (colori dell'idea #12): calma → ambra → rosso urgente. */
+export type TimerPhase = "calm" | "warn" | "urgent";
+
+/**
+ * Mappa i millisecondi rimanenti in una fase visiva. `> 5:00` calma; `≤ 5:00 e
+ * > 1:00` ambra (warn); `≤ 1:00` rosso (urgent). Pura e deterministica.
+ */
+export function timerPhase(remainingMs: number): TimerPhase {
+  if (remainingMs <= TIMER_URGENT_MS) return "urgent";
+  if (remainingMs <= TIMER_WARN_MS) return "warn";
+  return "calm";
+}
+
 // --- Persistenza (isolata, best-effort) -----------------------------------
 
 const STORAGE_KEY = "sanzy.demo.session";
@@ -288,5 +306,36 @@ export function clearDemoSession(): void {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
     // no-op
+  }
+}
+
+// --- Consenso cookie (GDPR) -----------------------------------------------
+
+const COOKIE_CONSENT_KEY = "sanzy.cookies.accepted";
+
+/**
+ * Salva la scelta sul banner cookie. `true` = accettati; `false` = rifiutati.
+ * Best-effort: se lo storage è disabilitato non lancia (il banner ricomparirà).
+ */
+export function saveCookieConsent(accepted: boolean): void {
+  try {
+    localStorage.setItem(COOKIE_CONSENT_KEY, accepted ? "true" : "false");
+  } catch {
+    // no-op
+  }
+}
+
+/**
+ * Legge la scelta sul banner cookie: `true`/`false` se già decisa, `null` se
+ * l'utente non ha ancora scelto (in tal caso il banner va mostrato).
+ */
+export function loadCookieConsent(): boolean | null {
+  try {
+    const raw = localStorage.getItem(COOKIE_CONSENT_KEY);
+    if (raw === "true") return true;
+    if (raw === "false") return false;
+    return null;
+  } catch {
+    return null;
   }
 }
