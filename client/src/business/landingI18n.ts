@@ -151,6 +151,10 @@ export const BIZ_STRINGS = {
     it: "La versione dell'accordo è cambiata. Ricarica la pagina per continuare.",
     en: "The agreement version has changed. Please reload the page to continue.",
   },
+  "nda.error.rateLimited": {
+    it: "Troppi tentativi da questa rete. Riprova tra qualche minuto.",
+    en: "Too many attempts from this network. Please try again in a few minutes.",
+  },
   // --- Schermata di sblocco ---
   "unlock.title": {
     it: "Accesso demo sbloccato",

@@ -24,6 +24,7 @@ import {
   createInMemorySignatureStore,
   normalizeEmail,
 } from "../server/nda/store";
+import { createRateLimiter } from "../server/nda/rateLimit";
 import {
   processNdaSign,
   extractClientIp,
@@ -95,6 +96,22 @@ describe("NDA — validazione richiesta (zod)", () => {
   it("rifiuta una locale fuori da it/en", () => {
     expect(
       ndaSignRequestSchema.safeParse({ ...VALID_BODY, ndaLocale: "es" }).success
+    ).toBe(false);
+  });
+
+  it("rifiuta caratteri di controllo nei campi liberi (anti-injection)", () => {
+    // Un \n iniettato forgerebbe righe di audit/paragrafi nel PDF/subject email.
+    expect(
+      ndaSignRequestSchema.safeParse({
+        ...VALID_BODY,
+        fullName: "Mario\nIP: 1.2.3.4",
+      }).success
+    ).toBe(false);
+    expect(
+      ndaSignRequestSchema.safeParse({
+        ...VALID_BODY,
+        companyName: "ACME\r\nBcc: x@y.com",
+      }).success
     ).toBe(false);
   });
 });
@@ -265,15 +282,16 @@ describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
     expect(await c.store.has(VALID_BODY.businessEmail)).toBe(true);
   });
 
-  it("email degradata → 200 serverAcknowledged:false e prenotazione RILASCIATA", async () => {
+  it("email degradata (no-api-key) → 200 serverAcknowledged:false ma anti-replay MANTENUTO", async () => {
     const c = ctx(emailDegraded);
     const res = await processNdaSign(VALID_BODY, c);
     expect(res.status).toBe(200);
     expect(res.body.serverAcknowledged).toBe(false);
-    // nessun artefatto durevole → rilasciata: l'utente può ritentare (no 409)
-    expect(await c.store.has(VALID_BODY.businessEmail)).toBe(false);
+    // degrada l'EMAIL, non l'anti-replay: la prenotazione resta → «una demo per
+    // email» tiene anche senza RESEND_API_KEY.
+    expect(await c.store.has(VALID_BODY.businessEmail)).toBe(true);
     const res2 = await processNdaSign(VALID_BODY, c);
-    expect(res2.status).toBe(200);
+    expect(res2.status).toBe(409);
   });
 
   it("errore email TRANSITORIO → 503 (ritentabile) e prenotazione rilasciata", async () => {
@@ -370,5 +388,18 @@ describe("NDA — extractClientIp (non spoofabile)", () => {
       socket: { remoteAddress: "10.0.0.2" },
     } as unknown as import("express").Request;
     expect(extractClientIp(req)).toBe("10.0.0.2");
+  });
+});
+
+describe("NDA — rate limiter (anti-abuso)", () => {
+  it("ammette fino a `max` per chiave nella finestra, poi blocca", () => {
+    const rl = createRateLimiter({ max: 2, windowMs: 1000 });
+    expect(rl.check("ip1", 0)).toBe(true);
+    expect(rl.check("ip1", 100)).toBe(true);
+    expect(rl.check("ip1", 200)).toBe(false); // 3° nella finestra → bloccato
+    // chiave diversa: indipendente
+    expect(rl.check("ip2", 200)).toBe(true);
+    // oltre la finestra: i vecchi scadono → riammesso
+    expect(rl.check("ip1", 1300)).toBe(true);
   });
 });

@@ -23,6 +23,7 @@ import {
 import { NDA_VERSION } from "./ndaText";
 import type { SignatureStore } from "./store";
 import { sendNdaEmail, type EmailResult, type NdaEmailInput } from "./email";
+import { createRateLimiter, type RateLimiter } from "./rateLimit";
 
 export type NdaSignResponse = {
   ok: boolean;
@@ -115,18 +116,17 @@ export async function processNdaSign(
       `[nda] firma ${signatureId} email=${maskEmail(req.businessEmail)} ip=${deps.ip} at=${acceptedAt} emailSent=${email.sent}`
     );
 
-    // Se l'unico artefatto durevole (l'email col PDF) non è stato prodotto,
-    // RILASCIA la prenotazione: la firma non è registrata da nessuna parte,
-    // quindi l'utente deve poter ritentare invece di restare su 409.
-    if (!email.sent) {
+    if (!email.sent && email.reason === "error") {
+      // Errore TRANSITORIO del provider: rollback della prenotazione e 503
+      // ritentabile (non concediamo credenziali su una firma non registrata).
+      // Logghiamo il dettaglio (messaggio del provider, non PII) per la diagnosi.
       await deps.store.release(req.businessEmail, signatureId);
-      // Errore TRANSITORIO del provider (≠ chiave assente): non concediamo
-      // credenziali su una firma non registrata → 503 ritentabile. Il caso
-      // "no-api-key" è invece la modalità degradata DICHIARATA: si procede.
-      if (email.reason === "error") {
-        return { status: 503, body: { ok: false, error: "email_unavailable" } };
-      }
+      console.error(`[nda] email error ${signatureId}: ${email.detail ?? "?"}`);
+      return { status: 503, body: { ok: false, error: "email_unavailable" } };
     }
+    // `no-api-key` è la modalità degradata DICHIARATA: si degrada l'EMAIL, non
+    // l'anti-replay — la prenotazione resta (una demo per email tiene comunque)
+    // e la demo viene concessa con `serverAcknowledged:false`.
 
     return {
       status: 200,
@@ -173,14 +173,25 @@ export function extractClientIp(req: Request): string {
   return req.socket?.remoteAddress ?? "unknown";
 }
 
-/** Crea il router Express che monta `POST /sign` (montato sotto `/api/nda`). */
-export function createNdaRouter(deps: { store: SignatureStore }): Router {
+/** Crea il router Express che monta `POST /sign` (montato sotto `/api/nda`).
+ * `rateLimiter` iniettabile (default: 8 firme per IP ogni 10 minuti). */
+export function createNdaRouter(deps: {
+  store: SignatureStore;
+  rateLimiter?: RateLimiter;
+}): Router {
+  const limiter =
+    deps.rateLimiter ?? createRateLimiter({ max: 8, windowMs: 10 * 60 * 1000 });
   const router = express.Router();
   router.post("/sign", express.json({ limit: "16kb" }), async (req, res) => {
     try {
+      const ip = extractClientIp(req);
+      if (!limiter.check(ip, Date.now())) {
+        res.status(429).json({ ok: false, error: "rate_limited" });
+        return;
+      }
       const result = await processNdaSign(req.body, {
         store: deps.store,
-        ip: extractClientIp(req),
+        ip,
         now: Date.now(),
       });
       res.status(result.status).json(result.body);

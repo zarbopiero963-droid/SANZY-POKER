@@ -10,13 +10,21 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { z } from "zod";
 import { fillNdaText, NDA_VERSION, type NdaLocale } from "./ndaText";
 
+/**
+ * Vieta i caratteri di controllo (`< 0x20` e `0x7F`) nei campi liberi: senza
+ * questo, un `\n` iniettato in `fullName`/`companyName` forgerebbe righe di
+ * audit nell'email, creerebbe paragrafi arbitrari nel PDF legale (lo split
+ * avviene su `\n`) o inietterebbe header nel subject.
+ */
+const NO_CONTROL = /^[^\x00-\x1f\x7f]+$/;
+
 /** Schema del corpo di `POST /api/nda/sign`. Il server NON si fida del client:
  * signatureId/password/IP/timestamp sono generati/rilevati lato server. */
 export const ndaSignRequestSchema = z.object({
-  fullName: z.string().trim().min(1).max(120),
+  fullName: z.string().trim().min(1).max(120).regex(NO_CONTROL),
   businessEmail: z.string().trim().min(5).max(254).email(),
-  companyName: z.string().trim().min(1).max(160),
-  jobTitle: z.string().trim().min(1).max(120),
+  companyName: z.string().trim().min(1).max(160).regex(NO_CONTROL),
+  jobTitle: z.string().trim().min(1).max(120).regex(NO_CONTROL),
   accepted: z.literal(true),
   ndaLocale: z.enum(["it", "en"]),
   // versione del testo mostrata al client: deve combaciare con quella del server.

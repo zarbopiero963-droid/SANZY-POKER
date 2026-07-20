@@ -49,7 +49,7 @@ export default function NdaDialog({
   const [session, setSession] = useState<DemoSession | null>(null);
   // null = nessun errore; altrimenti la chiave i18n del messaggio da mostrare.
   const [submitError, setSubmitError] = useState<
-    null | "submit" | "alreadySigned" | "outdated"
+    null | "submit" | "alreadySigned" | "outdated" | "rateLimited"
   >(null);
   const [copied, setCopied] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -104,15 +104,19 @@ export default function NdaDialog({
             ? "alreadySigned"
             : result.error === "unsupported_nda_version"
               ? "outdated"
-              : "submit"
+              : result.error === "rate_limited"
+                ? "rateLimited"
+                : "submit"
         );
         return;
       }
-      // `startedAt` è deciso dal server; lo clampiamo al clock del CLIENT così un
-      // orologio client leggermente indietro non fa scartare al refresh la
-      // sessione appena firmata (il guard `isPersistedSession` rifiuta lo
-      // `startedAt` futuro). Al più anticipa di pochi secondi la scadenza demo.
-      const startedAt = Math.min(result.startedAt, Date.now());
+      // Il countdown demo è lato client: lo ancoriamo al clock del CLIENT
+      // (`Date.now()` alla firma), NON al timestamp server. Così è coerente in
+      // entrambe le direzioni di skew — un client indietro non fa scartare la
+      // sessione al refresh (guard `startedAt <= now`), e uno avanti non la fa
+      // risultare già scaduta. Il tempo AUTOREVOLE della firma resta comunque
+      // registrato lato server (acceptedAt nel record/PDF).
+      const startedAt = Date.now();
       const finalized: DemoSession = {
         signatureId: result.signatureId,
         password: result.password,
