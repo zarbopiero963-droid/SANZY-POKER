@@ -89,6 +89,15 @@ export default function Home() {
   }, []);
 
   const onSigned = useCallback((signed: DemoSession) => {
+    // Guardia sincrona: se tra la firma e il click su "Avvia" sono passati più
+    // di 15' (utente fermo sulla schermata di sblocco), la sessione è già
+    // scaduta → non montare il gioco, vai diretto alla scadenza. Così "a 0
+    // blocca la demo" vale anche su questo percorso, senza il frame iniziale.
+    if (isExpired(signed.startedAt, Date.now())) {
+      clearDemoSession();
+      setStage("expired");
+      return;
+    }
     saveDemoSession(signed); // persiste solo il minimo (scarta la PII)
     // In memoria a livello di Home teniamo solo il sottoinsieme senza PII.
     setSession({

@@ -93,9 +93,10 @@ export default function DemoTimer({
       <span className="sanzy-demo-timer__label">{label}</span>
       <span className="sanzy-demo-timer__value">{formatted}</span>
       {/* Region live STABILE (sempre presente): gli screen reader annunciano solo
-          quando il testo cambia. Restando vuota fuori dall'ultimo minuto evita
-          gli annunci al secondo; nell'ultimo minuto annuncia il tempo residuo.
-          Un toggle di aria-live sullo stesso nodo è invece inaffidabile. */}
+          quando il testo cambia. Resta vuota tra una soglia e l'altra (niente
+          annunci al secondo) e riporta il tempo residuo SOLO alle soglie di
+          `isTimerAnnounceTick` (5', 60/30/15/10/5/3/2/1/0 s). Un toggle di
+          aria-live sullo stesso nodo è invece inaffidabile. */}
       <span
         className="sanzy-demo-timer__sr"
         role="status"
