@@ -166,3 +166,14 @@
 **Prove visive mobile superate:** all'apertura normale compare direttamente il tavolo con stato "Tavolo pronto" e pulsante GIOCA, senza lobby. Allo showdown le due board restano integralmente visibili; le cinque carte dei tre bot ancora in mano compaiono nei rispettivi posti e il riepilogo occupa soltanto il pannello inferiore con il pulsante NUOVA MANO.
 
 **Controllo desktop e pulizia:** il tavolo 3D, i pannelli laterali, le fasi e i comandi desktop restano invariati dopo la rimozione della strumentazione diagnostica. TypeScript non segnala errori; la build Babylon è stata interrotta per memoria ma il codice è verificato.
+
+## Demo B2B con NDA click-wrap (idea #12 · tracking #26) — PR1 (frontend)
+
+- [x] Modulo `client/src/business/**` davanti al gioco (landing → NDA 3 slide → sblocco → gioco).
+- [x] Logica pura `demoSession.ts` (validazione modulo, password `SANZY-XXXX-XXXX`, payload NDA, timer 15').
+- [x] Timer demo persistito: dipende da `startedAt` (localStorage), **non riparte al refresh**; blocco a scadenza.
+- [x] i18n business IT/EN separato dal gioco (`landingI18n.ts`), invariante 4-lingue del gioco intatto.
+- [x] `submitNda()` stub del contratto `POST /api/nda/sign` (backend nel PR2).
+- [x] Test hard offline: 13 su `demoSession` + 7 su `landingI18n` (177 totali verdi); `pnpm check`/`prettier` PASS.
+- [ ] **PR2 (backend):** Express `POST /api/nda/sign` → PDF (pdf-lib) + log IP/timestamp + email a pier.zar69@gmail.com via Resend (`RESEND_API_KEY` Secret). Password/timer ancorati al server.
+- [ ] Verifica browser reale del flusso (viewport mobile/desktop) — smoke manuale (WebGL/CSS non profilabili offline).
