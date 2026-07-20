@@ -205,6 +205,10 @@ export const BIZ_STRINGS = {
     en: "Read the Cookie Policy",
   },
   // --- Footer legale ---
+  "footer.legalNav": {
+    it: "Note legali",
+    en: "Legal",
+  },
   "footer.terms": {
     it: "Termini e Condizioni",
     en: "Terms & Conditions",

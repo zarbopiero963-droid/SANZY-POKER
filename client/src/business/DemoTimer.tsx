@@ -5,7 +5,7 @@
  * refresh della pagina il tempo prosegue e non riparte. Quando arriva a zero
  * chiama `onExpire`. Il componente è un overlay React (non tocca Babylon).
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef } from "react";
 import {
   computeRemainingMs,
   DEMO_DURATION_MS,
@@ -28,9 +28,12 @@ export default function DemoTimer({
   onExpire,
   totalMs = DEMO_DURATION_MS,
 }: DemoTimerProps) {
-  const [remaining, setRemaining] = useState(() =>
-    computeRemainingMs(startedAt, Date.now(), totalMs)
-  );
+  // `remaining` è RICALCOLATO a ogni render da startedAt/now: se `startedAt`
+  // cambia (nuova sessione sulla stessa istanza) il valore è subito corretto,
+  // senza il frame "vecchio" (es. 00:00 della sessione precedente). Il tick
+  // dell'interval forza solo il re-render; il valore resta ancorato a startedAt.
+  const [, forceTick] = useReducer((c: number) => c + 1, 0);
+  const remaining = computeRemainingMs(startedAt, Date.now(), totalMs);
   // Evita di richiamare onExpire più di una volta.
   const firedRef = useRef(false);
   // Chiave della sessione: firedRef si azzera SOLO quando cambia davvero, non a
@@ -50,8 +53,8 @@ export default function DemoTimer({
       firedRef.current = false; // nuova sessione reale: riabilita onExpire
     }
     const tick = () => {
+      forceTick(); // re-render → `remaining` ricalcolato dal valore corrente
       const ms = computeRemainingMs(startedAt, Date.now(), totalMs);
-      setRemaining(ms);
       if (ms <= 0 && !firedRef.current) {
         firedRef.current = true;
         onExpireRef.current();

@@ -25,89 +25,104 @@ export default function BusinessLanding({
 }: BusinessLandingProps) {
   const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null);
   return (
-    <main className="sanzy-biz">
-      <div className="sanzy-biz__felt" aria-hidden />
+    <>
+      {/* Mentre il modal legale è aperto la landing è `inert`: né focus né lettura
+          da screen reader (il cursore virtuale non ci arriva), coerente con la
+          modalità del dialog. Il modal è renderizzato FUORI da `main`. */}
+      <main className="sanzy-biz" inert={legalDoc !== null}>
+        <div className="sanzy-biz__felt" aria-hidden />
 
-      <header className="sanzy-biz__top">
-        <div
-          className="sanzy-biz__wordmark"
-          role="img"
-          aria-label={tb("brand.name", locale)}
-        >
-          <span className="sanzy-biz__wm-s">{tb("brand.sanzy", locale)}</span>
-          <span className="sanzy-biz__wm-p">{tb("brand.poker", locale)}</span>
-        </div>
-        <button
-          type="button"
-          className="sanzy-biz__lang"
-          onClick={onToggleLocale}
-          aria-label={tb("landing.localeToggleAria", locale)}
-        >
-          {tb("landing.localeToggle", locale)}
-        </button>
-      </header>
-
-      <section className="sanzy-biz__hero">
-        <p className="sanzy-biz__eyebrow">{tb("landing.eyebrow", locale)}</p>
-        <h1 className="sanzy-biz__tagline">{tb("landing.tagline", locale)}</h1>
-        <p className="sanzy-biz__subtitle">{tb("landing.subtitle", locale)}</p>
-        <p className="sanzy-biz__pitch">{tb("landing.pitch", locale)}</p>
-
-        <div className="sanzy-biz__shots" aria-hidden>
-          <span className="sanzy-biz__shot" />
-          <span className="sanzy-biz__shot" />
-          <span className="sanzy-biz__shot" />
-        </div>
-
-        <div className="sanzy-biz__cta">
-          <span className="sanzy-biz__cta-badge">
-            {tb("landing.forBusiness", locale)}
-          </span>
-          <button type="button" className="sanzy-biz__demo" onClick={onTryDemo}>
-            {tb("landing.tryDemo", locale)} <span aria-hidden>🎰</span>
-          </button>
-          <span className="sanzy-biz__cta-sub">
-            {tb("landing.tryDemoSub", locale)}
-          </span>
-        </div>
-      </section>
-
-      <footer className="sanzy-biz__footer">
-        <nav
-          className="sanzy-biz__legal"
-          aria-label={tb("footer.privacy", locale)}
-        >
+        <header className="sanzy-biz__top">
+          <div
+            className="sanzy-biz__wordmark"
+            role="img"
+            aria-label={tb("brand.name", locale)}
+          >
+            <span className="sanzy-biz__wm-s">{tb("brand.sanzy", locale)}</span>
+            <span className="sanzy-biz__wm-p">{tb("brand.poker", locale)}</span>
+          </div>
           <button
             type="button"
-            className="sanzy-biz__legal-link"
-            onClick={() => setLegalDoc("terms")}
+            className="sanzy-biz__lang"
+            onClick={onToggleLocale}
+            aria-label={tb("landing.localeToggleAria", locale)}
           >
-            {tb("footer.terms", locale)}
+            {tb("landing.localeToggle", locale)}
           </button>
-          <span aria-hidden>·</span>
-          <button
-            type="button"
-            className="sanzy-biz__legal-link"
-            onClick={() => setLegalDoc("privacy")}
-          >
-            {tb("footer.privacy", locale)}
-          </button>
-          <span aria-hidden>·</span>
-          <button
-            type="button"
-            className="sanzy-biz__legal-link"
-            onClick={() => setLegalDoc("cookie")}
-          >
-            {tb("footer.cookie", locale)}
-          </button>
-        </nav>
-        <p className="sanzy-biz__rights">{tb("footer.rights", locale)}</p>
-      </footer>
+        </header>
 
-      <CookieBanner
-        locale={locale}
-        onOpenPolicy={() => setLegalDoc("cookie")}
-      />
+        <section className="sanzy-biz__hero">
+          <p className="sanzy-biz__eyebrow">{tb("landing.eyebrow", locale)}</p>
+          <h1 className="sanzy-biz__tagline">
+            {tb("landing.tagline", locale)}
+          </h1>
+          <p className="sanzy-biz__subtitle">
+            {tb("landing.subtitle", locale)}
+          </p>
+          <p className="sanzy-biz__pitch">{tb("landing.pitch", locale)}</p>
+
+          <div className="sanzy-biz__shots" aria-hidden>
+            <span className="sanzy-biz__shot" />
+            <span className="sanzy-biz__shot" />
+            <span className="sanzy-biz__shot" />
+          </div>
+
+          <div className="sanzy-biz__cta">
+            <span className="sanzy-biz__cta-badge">
+              {tb("landing.forBusiness", locale)}
+            </span>
+            <button
+              type="button"
+              className="sanzy-biz__demo"
+              onClick={onTryDemo}
+            >
+              {tb("landing.tryDemo", locale)} <span aria-hidden>🎰</span>
+            </button>
+            <span className="sanzy-biz__cta-sub">
+              {tb("landing.tryDemoSub", locale)}
+            </span>
+          </div>
+        </section>
+
+        <footer className="sanzy-biz__footer">
+          <nav
+            className="sanzy-biz__legal"
+            aria-label={tb("footer.legalNav", locale)}
+          >
+            <button
+              type="button"
+              className="sanzy-biz__legal-link"
+              onClick={() => setLegalDoc("terms")}
+            >
+              {tb("footer.terms", locale)}
+            </button>
+            <span aria-hidden>·</span>
+            <button
+              type="button"
+              className="sanzy-biz__legal-link"
+              onClick={() => setLegalDoc("privacy")}
+            >
+              {tb("footer.privacy", locale)}
+            </button>
+            <span aria-hidden>·</span>
+            <button
+              type="button"
+              className="sanzy-biz__legal-link"
+              onClick={() => setLegalDoc("cookie")}
+            >
+              {tb("footer.cookie", locale)}
+            </button>
+          </nav>
+          <p className="sanzy-biz__rights">{tb("footer.rights", locale)}</p>
+        </footer>
+
+        <CookieBanner
+          locale={locale}
+          onOpenPolicy={() => setLegalDoc("cookie")}
+        />
+
+        <style>{LANDING_CSS}</style>
+      </main>
 
       {legalDoc && (
         <LegalModal
@@ -116,9 +131,7 @@ export default function BusinessLanding({
           onClose={() => setLegalDoc(null)}
         />
       )}
-
-      <style>{LANDING_CSS}</style>
-    </main>
+    </>
   );
 }
 
