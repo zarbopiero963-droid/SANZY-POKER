@@ -11,9 +11,14 @@ type DemoExpiredProps = {
 
 export default function DemoExpired({ locale, onBackHome }: DemoExpiredProps) {
   return (
-    <div className="sanzy-expired" role="dialog" aria-modal="true">
+    <div
+      className="sanzy-expired"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="demo-expired-title"
+    >
       <div className="sanzy-expired__card">
-        <h2 className="sanzy-expired__title">
+        <h2 id="demo-expired-title" className="sanzy-expired__title">
           {tb("demo.expired.title", locale)}
         </h2>
         <p className="sanzy-expired__body">{tb("demo.expired.body", locale)}</p>

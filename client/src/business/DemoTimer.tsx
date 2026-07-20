@@ -31,16 +31,23 @@ export default function DemoTimer({
   );
   // Evita di richiamare onExpire più di una volta.
   const firedRef = useRef(false);
+  // onExpire in un ref: l'effect NON dipende dalla sua identità, così il reset
+  // di firedRef avviene solo su cambio sessione (startedAt/totalMs) e onExpire
+  // non può scattare due volte anche se il consumer passa una callback nuova.
+  const onExpireRef = useRef(onExpire);
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  }, [onExpire]);
 
   useEffect(() => {
-    // Se startedAt/totalMs cambiano (nuova sessione), riabilita onExpire.
+    // Nuova sessione (startedAt/totalMs cambiati): riabilita onExpire.
     firedRef.current = false;
     const tick = () => {
       const ms = computeRemainingMs(startedAt, Date.now(), totalMs);
       setRemaining(ms);
       if (ms <= 0 && !firedRef.current) {
         firedRef.current = true;
-        onExpire();
+        onExpireRef.current();
       }
     };
     tick(); // aggiorna subito al mount (es. dopo un refresh)
@@ -52,7 +59,7 @@ export default function DemoTimer({
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [startedAt, totalMs, onExpire]);
+  }, [startedAt, totalMs]);
 
   const isLow = remaining <= 60_000; // ultimo minuto: evidenzia
 

@@ -6,9 +6,10 @@
  * comportamento del timer di 15 minuti, incluso l'invariante richiesto
  * dall'owner: **al refresh il timer non riparte** (dipende solo da `startedAt`).
  */
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   buildNdaPayload,
+  clearDemoSession,
   computeRemainingMs,
   createDemoSession,
   DEMO_DURATION_MS,
@@ -17,6 +18,8 @@ import {
   isExpired,
   isNdaFormValid,
   isValidEmail,
+  loadDemoSession,
+  saveDemoSession,
   validateNdaForm,
   type NdaForm,
 } from "../client/src/business/demoSession";
@@ -61,6 +64,16 @@ describe("demoSession — validazione del modulo NDA", () => {
     expect(errors.jobTitle).toBe("required");
     expect(errors.accepted).toBe("required");
     expect(isNdaFormValid({ ...VALID_FORM, accepted: false })).toBe(false);
+  });
+
+  it("un modulo spuntato ma con un campo obbligatorio vuoto resta invalido", () => {
+    // Caso difeso dalla guardia finale di sign(): checkbox ok ma dati mancanti
+    // non devono mai produrre un payload NDA con campi vuoti.
+    expect(isNdaFormValid({ ...VALID_FORM, fullName: "" })).toBe(false);
+    expect(isNdaFormValid({ ...VALID_FORM, businessEmail: "storto" })).toBe(
+      false
+    );
+    expect(isNdaFormValid({ ...VALID_FORM, companyName: "  " })).toBe(false);
   });
 
   it("distingue email vuota da email non valida", () => {
@@ -163,5 +176,80 @@ describe("demoSession — timer 15 minuti", () => {
     expect(formatCountdown(60_000)).toBe("01:00");
     expect(formatCountdown(0)).toBe("00:00");
     expect(formatCountdown(-100)).toBe("00:00");
+  });
+});
+
+// Stub minimale di Web Storage: l'ambiente di test è "node" (niente
+// localStorage), ma vogliamo esercitare le funzioni REALI di persistenza.
+class MemoryStorage {
+  private store = new Map<string, string>();
+  getItem(key: string): string | null {
+    return this.store.has(key) ? this.store.get(key)! : null;
+  }
+  setItem(key: string, value: string): void {
+    this.store.set(key, String(value));
+  }
+  removeItem(key: string): void {
+    this.store.delete(key);
+  }
+  clear(): void {
+    this.store.clear();
+  }
+}
+
+const STORAGE_KEY = "sanzy.demo.session";
+
+describe("demoSession — persistenza minimale (no PII)", () => {
+  beforeEach(() => {
+    (globalThis as unknown as { localStorage: Storage }).localStorage =
+      new MemoryStorage() as unknown as Storage;
+  });
+
+  it("salva SOLO signatureId/password/startedAt, mai la PII del payload", () => {
+    const session = createDemoSession(VALID_FORM, 1_800_000_000_000);
+    saveDemoSession(session);
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    expect(raw).toEqual({
+      signatureId: session.signatureId,
+      password: session.password,
+      startedAt: session.startedAt,
+    });
+    // Nessun campo PII del payload deve finire nello storage.
+    for (const pii of [
+      "fullName",
+      "businessEmail",
+      "companyName",
+      "jobTitle",
+    ]) {
+      expect(raw).not.toHaveProperty(pii);
+    }
+  });
+
+  it("round-trip: loadDemoSession rilegge esattamente ciò che è stato salvato", () => {
+    const session = createDemoSession(VALID_FORM, 1_800_000_000_000);
+    saveDemoSession(session);
+    expect(loadDemoSession()).toEqual({
+      signatureId: session.signatureId,
+      password: session.password,
+      startedAt: session.startedAt,
+    });
+  });
+
+  it("rifiuta blob malformati o con campi di tipo errato", () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ foo: "bar" }));
+    expect(loadDemoSession()).toBeNull();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ signatureId: "s", password: "p", startedAt: "NaN" })
+    );
+    expect(loadDemoSession()).toBeNull();
+    localStorage.setItem(STORAGE_KEY, "non-json");
+    expect(loadDemoSession()).toBeNull();
+  });
+
+  it("clearDemoSession rimuove la sessione salvata", () => {
+    saveDemoSession(createDemoSession(VALID_FORM, 1));
+    clearDemoSession();
+    expect(loadDemoSession()).toBeNull();
   });
 });

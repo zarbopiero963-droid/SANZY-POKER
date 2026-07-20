@@ -52,8 +52,11 @@ export function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
+/** Codici d'errore per campo (usati per comporre le chiavi i18n `nda.error.*`). */
+export type NdaFieldError = "required" | "email";
+
 /** Errori del modulo NDA, per campo. Oggetto vuoto = modulo valido. */
-export type NdaFormErrors = Partial<Record<keyof NdaForm, string>>;
+export type NdaFormErrors = Partial<Record<keyof NdaForm, NdaFieldError>>;
 
 /**
  * Valida i dati delle 3 slide. Tutti i campi testuali sono obbligatori,

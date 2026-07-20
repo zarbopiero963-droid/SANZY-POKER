@@ -12,6 +12,7 @@
 import { useEffect, useState } from "react";
 import {
   createDemoSession,
+  isNdaFormValid,
   validateNdaForm,
   type DemoSession,
   type NdaForm,
@@ -72,7 +73,9 @@ export default function NdaDialog({
 
   const sign = async () => {
     if (submitting) return; // invio in corso: non ri-mostrare errori sul modulo valido
-    if (stepInvalid()) {
+    // Guardia finale sull'INTERO modulo (non solo la checkbox del passo 3): un
+    // documento con pretese legali non deve mai nascere con campi vuoti.
+    if (stepInvalid() || !isNdaFormValid(form)) {
       setShowErrors(true);
       return;
     }
@@ -162,12 +165,15 @@ export default function NdaDialog({
                     {tb("nda.slide1.text", locale)}
                   </p>
                   <Field
+                    id="nda-fullName"
                     label={tb("nda.field.fullName", locale)}
                     value={form.fullName}
                     onChange={v => set("fullName", v)}
                     error={err("fullName")}
+                    autoFocus
                   />
                   <Field
+                    id="nda-businessEmail"
                     label={tb("nda.field.businessEmail", locale)}
                     type="email"
                     value={form.businessEmail}
@@ -183,12 +189,15 @@ export default function NdaDialog({
                     {tb("nda.slide2.text", locale)}
                   </p>
                   <Field
+                    id="nda-companyName"
                     label={tb("nda.field.companyName", locale)}
                     value={form.companyName}
                     onChange={v => set("companyName", v)}
                     error={err("companyName")}
+                    autoFocus
                   />
                   <Field
+                    id="nda-jobTitle"
                     label={tb("nda.field.jobTitle", locale)}
                     value={form.jobTitle}
                     onChange={v => set("jobTitle", v)}
@@ -210,11 +219,21 @@ export default function NdaDialog({
                       type="checkbox"
                       checked={form.accepted}
                       onChange={e => set("accepted", e.target.checked)}
+                      // eslint-disable-next-line jsx-a11y/no-autofocus -- focus iniziale dello step
+                      autoFocus
+                      aria-invalid={
+                        showErrors && errors.accepted ? "true" : "false"
+                      }
+                      aria-describedby={
+                        showErrors && errors.accepted
+                          ? "nda-accepted-error"
+                          : undefined
+                      }
                     />
                     <span>{tb("nda.checkbox", locale)}</span>
                   </label>
                   {showErrors && errors.accepted && (
-                    <p className="sanzy-nda__err">
+                    <p id="nda-accepted-error" className="sanzy-nda__err">
                       {tb("nda.error.required", locale)}
                     </p>
                   )}
@@ -274,29 +293,43 @@ export default function NdaDialog({
 }
 
 function Field({
+  id,
   label,
   value,
   onChange,
   error,
   type = "text",
+  autoFocus = false,
 }: {
+  id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
   error: string;
   type?: string;
+  autoFocus?: boolean;
 }) {
+  const errorId = `${id}-error`;
   return (
-    <label className="sanzy-nda__field">
+    <label className="sanzy-nda__field" htmlFor={id}>
       <span className="sanzy-nda__label">{label}</span>
       <input
+        id={id}
         className="sanzy-nda__input"
         type={type}
         value={value}
         onChange={e => onChange(e.target.value)}
         data-invalid={error ? "true" : "false"}
+        aria-invalid={error ? "true" : "false"}
+        aria-describedby={error ? errorId : undefined}
+        // eslint-disable-next-line jsx-a11y/no-autofocus -- focus iniziale del dialog
+        autoFocus={autoFocus}
       />
-      {error && <span className="sanzy-nda__err">{error}</span>}
+      {error && (
+        <span id={errorId} className="sanzy-nda__err">
+          {error}
+        </span>
+      )}
     </label>
   );
 }

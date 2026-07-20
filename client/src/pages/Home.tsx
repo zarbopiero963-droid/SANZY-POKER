@@ -51,8 +51,9 @@ function readBizLocale(): BizLocale {
 
 export default function Home() {
   const [bizLocale, setBizLocale] = useState<BizLocale>(readBizLocale);
-  // Dopo la firma teniamo solo il minimo (no PII): startedAt per il timer,
-  // signatureId/password per riferimento. Il payload completo resta in NdaDialog.
+  // Dopo la firma Home tiene solo il minimo (no PII): startedAt per il timer,
+  // signatureId/password per riferimento. Il payload con la PII vive solo dentro
+  // NdaDialog al momento della firma (e nel PR2 va al server), mai qui.
   const [session, setSession] = useState<PersistedSession | null>(null);
   const [variant, setVariant] = useState<Variant | null>(null);
   const [stage, setStage] = useState<Stage>("landing");
@@ -73,21 +74,28 @@ export default function Home() {
     setStage("entry");
   }, []);
 
+  // La persistenza è un effetto collaterale: sta in un useEffect, non nell'updater
+  // di stato (React può invocare gli updater più volte, es. in Strict Mode).
+  useEffect(() => {
+    try {
+      localStorage.setItem(BIZ_LOCALE_KEY, bizLocale);
+    } catch {
+      // no-op
+    }
+  }, [bizLocale]);
+
   const toggleLocale = useCallback(() => {
-    setBizLocale(prev => {
-      const next: BizLocale = prev === "it" ? "en" : "it";
-      try {
-        localStorage.setItem(BIZ_LOCALE_KEY, next);
-      } catch {
-        // no-op
-      }
-      return next;
-    });
+    setBizLocale(prev => (prev === "it" ? "en" : "it"));
   }, []);
 
   const onSigned = useCallback((signed: DemoSession) => {
-    saveDemoSession(signed);
-    setSession(signed);
+    saveDemoSession(signed); // persiste solo il minimo (scarta la PII)
+    // In memoria a livello di Home teniamo solo il sottoinsieme senza PII.
+    setSession({
+      signatureId: signed.signatureId,
+      password: signed.password,
+      startedAt: signed.startedAt,
+    });
     setStage("entry");
   }, []);
 

@@ -18,7 +18,7 @@ type Entry = Record<BizLocale, string>;
  * Dizionario: ogni chiave ha esattamente le due lingue. I testi delle slide
  * riprendono i contenuti "psicologici" concordati nell'idea #12.
  */
-export const BIZ_STRINGS: Record<string, Entry> = {
+export const BIZ_STRINGS = {
   "landing.eyebrow": {
     it: "Demo riservata · Partner B2B",
     en: "Confidential demo · B2B partners",
@@ -178,25 +178,28 @@ export const BIZ_STRINGS: Record<string, Entry> = {
     it: "Torna alla home",
     en: "Back to home",
   },
-};
+} satisfies Record<string, Entry>;
+
+/** Unione letterale delle chiavi del dizionario business: typo = errore a compile-time. */
+export type BizKey = keyof typeof BIZ_STRINGS;
 
 /** Chiavi del dizionario business (per i test di completezza). */
-export function bizKeys(): string[] {
-  return Object.keys(BIZ_STRINGS);
+export function bizKeys(): BizKey[] {
+  return Object.keys(BIZ_STRINGS) as BizKey[];
 }
 
 /**
  * Risolve una chiave nella lingua richiesta, con interpolazione di `{param}`.
- * Se la chiave non esiste, ripiega sulla chiave stessa (comportamento visibile
- * nei test, mai in produzione perché le chiavi sono tipate a mano).
+ * La chiave è tipata (`BizKey`), quindi i typo sono errori di compilazione; il
+ * fallback alla chiave grezza resta solo come rete di sicurezza a runtime.
  */
 export function tb(
-  key: string,
+  key: BizKey,
   locale: BizLocale = DEFAULT_BIZ_LOCALE,
   params?: Record<string, string | number>
 ): string {
   const entry = BIZ_STRINGS[key];
-  let text = entry ? entry[locale] : key;
+  let text: string = entry ? entry[locale] : key;
   if (params) {
     for (const [name, value] of Object.entries(params)) {
       // Escape del nome parametro (difesa se un domani contenesse metacaratteri
