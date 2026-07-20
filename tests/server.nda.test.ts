@@ -307,6 +307,14 @@ describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
     expect(await c.store.has(VALID_BODY.businessEmail)).toBe(false);
   });
 
+  it("fail-closed (requireEmail): no-api-key → 503 e prenotazione rilasciata", async () => {
+    const c = { ...ctx(emailDegraded), requireEmail: true };
+    const res = await processNdaSign(VALID_BODY, c);
+    expect(res.status).toBe(503);
+    expect(res.body.error).toBe("email_unavailable");
+    expect(await c.store.has(VALID_BODY.businessEmail)).toBe(false);
+  });
+
   it("anti-replay: seconda firma stessa email (prima inviata) → 409", async () => {
     const c = ctx(emailSent);
     await processNdaSign(VALID_BODY, c);
@@ -401,5 +409,15 @@ describe("NDA — rate limiter (anti-abuso)", () => {
     expect(rl.check("ip2", 200)).toBe(true);
     // oltre la finestra: i vecchi scadono → riammesso
     expect(rl.check("ip1", 1300)).toBe(true);
+  });
+
+  it("sweep elimina le entry scadute (niente crescita illimitata della Map)", () => {
+    const rl = createRateLimiter({ max: 2, windowMs: 1000 });
+    rl.check("a", 0);
+    rl.check("b", 0);
+    rl.check("c", 0);
+    expect(rl.size()).toBe(3);
+    rl.sweep(2000); // oltre la finestra → tutte scadute
+    expect(rl.size()).toBe(0);
   });
 });

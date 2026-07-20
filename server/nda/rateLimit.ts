@@ -13,15 +13,40 @@
 export interface RateLimiter {
   /** True se la richiesta è ammessa (e viene contata); false se supera il tetto. */
   check(key: string, now: number): boolean;
+  /** Elimina le entry scadute (chiamato periodicamente da `check`). Per i test. */
+  sweep(now: number): void;
+  /** Numero di chiavi tracciate (per i test/diagnostica). */
+  size(): number;
 }
 
 export function createRateLimiter(opts: {
   max: number;
   windowMs: number;
+  /** Ogni quante `check` scatta lo sweep periodico (default 500). */
+  sweepEvery?: number;
 }): RateLimiter {
   const hits = new Map<string, number[]>();
+  const sweepEvery = opts.sweepEvery ?? 500;
+  let sinceSweep = 0;
+
+  // Sweep periodico: senza, gli IP visti una sola volta resterebbero nella Map
+  // per tutta la vita del processo (crescita illimitata su endpoint pubblico).
+  function sweep(now: number) {
+    // forEach (non for-of) per evitare la dipendenza da downlevelIteration; è
+    // sicuro cancellare dalla Map durante l'iterazione.
+    hits.forEach((times, key) => {
+      const recent = times.filter(t => now - t < opts.windowMs);
+      if (recent.length === 0) hits.delete(key);
+      else hits.set(key, recent);
+    });
+  }
+
   return {
     check(key, now) {
+      if (++sinceSweep >= sweepEvery) {
+        sinceSweep = 0;
+        sweep(now);
+      }
       const recent = (hits.get(key) ?? []).filter(t => now - t < opts.windowMs);
       if (recent.length >= opts.max) {
         hits.set(key, recent); // aggiorna la finestra (scarta i vecchi)
@@ -31,5 +56,7 @@ export function createRateLimiter(opts: {
       hits.set(key, recent);
       return true;
     },
+    sweep,
+    size: () => hits.size,
   };
 }

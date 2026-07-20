@@ -44,6 +44,9 @@ export type ProcessDeps = {
   newSignatureId?: () => string;
   newPassword?: () => string;
   sendEmail?: (input: NdaEmailInput) => Promise<EmailResult>;
+  /** Fail-closed: se true, senza email consegnata NON si concede la demo (503).
+   * Attivabile in produzione via `NDA_REQUIRE_EMAIL=1`. Default: degradato. */
+  requireEmail?: boolean;
 };
 
 /**
@@ -116,17 +119,22 @@ export async function processNdaSign(
       `[nda] firma ${signatureId} email=${maskEmail(req.businessEmail)} ip=${deps.ip} at=${acceptedAt} emailSent=${email.sent}`
     );
 
-    if (!email.sent && email.reason === "error") {
-      // Errore TRANSITORIO del provider: rollback della prenotazione e 503
-      // ritentabile (non concediamo credenziali su una firma non registrata).
-      // Logghiamo il dettaglio (messaggio del provider, non PII) per la diagnosi.
+    if (!email.sent && (email.reason === "error" || deps.requireEmail)) {
+      // Fail-closed: rollback della prenotazione e 503 quando NON c'è un
+      // artefatto durevole (email non consegnata). Vale sempre per l'errore
+      // TRANSITORIO del provider; e per `no-api-key` solo se `requireEmail`
+      // (produzione strict) — così non si concede la demo senza registrazione.
       await deps.store.release(req.businessEmail, signatureId);
-      console.error(`[nda] email error ${signatureId}: ${email.detail ?? "?"}`);
+      if (email.reason === "error") {
+        console.error(
+          `[nda] email error ${signatureId}: ${email.detail ?? "?"}`
+        );
+      }
       return { status: 503, body: { ok: false, error: "email_unavailable" } };
     }
-    // `no-api-key` è la modalità degradata DICHIARATA: si degrada l'EMAIL, non
-    // l'anti-replay — la prenotazione resta (una demo per email tiene comunque)
-    // e la demo viene concessa con `serverAcknowledged:false`.
+    // `no-api-key` senza `requireEmail` = modalità degradata DICHIARATA: si
+    // degrada l'EMAIL, non l'anti-replay — la prenotazione resta (una demo per
+    // email tiene comunque) e la demo è concessa con `serverAcknowledged:false`.
 
     return {
       status: 200,
@@ -181,6 +189,8 @@ export function createNdaRouter(deps: {
 }): Router {
   const limiter =
     deps.rateLimiter ?? createRateLimiter({ max: 8, windowMs: 10 * 60 * 1000 });
+  // Fail-closed opt-in (produzione strict): senza email consegnata → 503.
+  const requireEmail = /^(1|true)$/i.test(process.env.NDA_REQUIRE_EMAIL ?? "");
   const router = express.Router();
   router.post("/sign", express.json({ limit: "16kb" }), async (req, res) => {
     try {
@@ -193,6 +203,7 @@ export function createNdaRouter(deps: {
         store: deps.store,
         ip,
         now: Date.now(),
+        requireEmail,
       });
       res.status(result.status).json(result.body);
     } catch (err) {

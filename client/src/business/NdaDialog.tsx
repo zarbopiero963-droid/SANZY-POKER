@@ -123,7 +123,9 @@ export default function NdaDialog({
         startedAt,
         payload: buildNdaPayload(form, {
           signatureId: result.signatureId,
-          acceptedAt: new Date(startedAt).toISOString(),
+          // Istante di accettazione = quello AUTOREVOLE del server (nel PDF/log),
+          // NON il clock locale usato per il countdown.
+          acceptedAt: new Date(result.startedAt).toISOString(),
           ndaLocale: locale,
         }),
       };
