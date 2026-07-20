@@ -13,6 +13,7 @@ import {
   isSupportedNdaVersion,
   renderNdaPdf,
   renderSignedNdaText,
+  sanitizedNdaParagraphs,
   toWinAnsiSafe,
   type SignedNdaRecord,
 } from "../server/nda/signing";
@@ -147,10 +148,23 @@ describe("NDA — testo e PDF", () => {
     );
   });
 
-  it("toWinAnsiSafe tiene gli accenti Latin-1 e sostituisce il resto con ?", () => {
+  it("toWinAnsiSafe: Latin-1 OK; C1/CJK/emoji/newline → ?", () => {
     expect(toWinAnsiSafe("Café Zürich")).toBe("Café Zürich");
     expect(toWinAnsiSafe("株式会社")).toBe("????");
     expect(toWinAnsiSafe("emoji🎰x")).toBe("emoji?x");
+    expect(toWinAnsiSafe("a\u0086b")).toBe("a?b"); // controllo C1 (non WinAnsi)
+    // il newline è < 0x20 → sostituito: per questo `renderNdaPdf` fa lo split
+    // sui paragrafi PRIMA di sanitizzare.
+    expect(toWinAnsiSafe("a\nb")).toBe("a?b");
+  });
+
+  it("sanitizedNdaParagraphs preserva i paragrafi (newline NON distrutti)", () => {
+    const paras = sanitizedNdaParagraphs(RECORD);
+    expect(paras.length).toBeGreaterThan(15); // molte righe, non un unico blob
+    // testo canonico ASCII + valori firmati: nessun "?" introdotto
+    expect(paras.join("\n")).not.toContain("?");
+    expect(paras).toContain(ndaTemplate("en").split("\n")[0]); // titolo = riga a sé
+    expect(paras.join("\n")).toContain("203.0.113.7"); // IP firmato
   });
 
   it("renderNdaPdf produce un PDF valido (header %PDF) e non vuoto", async () => {
@@ -194,7 +208,10 @@ describe("NDA — store anti-replay (async, atomico, rollback)", () => {
         startedAt: 2,
       })
     ).toBe(false);
-    await store.release("a@b.com");
+    // release con signatureId SBAGLIATO non cancella; con quello giusto sì.
+    await store.release("a@b.com", "wrong");
+    expect(await store.has("a@b.com")).toBe(true);
+    await store.release("a@b.com", "s1");
     expect(await store.has("a@b.com")).toBe(false);
   });
 });
@@ -257,6 +274,19 @@ describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
     expect(await c.store.has(VALID_BODY.businessEmail)).toBe(false);
     const res2 = await processNdaSign(VALID_BODY, c);
     expect(res2.status).toBe(200);
+  });
+
+  it("errore email TRANSITORIO → 503 (ritentabile) e prenotazione rilasciata", async () => {
+    const c = ctx(async () => ({
+      sent: false as const,
+      reason: "error" as const,
+      detail: "boom",
+    }));
+    const res = await processNdaSign(VALID_BODY, c);
+    expect(res.status).toBe(503);
+    expect(res.body.error).toBe("email_unavailable");
+    // rilasciata: l'utente può ritentare (niente firma «persa» dietro un 409)
+    expect(await c.store.has(VALID_BODY.businessEmail)).toBe(false);
   });
 
   it("anti-replay: seconda firma stessa email (prima inviata) → 409", async () => {

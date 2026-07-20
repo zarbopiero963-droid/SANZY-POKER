@@ -31,11 +31,13 @@ export interface SignatureStore {
    */
   tryRecord(entry: StoredSignature): Promise<boolean>;
   /**
-   * Rilascia la prenotazione per un'email (rollback). Serve se dopo il
-   * `tryRecord` la firma non produce un artefatto durevole (email non inviata):
-   * così l'utente può ritentare invece di restare bloccato su 409 senza NDA.
+   * Rilascia la prenotazione per un'email (rollback) SOLO se corrisponde a
+   * `signatureId` (evita che un rollback cancelli la prenotazione di un'altra
+   * richiesta — rilevante con uno store condiviso/persistente futuro). Serve se
+   * dopo il `tryRecord` la firma non produce un artefatto durevole (email non
+   * inviata): così l'utente può ritentare invece di restare bloccato su 409.
    */
-  release(businessEmail: string): Promise<void>;
+  release(businessEmail: string, signatureId: string): Promise<void>;
 }
 
 /** Normalizza l'email per il confronto (trim + lowercase). */
@@ -62,8 +64,10 @@ export function createInMemorySignatureStore(): SignatureStore {
       byEmail.set(key, entry);
       return true;
     },
-    async release(businessEmail) {
-      byEmail.delete(normalizeEmail(businessEmail));
+    async release(businessEmail, signatureId) {
+      const key = normalizeEmail(businessEmail);
+      const existing = byEmail.get(key);
+      if (existing && existing.signatureId === signatureId) byEmail.delete(key);
     },
   };
 }

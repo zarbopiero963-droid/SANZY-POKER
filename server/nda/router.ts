@@ -56,14 +56,8 @@ export async function processNdaSign(
 ): Promise<ProcessResult> {
   const parsed = ndaSignRequestSchema.safeParse(rawBody);
   if (!parsed.success) {
-    return {
-      status: 400,
-      body: {
-        ok: false,
-        error: "invalid_request",
-        issues: parsed.error.issues,
-      },
-    };
+    // Non esponiamo i dettagli interni di zod al client.
+    return { status: 400, body: { ok: false, error: "invalid_request" } };
   }
   const req = parsed.data;
 
@@ -122,10 +116,16 @@ export async function processNdaSign(
     );
 
     // Se l'unico artefatto durevole (l'email col PDF) non è stato prodotto,
-    // RILASCIA la prenotazione: la firma non è stata registrata da nessuna
-    // parte, quindi l'utente deve poter ritentare invece di restare su 409.
+    // RILASCIA la prenotazione: la firma non è registrata da nessuna parte,
+    // quindi l'utente deve poter ritentare invece di restare su 409.
     if (!email.sent) {
-      await deps.store.release(req.businessEmail);
+      await deps.store.release(req.businessEmail, signatureId);
+      // Errore TRANSITORIO del provider (≠ chiave assente): non concediamo
+      // credenziali su una firma non registrata → 503 ritentabile. Il caso
+      // "no-api-key" è invece la modalità degradata DICHIARATA: si procede.
+      if (email.reason === "error") {
+        return { status: 503, body: { ok: false, error: "email_unavailable" } };
+      }
     }
 
     return {
@@ -140,7 +140,7 @@ export async function processNdaSign(
     };
   } catch (err) {
     // Errore interno (es. rendering PDF): rollback della prenotazione e 500.
-    await deps.store.release(req.businessEmail);
+    await deps.store.release(req.businessEmail, signatureId);
     console.error("[nda] errore durante la firma:", err);
     return { status: 500, body: { ok: false, error: "internal_error" } };
   }

@@ -108,13 +108,18 @@ export default function NdaDialog({
         );
         return;
       }
+      // `startedAt` è deciso dal server; lo clampiamo al clock del CLIENT così un
+      // orologio client leggermente indietro non fa scartare al refresh la
+      // sessione appena firmata (il guard `isPersistedSession` rifiuta lo
+      // `startedAt` futuro). Al più anticipa di pochi secondi la scadenza demo.
+      const startedAt = Math.min(result.startedAt, Date.now());
       const finalized: DemoSession = {
         signatureId: result.signatureId,
         password: result.password,
-        startedAt: result.startedAt, // istante deciso dal server
+        startedAt,
         payload: buildNdaPayload(form, {
           signatureId: result.signatureId,
-          acceptedAt: new Date(result.startedAt).toISOString(),
+          acceptedAt: new Date(startedAt).toISOString(),
           ndaLocale: locale,
         }),
       };

@@ -95,9 +95,14 @@ export function toWinAnsiSafe(text: string): string {
   let out = "";
   for (const ch of text) {
     const cp = ch.codePointAt(0) ?? 0;
-    const undefinedWinAnsi =
-      cp === 0x81 || cp === 0x8d || cp === 0x8f || cp === 0x90 || cp === 0x9d;
-    out += cp < 0x20 || cp > 0xff || undefinedWinAnsi ? "?" : ch;
+    // Codificabili da WinAnsi (Helvetica standard di pdf-lib): ASCII stampabile
+    // (0x20–0x7E) + Latin-1 supplement (0xA0–0xFF). Fuori da qui → "?":
+    // - controlli C0 (< 0x20),
+    // - controlli C1 (0x80–0x9F): NON mappati da WinAnsi → farebbero lanciare
+    //   `drawText`/`widthOfTextAtSize` (è il bug che questa funzione previene),
+    // - tutto ciò che è > 0xFF (CJK/cirillico/emoji…).
+    const encodable = (cp >= 0x20 && cp <= 0x7e) || (cp >= 0xa0 && cp <= 0xff);
+    out += encodable ? ch : "?";
   }
   return out;
 }
@@ -140,6 +145,16 @@ function wrapLine(
 }
 
 /**
+ * Paragrafi dell'NDA firmato pronti per il PDF: si SPLIT-a sui newline PRIMA di
+ * sanitizzare (altrimenti `toWinAnsiSafe`, che scarta i controlli < 0x20,
+ * cancellerebbe i `\n` e comprimerebbe tutto in un unico paragrafo). Ogni
+ * elemento è una riga logica già WinAnsi-safe. Esportata per i test.
+ */
+export function sanitizedNdaParagraphs(record: SignedNdaRecord): string[] {
+  return renderSignedNdaText(record).split("\n").map(toWinAnsiSafe);
+}
+
+/**
  * Genera il PDF dell'NDA firmato. Deterministico a parità di `record` (nessun
  * timestamp interno di pdf-lib: le date di creazione/modifica sono azzerate).
  */
@@ -165,8 +180,7 @@ export async function renderNdaPdf(
   let y = height - margin;
   const maxWidth = width - margin * 2;
 
-  const body = toWinAnsiSafe(renderSignedNdaText(record));
-  const paragraphs = body.split("\n");
+  const paragraphs = sanitizedNdaParagraphs(record);
 
   for (const paragraph of paragraphs) {
     const lines = paragraph.trim()
