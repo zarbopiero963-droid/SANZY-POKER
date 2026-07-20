@@ -43,7 +43,13 @@ export default function DemoTimer({
     };
     tick(); // aggiorna subito al mount (es. dopo un refresh)
     const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
+    // Al ritorno sul tab (i timer in background vengono rallentati dal browser)
+    // ricalcoliamo subito: il valore dipende da startedAt, quindi resta esatto.
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
   }, [startedAt, totalMs, onExpire]);
 
   const isLow = remaining <= 60_000; // ultimo minuto: evidenzia

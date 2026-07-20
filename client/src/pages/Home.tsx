@@ -31,7 +31,9 @@ import {
   type BizLocale,
 } from "@/business/landingI18n";
 
-type Stage = "landing" | "nda" | "entry" | "game" | "expired";
+// Nota: dopo la firma lo stage resta "entry"; il passaggio al gioco è governato
+// dallo stato `variant` (scelto in StartScreen), non da uno stage dedicato.
+type Stage = "landing" | "nda" | "entry" | "expired";
 
 const BIZ_LOCALE_KEY = "sanzy.business.locale";
 
@@ -59,6 +61,8 @@ export default function Home() {
     const saved = loadDemoSession();
     if (!saved) return;
     if (isExpired(saved.startedAt, Date.now())) {
+      // Coerente con onExpire: la sessione scaduta viene rimossa dallo storage.
+      clearDemoSession();
       setStage("expired");
       return;
     }

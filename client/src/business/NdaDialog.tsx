@@ -43,6 +43,7 @@ export default function NdaDialog({
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [session, setSession] = useState<DemoSession | null>(null);
+  const [submitError, setSubmitError] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const errors = validateNdaForm(form);
@@ -70,16 +71,31 @@ export default function NdaDialog({
   };
 
   const sign = async () => {
-    if (stepInvalid() || submitting) {
+    if (submitting) return; // invio in corso: non ri-mostrare errori sul modulo valido
+    if (stepInvalid()) {
       setShowErrors(true);
       return;
     }
+    setShowErrors(false);
+    setSubmitError(false);
     setSubmitting(true);
-    const created = createDemoSession(form, Date.now());
-    // PR1: stub locale. PR2 userà la risposta autorevole del server.
-    await submitNda(created);
-    setSession(created);
-    setSubmitting(false);
+    try {
+      const created = createDemoSession(form, Date.now());
+      // PR1: stub locale. PR2 userà la risposta autorevole del server (fetch).
+      const result = await submitNda(created);
+      if (!result.ok) {
+        setSubmitError(true);
+        return;
+      }
+      setSession(created);
+    } catch {
+      // Il PR2 sostituirà submitNda con una fetch: qui il finally garantisce
+      // che il pulsante non resti bloccato su "Registrazione…" se la promise
+      // rigetta (rete/500), e l'utente vede un messaggio d'errore.
+      setSubmitError(true);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const copyPassword = async () => {
@@ -189,6 +205,11 @@ export default function NdaDialog({
                   {showErrors && errors.accepted && (
                     <p className="sanzy-nda__err">
                       {tb("nda.error.required", locale)}
+                    </p>
+                  )}
+                  {submitError && (
+                    <p className="sanzy-nda__err" role="alert">
+                      {tb("nda.error.submit", locale)}
                     </p>
                   )}
                 </>

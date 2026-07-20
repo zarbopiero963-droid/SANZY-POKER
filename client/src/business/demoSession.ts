@@ -78,15 +78,23 @@ export function isNdaFormValid(form: NdaForm): boolean {
 /**
  * Password di sessione temporanea mostrata dopo la firma. Formato leggibile
  * `SANZY-XXXX-XXXX` con alfabeto senza caratteri ambigui (niente 0/O/1/I/L).
+ * Usa `crypto.getRandomValues` (non `Math.random`) come sorgente casuale, così
+ * il codice non è prevedibile anche se nel PR2 diventasse una credenziale reale.
  */
+const PW_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+function randomBlock(length: number): string {
+  const bytes = new Uint32Array(length);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += PW_ALPHABET[bytes[i] % PW_ALPHABET.length];
+  }
+  return out;
+}
+
 export function generateSessionPassword(): string {
-  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  const block = () =>
-    Array.from(
-      { length: 4 },
-      () => alphabet[Math.floor(Math.random() * alphabet.length)]
-    ).join("");
-  return `SANZY-${block()}-${block()}`;
+  return `SANZY-${randomBlock(4)}-${randomBlock(4)}`;
 }
 
 /**
@@ -157,17 +165,32 @@ export function formatCountdown(remainingMs: number): string {
 
 const STORAGE_KEY = "sanzy.demo.session";
 
-/** Type guard minimale per una sessione ricaricata da storage. */
+/** Type guard per una sessione ricaricata da storage (valida anche il payload). */
 function isDemoSession(value: unknown): value is DemoSession {
   if (!value || typeof value !== "object") return false;
   const s = value as Record<string, unknown>;
-  return (
-    typeof s.signatureId === "string" &&
-    typeof s.password === "string" &&
-    typeof s.startedAt === "number" &&
-    typeof s.payload === "object" &&
-    s.payload !== null
-  );
+  if (
+    typeof s.signatureId !== "string" ||
+    typeof s.password !== "string" ||
+    typeof s.startedAt !== "number" ||
+    !Number.isFinite(s.startedAt) ||
+    typeof s.payload !== "object" ||
+    s.payload === null
+  ) {
+    return false;
+  }
+  // Il payload deve avere tutti i campi stringa attesi: evita sessioni corrotte
+  // semi-valide che passerebbero il solo check "è un oggetto".
+  const p = s.payload as Record<string, unknown>;
+  const stringFields: (keyof NdaPayload)[] = [
+    "fullName",
+    "businessEmail",
+    "companyName",
+    "jobTitle",
+    "signatureId",
+    "acceptedAt",
+  ];
+  return stringFields.every(field => typeof p[field] === "string");
 }
 
 /** Salva la sessione demo (best-effort: se lo storage è off, non lancia). */

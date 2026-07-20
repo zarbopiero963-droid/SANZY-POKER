@@ -52,6 +52,14 @@ describe("landingI18n — risoluzione e interpolazione di tb()", () => {
     expect(tb("nda.step", "en", { n: 3 })).toBe("Step 3 of 3");
   });
 
+  it("non interpreta i pattern di replace ($&, $1) nel valore del parametro", () => {
+    // Regressione: con replace(regex, stringa) un valore contenente "$&" verrebbe
+    // sostituito con la stringa matchata ("{n}"); con la forma a funzione resta
+    // letterale. I params reali sono numeri, ma il fix blinda il caso futuro.
+    expect(tb("nda.step", "it", { n: "$&X" })).toBe("Passo $&X di 3");
+    expect(tb("nda.step", "it", { n: "$1" })).toBe("Passo $1 di 3");
+  });
+
   it("ripiega sulla chiave se manca (comportamento visibile, mai in produzione)", () => {
     expect(tb("chiave.inesistente", "it")).toBe("chiave.inesistente");
   });

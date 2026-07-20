@@ -51,6 +51,10 @@ export const BIZ_STRINGS: Record<string, Entry> = {
     it: "EN",
     en: "IT",
   },
+  "landing.localeToggleAria": {
+    it: "Cambia lingua in inglese",
+    en: "Switch language to Italian",
+  },
   // --- Popup NDA (3 slide) ---
   "nda.step": {
     it: "Passo {n} di 3",
@@ -124,6 +128,10 @@ export const BIZ_STRINGS: Record<string, Entry> = {
     it: "Registrazione della firma…",
     en: "Recording your signature…",
   },
+  "nda.error.submit": {
+    it: "Registrazione non riuscita. Riprova.",
+    en: "Signature failed. Please try again.",
+  },
   // --- Schermata di sblocco ---
   "unlock.title": {
     it: "Accordo registrato con successo",
@@ -191,7 +199,10 @@ export function tb(
   let text = entry ? entry[locale] : key;
   if (params) {
     for (const [name, value] of Object.entries(params)) {
-      text = text.replace(new RegExp(`\\{${name}\\}`, "g"), String(value));
+      // Replacement a funzione: un valore contenente `$&`/`$1` resta letterale
+      // (con la forma a stringa verrebbe interpretato come pattern di replace).
+      const stringValue = String(value);
+      text = text.replace(new RegExp(`\\{${name}\\}`, "g"), () => stringValue);
     }
   }
   return text;

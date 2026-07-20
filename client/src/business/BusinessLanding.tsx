@@ -36,7 +36,7 @@ export default function BusinessLanding({
           type="button"
           className="sanzy-biz__lang"
           onClick={onToggleLocale}
-          aria-label={tb("landing.localeToggle", locale)}
+          aria-label={tb("landing.localeToggleAria", locale)}
         >
           {tb("landing.localeToggle", locale)}
         </button>
