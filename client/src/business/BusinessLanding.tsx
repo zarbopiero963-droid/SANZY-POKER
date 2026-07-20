@@ -27,10 +27,10 @@ export default function BusinessLanding({
         <div
           className="sanzy-biz__wordmark"
           role="img"
-          aria-label="Sanzy Poker"
+          aria-label={tb("brand.name", locale)}
         >
-          <span className="sanzy-biz__wm-s">SANZY</span>
-          <span className="sanzy-biz__wm-p">POKER</span>
+          <span className="sanzy-biz__wm-s">{tb("brand.sanzy", locale)}</span>
+          <span className="sanzy-biz__wm-p">{tb("brand.poker", locale)}</span>
         </div>
         <button
           type="button"

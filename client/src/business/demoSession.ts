@@ -87,11 +87,16 @@ export function isNdaFormValid(form: NdaForm): boolean {
 const PW_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
 function randomBlock(length: number): string {
-  const bytes = new Uint32Array(length);
-  crypto.getRandomValues(bytes);
+  const n = PW_ALPHABET.length;
+  // Massimo multiplo di n rappresentabile in Uint32: scartando i valori oltre
+  // questa soglia si elimina il modulo bias (rejection sampling).
+  const limit = Math.floor(0x1_0000_0000 / n) * n;
+  const buf = new Uint32Array(1);
   let out = "";
-  for (let i = 0; i < length; i++) {
-    out += PW_ALPHABET[bytes[i] % PW_ALPHABET.length];
+  while (out.length < length) {
+    crypto.getRandomValues(buf);
+    if (buf[0] >= limit) continue;
+    out += PW_ALPHABET[buf[0] % n];
   }
   return out;
 }

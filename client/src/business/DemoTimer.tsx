@@ -52,12 +52,15 @@ export default function DemoTimer({
     };
     tick(); // aggiorna subito al mount (es. dopo un refresh)
     const id = window.setInterval(tick, 1000);
-    // Al ritorno sul tab (i timer in background vengono rallentati dal browser)
-    // ricalcoliamo subito: il valore dipende da startedAt, quindi resta esatto.
-    document.addEventListener("visibilitychange", tick);
+    // Solo al RITORNO sul tab (non quando va in background) ricalcoliamo subito:
+    // il valore dipende da startedAt, quindi resta esatto anche col throttling.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       window.clearInterval(id);
-      document.removeEventListener("visibilitychange", tick);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [startedAt, totalMs]);
 

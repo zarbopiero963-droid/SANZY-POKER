@@ -9,10 +9,11 @@
  * La validazione e la creazione della sessione stanno in `demoSession.ts` (pure
  * e testate). Qui c'è solo la UI. Nessun testo hardcoded fuori da `tb()`.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createDemoSession,
   isNdaFormValid,
+  saveDemoSession,
   validateNdaForm,
   type DemoSession,
   type NdaForm,
@@ -46,6 +47,8 @@ export default function NdaDialog({
   const [session, setSession] = useState<DemoSession | null>(null);
   const [submitError, setSubmitError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const prevFocusRef = useRef<HTMLElement | null>(null);
 
   const errors = validateNdaForm(form);
   const set = <K extends keyof NdaForm>(key: K, value: NdaForm[K]) =>
@@ -90,7 +93,18 @@ export default function NdaDialog({
         setSubmitError(true);
         return;
       }
-      setSession(created);
+      // Onora il contratto: usa signatureId/password dalla RISPOSTA (nel PR2
+      // arriveranno dal server), non quelli generati solo dal client.
+      const finalized: DemoSession = {
+        ...created,
+        signatureId: result.signatureId,
+        password: result.password,
+        payload: { ...created.payload, signatureId: result.signatureId },
+      };
+      // Persistiamo SUBITO alla firma: un refresh sulla schermata di sblocco non
+      // perde la sessione (prima la persistenza avveniva solo al "Avvia").
+      saveDemoSession(finalized);
+      setSession(finalized);
     } catch {
       // Il PR2 sostituirà submitNda con una fetch: qui il finally garantisce
       // che il pulsante non resti bloccato su "Registrazione…" se la promise
@@ -126,6 +140,44 @@ export default function NdaDialog({
     return () => document.removeEventListener("keydown", onKey);
   }, [session, onClose]);
 
+  // Al montaggio memorizza l'elemento a fuoco e lo ripristina alla chiusura,
+  // così la navigazione da tastiera non resta "persa" dopo il dialog.
+  useEffect(() => {
+    prevFocusRef.current = document.activeElement as HTMLElement | null;
+    return () => prevFocusRef.current?.focus?.();
+  }, []);
+
+  // Focus trap: il Tab resta dentro il dialog (WCAG 2.4.3). Ricalcola i
+  // focusable a ogni cambio slide o al passaggio alla schermata di sblocco.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const node = dialogRef.current;
+      if (!node) return;
+      const focusables = Array.from(
+        node.querySelectorAll<HTMLElement>(
+          'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (!node.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [step, session]);
+
   return (
     <div
       className="sanzy-nda-backdrop"
@@ -133,7 +185,7 @@ export default function NdaDialog({
       aria-modal="true"
       aria-label={tb("landing.tryDemo", locale)}
     >
-      <div className="sanzy-nda">
+      <div className="sanzy-nda" ref={dialogRef}>
         {session ? (
           <UnlockPanel
             locale={locale}

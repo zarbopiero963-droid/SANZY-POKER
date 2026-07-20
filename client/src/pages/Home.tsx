@@ -127,15 +127,18 @@ export default function Home() {
   }
 
   if (stage === "nda") {
-    // La landing resta sotto il dialog: il backdrop sfocato ha così un contenuto
-    // reale da sfumare, invece dello sfondo nudo del body.
+    // La landing resta sotto il dialog (il backdrop sfocato ha così un contenuto
+    // reale), ma è `inert`: non riceve focus né interazione mentre il modale è
+    // aperto, coerente con aria-modal.
     return (
       <>
-        <BusinessLanding
-          locale={bizLocale}
-          onToggleLocale={toggleLocale}
-          onTryDemo={() => setStage("nda")}
-        />
+        <div inert>
+          <BusinessLanding
+            locale={bizLocale}
+            onToggleLocale={toggleLocale}
+            onTryDemo={() => setStage("nda")}
+          />
+        </div>
         <NdaDialog
           locale={bizLocale}
           onClose={() => setStage("landing")}
