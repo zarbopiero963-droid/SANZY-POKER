@@ -226,7 +226,8 @@ describe("demoSession — persistenza minimale (no PII)", () => {
   });
 
   it("round-trip: loadDemoSession rilegge esattamente ciò che è stato salvato", () => {
-    const session = createDemoSession(VALID_FORM, 1_800_000_000_000);
+    // startedAt nel passato: il guard rifiuta i timestamp futuri manomessi.
+    const session = createDemoSession(VALID_FORM, Date.now() - 60_000);
     saveDemoSession(session);
     expect(loadDemoSession()).toEqual({
       signatureId: session.signatureId,
@@ -244,6 +245,29 @@ describe("demoSession — persistenza minimale (no PII)", () => {
     );
     expect(loadDemoSession()).toBeNull();
     localStorage.setItem(STORAGE_KEY, "non-json");
+    expect(loadDemoSession()).toBeNull();
+  });
+
+  it("rifiuta stringhe vuote e startedAt nel futuro (dato manomesso)", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ signatureId: "", password: "p", startedAt: 1 })
+    );
+    expect(loadDemoSession()).toBeNull();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ signatureId: "s", password: "", startedAt: 1 })
+    );
+    expect(loadDemoSession()).toBeNull();
+    // startedAt un'ora nel futuro: manomissione che allungherebbe la demo.
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        signatureId: "s",
+        password: "p",
+        startedAt: Date.now() + 60 * 60 * 1000,
+      })
+    );
     expect(loadDemoSession()).toBeNull();
   });
 

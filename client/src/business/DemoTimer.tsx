@@ -70,21 +70,22 @@ export default function DemoTimer({
   }, [startedAt, totalMs]);
 
   const isLow = remaining <= 60_000; // ultimo minuto: evidenzia
+  const formatted = formatCountdown(remaining);
 
   return (
     <div
       className="sanzy-demo-timer"
       role="timer"
-      aria-live="off"
-      aria-label={tb("timer.label", locale)}
+      // Il valore fa parte del nome accessibile; nell'ultimo minuto lo annunciamo
+      // (polite) così gli screen reader segnalano l'avvicinarsi della scadenza.
+      aria-live={isLow ? "polite" : "off"}
+      aria-label={`${tb("timer.label", locale)} ${formatted}`}
       data-low={isLow ? "true" : "false"}
     >
       <span className="sanzy-demo-timer__label">
         {tb("timer.label", locale)}
       </span>
-      <span className="sanzy-demo-timer__value">
-        {formatCountdown(remaining)}
-      </span>
+      <span className="sanzy-demo-timer__value">{formatted}</span>
       <style>{TIMER_CSS}</style>
     </div>
   );

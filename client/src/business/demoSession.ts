@@ -185,16 +185,29 @@ export type PersistedSession = {
   startedAt: number;
 };
 
-/** Type guard della sessione minimale ricaricata da storage. */
+/** Tolleranza sull'orologio (5 min) per accettare un `startedAt` quasi-attuale. */
+const CLOCK_SKEW_MS = 5 * 60 * 1000;
+
+/**
+ * Type guard della sessione minimale ricaricata da storage. Oltre ai tipi,
+ * rifiuta stringhe vuote e un `startedAt` nel futuro (oltre la tolleranza): non
+ * rende il gate inviolabile — resta client-side, vedi #26 — ma scarta i dati
+ * palesemente manomessi che allungherebbero la demo.
+ */
 function isPersistedSession(value: unknown): value is PersistedSession {
   if (!value || typeof value !== "object") return false;
   const s = value as Record<string, unknown>;
-  return (
-    typeof s.signatureId === "string" &&
-    typeof s.password === "string" &&
-    typeof s.startedAt === "number" &&
-    Number.isFinite(s.startedAt)
-  );
+  if (
+    typeof s.signatureId !== "string" ||
+    s.signatureId.length === 0 ||
+    typeof s.password !== "string" ||
+    s.password.length === 0 ||
+    typeof s.startedAt !== "number" ||
+    !Number.isFinite(s.startedAt)
+  ) {
+    return false;
+  }
+  return s.startedAt <= Date.now() + CLOCK_SKEW_MS;
 }
 
 /**

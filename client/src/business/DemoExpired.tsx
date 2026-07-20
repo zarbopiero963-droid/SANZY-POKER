@@ -2,7 +2,9 @@
  * Schermata mostrata quando i 15 minuti della demo sono terminati (idea #12,
  * #26). Blocca il gioco e riporta alla home business. Nessun testo hardcoded.
  */
+import { useRef } from "react";
 import { tb, type BizLocale } from "./landingI18n";
+import { useFocusTrap } from "./useFocusTrap";
 
 type DemoExpiredProps = {
   locale: BizLocale;
@@ -10,12 +12,18 @@ type DemoExpiredProps = {
 };
 
 export default function DemoExpired({ locale, onBackHome }: DemoExpiredProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  // A demo scaduta il blocco deve valere anche da tastiera: il focus resta nel
+  // dialog e non può raggiungere l'HUD del gioco sottostante.
+  useFocusTrap(cardRef);
+
   return (
     <div
       className="sanzy-expired"
       role="dialog"
       aria-modal="true"
       aria-labelledby="demo-expired-title"
+      ref={cardRef}
     >
       <div className="sanzy-expired__card">
         <h2 id="demo-expired-title" className="sanzy-expired__title">
@@ -26,6 +34,8 @@ export default function DemoExpired({ locale, onBackHome }: DemoExpiredProps) {
           type="button"
           className="sanzy-expired__btn"
           onClick={onBackHome}
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- focus iniziale del blocco
+          autoFocus
         >
           {tb("demo.expired.back", locale)}
         </button>

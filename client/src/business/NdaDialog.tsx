@@ -20,6 +20,7 @@ import {
 } from "./demoSession";
 import { submitNda } from "./ndaService";
 import { tb, type BizLocale } from "./landingI18n";
+import { useFocusTrap } from "./useFocusTrap";
 
 type NdaDialogProps = {
   locale: BizLocale;
@@ -48,7 +49,10 @@ export default function NdaDialog({
   const [submitError, setSubmitError] = useState(false);
   const [copied, setCopied] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const prevFocusRef = useRef<HTMLElement | null>(null);
+  const copyTimeoutRef = useRef<number | null>(null);
+
+  // Focus trap + ripristino del focus alla chiusura (hook condiviso con DemoExpired).
+  useFocusTrap(dialogRef);
 
   const errors = validateNdaForm(form);
   const set = <K extends keyof NdaForm>(key: K, value: NdaForm[K]) =>
@@ -120,11 +124,22 @@ export default function NdaDialog({
     try {
       await navigator.clipboard.writeText(session.password);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
+      if (copyTimeoutRef.current !== null)
+        window.clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 1500);
     } catch {
       // clipboard non disponibile: la password resta comunque visibile.
     }
   };
+
+  // Pulisce il timeout del "Copiato" allo smontaggio (no set-state su unmount).
+  useEffect(
+    () => () => {
+      if (copyTimeoutRef.current !== null)
+        window.clearTimeout(copyTimeoutRef.current);
+    },
+    []
+  );
 
   const err = (key: keyof typeof errors) =>
     showErrors && errors[key] ? tb(`nda.error.${errors[key]}`, locale) : "";
@@ -141,45 +156,6 @@ export default function NdaDialog({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [session, submitting, onClose]);
-
-  // Al montaggio memorizza l'elemento a fuoco e lo ripristina alla chiusura,
-  // così la navigazione da tastiera non resta "persa" dopo il dialog.
-  useEffect(() => {
-    prevFocusRef.current = document.activeElement as HTMLElement | null;
-    return () => prevFocusRef.current?.focus?.();
-  }, []);
-
-  // Focus trap: il Tab resta dentro il dialog (WCAG 2.4.3). Il set di elementi
-  // focusabili è letto dal DOM al momento del keydown, quindi il listener resta
-  // valido per ogni slide/schermata senza bisogno di dipendenze.
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-      const node = dialogRef.current;
-      if (!node) return;
-      const focusables = Array.from(
-        node.querySelectorAll<HTMLElement>(
-          'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'
-        )
-      );
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const active = document.activeElement;
-      if (!node.contains(active)) {
-        e.preventDefault();
-        first.focus();
-      } else if (e.shiftKey && active === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
 
   return (
     <div
@@ -207,9 +183,10 @@ export default function NdaDialog({
                 type="button"
                 className="sanzy-nda__close"
                 onClick={onClose}
+                disabled={submitting}
                 aria-label={tb("nda.close", locale)}
               >
-                ×
+                <span aria-hidden>×</span>
               </button>
             </div>
 
@@ -307,8 +284,9 @@ export default function NdaDialog({
                   type="button"
                   className="sanzy-nda__btn sanzy-nda__btn--ghost"
                   onClick={goBack}
+                  disabled={submitting}
                 >
-                  ← {tb("nda.back", locale)}
+                  <span aria-hidden>←</span> {tb("nda.back", locale)}
                 </button>
               ) : (
                 <span />
@@ -323,7 +301,7 @@ export default function NdaDialog({
                   {step === 2
                     ? tb("nda.slide2.cta", locale)
                     : tb("nda.next", locale)}{" "}
-                  →
+                  <span aria-hidden>→</span>
                 </button>
               )}
               {step === 3 && (
@@ -333,9 +311,13 @@ export default function NdaDialog({
                   onClick={sign}
                   disabled={submitting}
                 >
-                  {submitting
-                    ? tb("nda.submitting", locale)
-                    : `${tb("nda.submit", locale)} 🎰`}
+                  {submitting ? (
+                    tb("nda.submitting", locale)
+                  ) : (
+                    <>
+                      {tb("nda.submit", locale)} <span aria-hidden>🎰</span>
+                    </>
+                  )}
                 </button>
               )}
             </div>
@@ -427,7 +409,7 @@ function UnlockPanel({
         className="sanzy-nda__btn sanzy-nda__btn--go sanzy-unlock__launch"
         onClick={onLaunch}
       >
-        {tb("unlock.launch", locale)} 🎰
+        {tb("unlock.launch", locale)} <span aria-hidden>🎰</span>
       </button>
     </div>
   );

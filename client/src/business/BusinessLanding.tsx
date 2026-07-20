@@ -59,7 +59,7 @@ export default function BusinessLanding({
             {tb("landing.forBusiness", locale)}
           </span>
           <button type="button" className="sanzy-biz__demo" onClick={onTryDemo}>
-            {tb("landing.tryDemo", locale)} 🎰
+            {tb("landing.tryDemo", locale)} <span aria-hidden>🎰</span>
           </button>
           <span className="sanzy-biz__cta-sub">
             {tb("landing.tryDemoSub", locale)}
