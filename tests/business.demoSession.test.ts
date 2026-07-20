@@ -173,6 +173,13 @@ describe("demoSession — timer 15 minuti", () => {
     expect(computeRemainingMs(T0, T0 + 12 * 60_000)).toBe(3 * 60_000);
   });
 
+  it("non supera mai la durata totale se l'orologio arretra dopo la firma", () => {
+    // now < startedAt (clock spostato indietro): il residuo resta clampato a 15:00.
+    expect(computeRemainingMs(T0, T0 - 60_000)).toBe(DEMO_DURATION_MS);
+    expect(computeRemainingMs(T0, T0 - 60 * 60_000)).toBe(DEMO_DURATION_MS);
+    expect(formatCountdown(computeRemainingMs(T0, T0 - 60_000))).toBe("15:00");
+  });
+
   it("si ferma a zero (mai negativo) e risulta scaduto oltre i 15 minuti", () => {
     expect(computeRemainingMs(T0, T0 + 20 * 60_000)).toBe(0);
     expect(isExpired(T0, T0 + 15 * 60_000)).toBe(true);

@@ -179,7 +179,10 @@ export function computeRemainingMs(
   now: number,
   totalMs: number = DEMO_DURATION_MS
 ): number {
-  return Math.max(0, startedAt + totalMs - now);
+  // Clamp su [0, totalMs]: mai negativo e mai OLTRE la durata totale. Se
+  // l'orologio di sistema arretra dopo la firma (`now < startedAt`) il conto
+  // supererebbe `totalMs`: il timer non deve mai mostrare più di 15:00.
+  return Math.min(totalMs, Math.max(0, startedAt + totalMs - now));
 }
 
 /** True quando la demo è scaduta (tempo rimanente a zero). */

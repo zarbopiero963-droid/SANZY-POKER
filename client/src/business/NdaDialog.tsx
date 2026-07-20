@@ -266,7 +266,7 @@ export default function NdaDialog({
                   </label>
                   {showErrors && errors.accepted && (
                     <p id="nda-accepted-error" className="sanzy-nda__err">
-                      {tb("nda.error.required", locale)}
+                      {tb(`nda.error.${errors.accepted}`, locale)}
                     </p>
                   )}
                   {submitError && (
