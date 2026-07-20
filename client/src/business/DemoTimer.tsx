@@ -90,8 +90,12 @@ export default function DemoTimer({
       aria-label={`${label} ${formatted}`}
       data-phase={phase}
     >
-      <span className="sanzy-demo-timer__label">{label}</span>
-      <span className="sanzy-demo-timer__value">{formatted}</span>
+      <span className="sanzy-demo-timer__label" aria-hidden="true">
+        {label}
+      </span>
+      <span className="sanzy-demo-timer__value" aria-hidden="true">
+        {formatted}
+      </span>
       {/* Region live STABILE (sempre presente): gli screen reader annunciano solo
           quando il testo cambia. Resta vuota tra una soglia e l'altra (niente
           annunci al secondo) e riporta il tempo residuo SOLO alle soglie di
