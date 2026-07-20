@@ -1,41 +1,85 @@
 /**
- * Servizio di "firma" dell'NDA.
+ * Servizio di firma dell'NDA (PR2, tracking #26).
  *
- * PR1 (frontend): STUB. La firma viene registrata solo lato client (la
- * sessione demo è creata da `createDemoSession`). Qui esponiamo il contratto
- * dell'endpoint che il PR2 (backend Express + Resend + PDF + log IP) andrà a
- * implementare, così i componenti chiamano già la forma definitiva.
- *
- * Contratto previsto (PR2): `POST /api/nda/sign` con `NdaPayload` nel body →
- * risponde con `{ ok, signatureId, password }`, genera il PDF, logga l'IP/ora e
- * invia l'email a pier.zar69@gmail.com. Finché l'endpoint non esiste, questo
- * stub risolve localmente senza rete.
+ * Chiama l'endpoint reale `POST /api/nda/sign`: il server è AUTOREVOLE — genera
+ * `signatureId`/`password`, fissa `startedAt` (istante server), rileva l'IP,
+ * produce il PDF, logga e invia l'email a pier.zar69@gmail.com via Resend.
+ * Il client invia solo il modulo + la lingua + la versione del testo NDA
+ * mostrato, e USA i valori restituiti dal server (non ne impone di propri).
  */
-import type { DemoSession, NdaPayload } from "./demoSession";
+import { NDA_VERSION, type NdaForm } from "./demoSession";
+import type { BizLocale } from "./landingI18n";
 
 export type NdaSignResult = {
   ok: boolean;
   signatureId: string;
   password: string;
-  /** true quando la registrazione server (email/PDF/log) è avvenuta davvero. */
+  /** Istante (epoch ms) deciso dal server: avvio del timer demo. */
+  startedAt: number;
+  /** true quando email/PDF/log server sono andati a buon fine. */
   serverAcknowledged: boolean;
+  /** Codice d'errore server (`already_signed`, `unsupported_nda_version`, …). */
+  error?: string;
 };
 
+const FAIL = (error: string): NdaSignResult => ({
+  ok: false,
+  signatureId: "",
+  password: "",
+  startedAt: 0,
+  serverAcknowledged: false,
+  error,
+});
+
 /**
- * Registra la firma. PR1: nessuna chiamata di rete, ritorna i dati della
- * sessione creata lato client. `serverAcknowledged: false` segnala in modo
- * esplicito che email/PDF/log NON sono ancora attivi (arrivano nel PR2).
+ * Registra la firma sul backend. In caso di rete/HTTP non OK ritorna
+ * `ok: false` con un codice d'errore (nessuna eccezione propagata al chiamante).
  */
-export async function submitNda(session: DemoSession): Promise<NdaSignResult> {
-  // TODO(PR2 #26): sostituire con
-  //   await fetch("/api/nda/sign", { method: "POST", body: JSON.stringify(payload) })
-  // e usare la risposta del server (password/signatureId autorevoli lato server).
-  const _payload: NdaPayload = session.payload;
-  void _payload;
+export async function submitNda(
+  form: NdaForm,
+  locale: BizLocale
+): Promise<NdaSignResult> {
+  let res: Response;
+  try {
+    res = await fetch("/api/nda/sign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fullName: form.fullName,
+        businessEmail: form.businessEmail,
+        companyName: form.companyName,
+        jobTitle: form.jobTitle,
+        accepted: form.accepted,
+        ndaLocale: locale,
+        ndaVersion: NDA_VERSION,
+      }),
+    });
+  } catch {
+    return FAIL("network");
+  }
+
+  let data: Partial<NdaSignResult> & { error?: string };
+  try {
+    data = (await res.json()) as typeof data;
+  } catch {
+    return FAIL("bad_response");
+  }
+
+  if (!res.ok || !data.ok) {
+    return FAIL(data.error ?? "submit");
+  }
+  if (
+    typeof data.signatureId !== "string" ||
+    typeof data.password !== "string" ||
+    typeof data.startedAt !== "number"
+  ) {
+    return FAIL("bad_response");
+  }
   return {
     ok: true,
-    signatureId: session.signatureId,
-    password: session.password,
-    serverAcknowledged: false,
+    signatureId: data.signatureId,
+    password: data.password,
+    startedAt: data.startedAt,
+    serverAcknowledged: Boolean(data.serverAcknowledged),
   };
 }

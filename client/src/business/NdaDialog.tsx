@@ -11,7 +11,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import {
-  createDemoSession,
+  buildNdaPayload,
   isNdaFormValid,
   saveDemoSession,
   validateNdaForm,
@@ -46,7 +46,10 @@ export default function NdaDialog({
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [session, setSession] = useState<DemoSession | null>(null);
-  const [submitError, setSubmitError] = useState(false);
+  // null = nessun errore; altrimenti la chiave i18n del messaggio da mostrare.
+  const [submitError, setSubmitError] = useState<
+    null | "submit" | "alreadySigned"
+  >(null);
   const [copied, setCopied] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const copyTimeoutRef = useRef<number | null>(null);
@@ -75,6 +78,7 @@ export default function NdaDialog({
 
   const goBack = () => {
     setShowErrors(false);
+    setSubmitError(null); // non trascinare un errore d'invio tra gli step
     setStep(prev => (prev === 1 ? 1 : ((prev - 1) as 1 | 2)));
   };
 
@@ -87,33 +91,36 @@ export default function NdaDialog({
       return;
     }
     setShowErrors(false);
-    setSubmitError(false);
+    setSubmitError(null);
     setSubmitting(true);
     try {
-      const created = createDemoSession(form, Date.now(), locale);
-      // PR1: stub locale. PR2 userà la risposta autorevole del server (fetch).
-      const result = await submitNda(created);
+      // Il server è autorevole: genera signatureId/password, fissa startedAt,
+      // rileva l'IP, produce PDF/email. Il client USA la risposta.
+      const result = await submitNda(form, locale);
       if (!result.ok) {
-        setSubmitError(true);
+        setSubmitError(
+          result.error === "already_signed" ? "alreadySigned" : "submit"
+        );
         return;
       }
-      // Onora il contratto: usa signatureId/password dalla RISPOSTA (nel PR2
-      // arriveranno dal server), non quelli generati solo dal client.
       const finalized: DemoSession = {
-        ...created,
         signatureId: result.signatureId,
         password: result.password,
-        payload: { ...created.payload, signatureId: result.signatureId },
+        startedAt: result.startedAt, // istante deciso dal server
+        payload: buildNdaPayload(form, {
+          signatureId: result.signatureId,
+          acceptedAt: new Date(result.startedAt).toISOString(),
+          ndaLocale: locale,
+        }),
       };
       // Persistiamo SUBITO alla firma: un refresh sulla schermata di sblocco non
       // perde la sessione (prima la persistenza avveniva solo al "Avvia").
       saveDemoSession(finalized);
       setSession(finalized);
     } catch {
-      // Il PR2 sostituirà submitNda con una fetch: qui il finally garantisce
-      // che il pulsante non resti bloccato su "Registrazione…" se la promise
-      // rigetta (rete/500), e l'utente vede un messaggio d'errore.
-      setSubmitError(true);
+      // Il finally garantisce che il pulsante non resti bloccato su
+      // "Registrazione…" se qualcosa rigetta; l'utente vede un messaggio.
+      setSubmitError("submit");
     } finally {
       setSubmitting(false);
     }
@@ -271,7 +278,7 @@ export default function NdaDialog({
                   )}
                   {submitError && (
                     <p className="sanzy-nda__err" role="alert">
-                      {tb("nda.error.submit", locale)}
+                      {tb(`nda.error.${submitError}`, locale)}
                     </p>
                   )}
                 </>
@@ -476,6 +483,7 @@ const NDA_CSS = `
   max-height: 168px; overflow-y: auto; padding: 12px 14px; border-radius: 10px;
   background: rgba(6, 24, 17, 0.7); border: 1px solid rgba(214, 178, 102, 0.25);
   font-size: 12.5px; line-height: 1.55; color: #cfe0d6;
+  white-space: pre-line;
 }
 .sanzy-nda__check { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.4; cursor: pointer; }
 .sanzy-nda__check input { margin-top: 3px; width: 18px; height: 18px; accent-color: #d6b466; flex: 0 0 auto; }

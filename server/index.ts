@@ -2,6 +2,8 @@ import express from "express";
 import { createServer } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createNdaRouter } from "./nda/router";
+import { createInMemorySignatureStore } from "./nda/store";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,6 +11,9 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // Dietro il proxy Railway: fa sì che req.ip/X-Forwarded-For siano affidabili.
+  app.set("trust proxy", true);
 
   // Serve static files from dist/public in production
   const staticPath =
@@ -22,6 +27,11 @@ async function startServer() {
   app.get("/healthz", (_req, res) => {
     res.status(200).json({ status: "ok" });
   });
+
+  // API NDA (PR2 #26): firma server-authoritative + PDF + log IP + email Resend.
+  // Store anti-replay in-memory (Railway effimero: si azzera al redeploy).
+  const signatureStore = createInMemorySignatureStore();
+  app.use("/api/nda", createNdaRouter({ store: signatureStore }));
 
   // Handle client-side routing - serve index.html for all routes
   app.get("*", (_req, res) => {

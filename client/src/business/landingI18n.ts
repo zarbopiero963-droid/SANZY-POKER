@@ -122,8 +122,8 @@ export const BIZ_STRINGS = {
     en: "You are about to step onto a table that changes the rules of the game. This software is protected by international copyright. To unlock the Babylon.js 3D core, please accept the confidentiality agreement.",
   },
   "nda.body": {
-    it: "Accordo di riservatezza (NDA). Le informazioni, il gameplay e il codice mostrati nella demo di Sanzy Poker sono riservati e di proprietà dell'autore. Il destinatario si impegna a non divulgare, copiare o riprodurre quanto mostrato senza consenso scritto. L'accordo si intende accettato digitalmente tramite selezione della casella e invio del modulo.",
-    en: "Confidentiality agreement (NDA). The information, gameplay and code shown in the Sanzy Poker demo are confidential and owned by the author. The recipient agrees not to disclose, copy or reproduce anything shown without written consent. This agreement is deemed accepted digitally by ticking the checkbox and submitting the form.",
+    it: "ACCORDO DI RISERVATEZZA E NON DIVULGAZIONE (NDA)\n\nTRA il Divulgante Piero Zambo, proprietario del software e della variante di gioco «Sanzy Poker», E il Ricevente sottoscrittore, per conto della propria azienda.\n\n1. Oggetto. Il Divulgante mostra una demo interattiva 3D basata su una variante proprietaria (6 carte personali, 8 comuni, doppio piatto simultaneo), protetta da copyright internazionale.\n\n2. Informazioni Riservate. Sono riservati codice sorgente, regole di gioco, logiche dei bot, design dell'interfaccia e strategie commerciali mostrati nella demo.\n\n3. Obblighi. Il Ricevente si impegna a mantenere il riserbo, a non copiare/decodificare (reverse engineering) il software o le regole, e a non usarli per sviluppare un prodotto concorrente.\n\n4. Consenso (Click-Wrap). L'Accordo diventa valido e vincolante tramite la selezione della casella «Accetto» e l'invio del modulo. All'invio verranno registrati indirizzo IP, data e ora (UTC) e un ID firma, che costituiscono prova informatica dell'accettazione.",
+    en: "MUTUAL NON-DISCLOSURE AGREEMENT (NDA)\n\nBY AND BETWEEN the Disclosing Party Piero Zambo, owner of the software and game variant “Sanzy Poker”, AND the undersigned Receiving Party, acting on behalf of their company.\n\n1. Purpose. The Disclosing Party showcases an interactive 3D demo based on a proprietary variant (6 hole cards, 8 community cards, dual simultaneous pot), protected by international copyright.\n\n2. Confidential Information. Source code, game rules, bot logic, UI/UX design and commercial strategies shown in the demo are confidential.\n\n3. Obligations. The Receiving Party agrees to keep strict confidentiality, not to copy or reverse engineer the software or rules, and not to use them to develop a competing product.\n\n4. Consent (Click-Wrap). This Agreement becomes valid and binding by ticking the “I Accept” box and submitting the form. Upon submission, the IP address, date and time (UTC) and a signature ID will be recorded and constitute electronic proof of acceptance.",
   },
   "nda.checkbox": {
     it: "Accetto i termini dell'accordo di non divulgazione (NDA) sopra riportato.",
@@ -140,6 +140,10 @@ export const BIZ_STRINGS = {
   "nda.error.submit": {
     it: "Registrazione non riuscita. Riprova.",
     en: "Signature failed. Please try again.",
+  },
+  "nda.error.alreadySigned": {
+    it: "Questa email aziendale ha già firmato l'NDA e avviato una demo. Contatta l'autore per una prova estesa.",
+    en: "This business email has already signed the NDA and started a demo. Contact the author for an extended trial.",
   },
   // --- Schermata di sblocco ---
   "unlock.title": {

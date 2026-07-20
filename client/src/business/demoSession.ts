@@ -19,11 +19,12 @@ export const DEMO_DURATION_MS = 15 * 60 * 1000;
 /**
  * Versione del testo NDA presentato all'utente. Fa parte del payload firmato:
  * un click-wrap è verificabile solo se registra QUALE testo è stato accettato.
- * Va incrementata a ogni modifica sostanziale del testo dell'NDA. Nel PR1 il
- * testo è ammorbidito (nulla è ancora registrato lato server); il PR2 (#26)
- * ripristina il testo legale pieno e alza questa versione.
+ * Va incrementata a ogni modifica sostanziale del testo dell'NDA. DEVE restare
+ * allineata a `NDA_VERSION` del server (`server/nda/ndaText.ts`): il backend
+ * rifiuta (422) le firme con una versione diversa. PR2 (#26): testo legale
+ * pieno «blindato» + registrazione server-side (IP/PDF/email).
  */
-export const NDA_VERSION = "pr1-draft-1";
+export const NDA_VERSION = "1.0-clickwrap";
 
 /** Dati raccolti dal manager nelle 3 slide del popup NDA. */
 export type NdaForm = {
