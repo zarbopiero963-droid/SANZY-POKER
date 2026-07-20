@@ -6,7 +6,7 @@
  * focusabili sono letti dal DOM al momento del keydown e filtrati per
  * visibilità, così l'hook resta valido a ogni cambio di contenuto.
  */
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -21,11 +21,27 @@ export function useFocusTrap(
   ref: RefObject<HTMLElement | null>,
   active: boolean = true
 ): void {
-  // Salva e ripristina il focus attorno alla vita del modale.
+  // Cattura l'elemento a fuoco PRIMA del commit di React: `autoFocus` di un campo
+  // interno viene applicato in fase di commit (prima degli effetti passivi),
+  // quindi leggere `document.activeElement` dentro l'effect catturerebbe un nodo
+  // DENTRO il modale — al ripristino il focus cadrebbe su `body` (WCAG 2.4.3).
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  if (active) {
+    if (
+      previouslyFocusedRef.current === null &&
+      typeof document !== "undefined"
+    ) {
+      previouslyFocusedRef.current =
+        document.activeElement as HTMLElement | null;
+    }
+  } else {
+    previouslyFocusedRef.current = null;
+  }
+
+  // Ripristina il focus all'elemento d'apertura allo smontaggio del modale.
   useEffect(() => {
     if (!active) return;
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    return () => previouslyFocused?.focus?.();
+    return () => previouslyFocusedRef.current?.focus?.();
   }, [active]);
 
   // Contiene il Tab dentro il contenitore.

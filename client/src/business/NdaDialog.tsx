@@ -384,9 +384,18 @@ function UnlockPanel({
   onCopy: () => void;
   onLaunch: () => void;
 }) {
+  // Alla firma il pulsante di invio a fuoco viene smontato: spostiamo il focus
+  // sul titolo (focusabile via tabIndex=-1) così lo screen reader annuncia lo
+  // sblocco e il focus resta dentro il dialog modale (non cade su body).
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    titleRef.current?.focus();
+  }, []);
   return (
     <div className="sanzy-unlock">
-      <h2 className="sanzy-unlock__title">{tb("unlock.title", locale)}</h2>
+      <h2 className="sanzy-unlock__title" ref={titleRef} tabIndex={-1}>
+        {tb("unlock.title", locale)}
+      </h2>
       <p className="sanzy-unlock__body">{tb("unlock.body", locale)}</p>
       <p className="sanzy-unlock__notice">{tb("unlock.notice", locale)}</p>
       <div className="sanzy-unlock__pwbox">
@@ -482,6 +491,7 @@ const NDA_CSS = `
 .sanzy-nda__btn--go:hover { background: linear-gradient(180deg, #37c079 0%, #229459 100%); }
 .sanzy-unlock { display: flex; flex-direction: column; gap: 14px; text-align: center; }
 .sanzy-unlock__title { margin: 4px 0 0; font-size: 22px; font-weight: 900; color: #d6b466; }
+.sanzy-unlock__title:focus { outline: none; }
 .sanzy-unlock__body { margin: 0; font-size: 14px; line-height: 1.5; color: #eaf2ec; }
 .sanzy-unlock__notice { margin: 0; font-size: 12.5px; line-height: 1.5; color: #bfd2c6; background: rgba(6, 24, 17, 0.6); border-radius: 10px; padding: 12px 14px; }
 .sanzy-unlock__pwbox { display: flex; flex-direction: column; gap: 8px; }
