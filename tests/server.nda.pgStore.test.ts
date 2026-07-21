@@ -88,6 +88,22 @@ describe("NDA — store Postgres (pg-mem, SQL reale)", () => {
     expect(other.status).toBe("duplicate_email"); // MAI "replay"
   });
 
+  it("retention: una riga oltre la finestra viene cancellata al reserve successivo", async () => {
+    await store.reserve(
+      entry({ idempotencyKey: "old", businessEmail: "a@b.com" })
+    );
+    // invecchia la riga oltre i 30 giorni di retention
+    await pool.query("UPDATE nda_signatures SET created_at = $1", [
+      new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
+    ]);
+    // il reserve successivo pota le righe scadute → l'email è di nuovo prenotabile
+    const r = await store.reserve(
+      entry({ idempotencyKey: "new", businessEmail: "a@b.com" })
+    );
+    expect(r.status).toBe("reserved");
+    expect(await store.getByIdempotencyKey("old")).toBeUndefined();
+  });
+
   it("finalize aggiorna l'esito email persistito", async () => {
     await store.reserve(entry({ idempotencyKey: "k1" }));
     await store.finalize("k1", {

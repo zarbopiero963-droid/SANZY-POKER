@@ -20,6 +20,16 @@ import {
   type StoredSignature,
 } from "./store";
 
+/**
+ * Retention delle righe: la `password` di sessione è persistita per il replay,
+ * ma non deve restare a tempo indefinito nel DB durevole. Le righe più vecchie
+ * di questa finestra vengono cancellate opportunisticamente a ogni `reserve`
+ * (nessun cron): bound sull'esposizione at-rest e anti-replay «una demo per
+ * email» che diventa una finestra scorrevole (dopo la scadenza l'email può
+ * rifirmare). La sessione server-authoritative (PR3 punto 2) affinerà il ciclo.
+ */
+const ROW_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 giorni
+
 const CREATE_TABLE = `
   CREATE TABLE IF NOT EXISTS nda_signatures (
     idempotency_key TEXT PRIMARY KEY,
@@ -82,6 +92,12 @@ export function createPostgresSignatureStore(pool: Pool): SignatureStore {
 
     async reserve(entry): Promise<ReserveOutcome> {
       const email = normalizeEmail(entry.businessEmail);
+      // Cleanup opportunistico delle righe scadute (retention): niente cron,
+      // niente `password` at-rest oltre la finestra. Cutoff passato come
+      // parametro (evita dipendere dall'aritmetica `interval` del motore SQL).
+      await pool.query("DELETE FROM nda_signatures WHERE created_at < $1", [
+        new Date(Date.now() - ROW_RETENTION_MS),
+      ]);
       // INSERT atomico: `ON CONFLICT DO NOTHING` copre SIA la PK
       // (`idempotency_key`) SIA la UNIQUE (`business_email`). Se ha inserito →
       // reserved; altrimenti classifico il conflitto con una lettura per chiave.
