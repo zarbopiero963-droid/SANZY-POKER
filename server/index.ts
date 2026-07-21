@@ -9,11 +9,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Sceglie lo store delle firme: **Postgres durevole** se `DATABASE_URL` è
- * configurata (import dinamico di `pg`, così non è richiesto a runtime quando
- * non serve), altrimenti **in-memory** effimero (dev/CI, o produzione non ancora
- * provisionata — come l'email senza `RESEND_API_KEY`). Se l'init Postgres
- * fallisce si degrada all'in-memory invece di impedire l'avvio del server.
+ * Sceglie lo store delle firme:
+ *  - `DATABASE_URL` ASSENTE → **in-memory** effimero (dev/CI, o produzione non
+ *    ancora provisionata — fallback INTENZIONALE, come l'email senza `RESEND_API_KEY`).
+ *  - `DATABASE_URL` PRESENTE → **Postgres durevole**. Se l'init fallisce NON si
+ *    degrada in silenzio (nasconderebbe una config rotta e ripristinerebbe
+ *    l'anti-replay effimero: un redeploy riconcederebbe la stessa email): si
+ *    propaga l'errore → lo startup fallisce in modo RUMOROSO (readiness KO).
+ * `pg` è importato dinamicamente così non è richiesto a runtime quando non serve.
  */
 async function createSignatureStore(): Promise<SignatureStore> {
   const url = process.env.DATABASE_URL;
@@ -21,29 +24,23 @@ async function createSignatureStore(): Promise<SignatureStore> {
     console.log("[nda] store: in-memory (DATABASE_URL assente → effimero)");
     return createInMemorySignatureStore();
   }
-  try {
-    const { Pool } = await import("pg");
-    const pool = new Pool({ connectionString: url });
-    // Un errore su una connessione IDLE del pool emette 'error': senza handler
-    // sarebbe un uncaught exception → crash del processo. Lo logghiamo (senza la
-    // connection string, che contiene credenziali) e lasciamo che il pool si
-    // riprenda ricreando le connessioni.
-    pool.on("error", err => {
-      console.error("[nda] pool Postgres error (idle):", err.message);
-    });
-    const { ensureSchema, createPostgresSignatureStore } = await import(
-      "./nda/pgStore"
-    );
-    await ensureSchema(pool);
-    console.log("[nda] store: Postgres (durevole)");
-    return createPostgresSignatureStore(pool);
-  } catch (err) {
-    console.error(
-      "[nda] store: init Postgres fallita → fallback in-memory:",
-      err instanceof Error ? err.message : err
-    );
-    return createInMemorySignatureStore();
-  }
+  const { Pool } = await import("pg");
+  const pool = new Pool({ connectionString: url });
+  // Un errore su una connessione IDLE del pool emette 'error': senza handler
+  // sarebbe un uncaught exception → crash del processo. Lo logghiamo (senza la
+  // connection string, che contiene credenziali) e lasciamo che il pool si
+  // riprenda ricreando le connessioni.
+  pool.on("error", err => {
+    console.error("[nda] pool Postgres error (idle):", err.message);
+  });
+  const { ensureSchema, createPostgresSignatureStore } = await import(
+    "./nda/pgStore"
+  );
+  // Se `ensureSchema` lancia (DB irraggiungibile / config errata) l'errore si
+  // propaga: la durabilità era ATTESA, meglio fallire l'avvio che degradare muti.
+  await ensureSchema(pool);
+  console.log("[nda] store: Postgres (durevole)");
+  return createPostgresSignatureStore(pool);
 }
 
 async function startServer() {
@@ -96,4 +93,10 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
+startServer().catch(err => {
+  // Avvio fallito (es. `DATABASE_URL` configurata ma DB irraggiungibile): esci
+  // con codice non-zero così Railway/CI segnalano la readiness KO in modo
+  // evidente, invece di restare su in modo apparentemente sano.
+  console.error("[nda] avvio server fallito:", err);
+  process.exit(1);
+});

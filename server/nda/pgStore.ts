@@ -104,9 +104,13 @@ export function createPostgresSignatureStore(pool: Pool): SignatureStore {
         ]
       );
       if ((ins.rowCount ?? 0) > 0) return { status: "reserved" };
-      // Conflitto: stessa idempotencyKey (replay) o stessa email (409)?
+      // Conflitto: replay SOLO se combaciano chiave E email normalizzata (una
+      // collisione di chiave o il riuso con un'altra email non deve restituire
+      // la sessione di un altro); altrimenti è un conflitto (409).
       const existing = await selectByKey(pool, entry.idempotencyKey);
-      if (existing) return { status: "replay", record: existing };
+      if (existing && existing.businessEmail === email) {
+        return { status: "replay", record: existing };
+      }
       return { status: "duplicate_email" };
     },
 

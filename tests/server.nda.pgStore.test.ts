@@ -67,12 +67,25 @@ describe("NDA — store Postgres (pg-mem, SQL reale)", () => {
 
   it("stessa idempotencyKey → replay del record (no 409, stessa sessione)", async () => {
     await store.reserve(entry({ idempotencyKey: "k1" }));
-    const again = await store.reserve(entry({ idempotencyKey: "k1" }));
+    // replay anche con case/spazi diversi dell'email (normalizzazione coerente)
+    const again = await store.reserve(
+      entry({ idempotencyKey: "k1", businessEmail: "  JOHN@acme.com " })
+    );
     expect(again.status).toBe("replay");
     if (again.status === "replay") {
       expect(again.record.signatureId).toBe("snz_nda_s1");
       expect(again.record.password).toBe("SANZY-ABCD-EFGH");
     }
+  });
+
+  it("stessa chiave ma email DIVERSA → NON fa replay (niente leak cross-email)", async () => {
+    await store.reserve(
+      entry({ idempotencyKey: "k1", businessEmail: "a@b.com" })
+    );
+    const other = await store.reserve(
+      entry({ idempotencyKey: "k1", businessEmail: "evil@x.com" })
+    );
+    expect(other.status).toBe("duplicate_email"); // MAI "replay"
   });
 
   it("finalize aggiorna l'esito email persistito", async () => {

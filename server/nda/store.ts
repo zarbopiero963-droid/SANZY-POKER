@@ -84,7 +84,15 @@ export function createInMemorySignatureStore(): SignatureStore {
       // Check-and-set sincrono (nessun await tra letture e scritture): atomico
       // rispetto ad altre richieste concorrenti.
       const existing = byKey.get(entry.idempotencyKey);
-      if (existing) return { status: "replay", record: existing };
+      if (existing) {
+        // Replay SOLO se combacia anche l'email: una collisione della chiave (o
+        // il riuso della chiave con un'altra email) NON deve mai restituire la
+        // sessione di un altro. Chiave presa da un'email diversa → conflitto.
+        return normalizeEmail(existing.businessEmail) ===
+          normalizeEmail(entry.businessEmail)
+          ? { status: "replay", record: existing }
+          : { status: "duplicate_email" };
+      }
       const emailKey = normalizeEmail(entry.businessEmail);
       if (keyByEmail.has(emailKey)) return { status: "duplicate_email" };
       byKey.set(entry.idempotencyKey, { ...entry });

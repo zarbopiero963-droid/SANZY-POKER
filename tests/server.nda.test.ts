@@ -288,13 +288,28 @@ describe("NDA — store anti-replay (async, atomico, rollback)", () => {
   it("reserve: stessa idempotencyKey → replay del record esistente (no 409)", async () => {
     const store = createInMemorySignatureStore();
     await store.reserve(rec({ idempotencyKey: "k1", signatureId: "s1" }));
-    const again = await store.reserve(rec({ idempotencyKey: "k1" }));
+    // replay anche con case/spazi diversi dell'email (normalizzazione coerente)
+    const again = await store.reserve(
+      rec({ idempotencyKey: "k1", businessEmail: "  a@b.COM " })
+    );
     expect(again.status).toBe("replay");
     if (again.status === "replay") {
       expect(again.record.signatureId).toBe("s1");
       expect(again.record.password).toBe("SANZY-ABCD-EFGH");
     }
     expect((await store.getByIdempotencyKey("k1"))?.signatureId).toBe("s1");
+  });
+
+  it("reserve: stessa chiave ma email DIVERSA → NON fa replay (niente leak)", async () => {
+    const store = createInMemorySignatureStore();
+    await store.reserve(
+      rec({ idempotencyKey: "k1", businessEmail: "a@b.com" })
+    );
+    // collisione/riuso chiave con un'altra email: non deve restituire la sessione
+    const other = await store.reserve(
+      rec({ idempotencyKey: "k1", businessEmail: "evil@x.com" })
+    );
+    expect(other.status).toBe("duplicate_email"); // MAI "replay"
   });
 
   it("finalize aggiorna l'esito email; release libera solo col signatureId giusto", async () => {
