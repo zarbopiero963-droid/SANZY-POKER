@@ -23,12 +23,24 @@ import {
 /**
  * Retention delle righe: la `password` di sessione è persistita per il replay,
  * ma non deve restare a tempo indefinito nel DB durevole. Le righe più vecchie
- * di questa finestra vengono cancellate opportunisticamente a ogni `reserve`
- * (nessun cron): bound sull'esposizione at-rest e anti-replay «una demo per
- * email» che diventa una finestra scorrevole (dopo la scadenza l'email può
- * rifirmare). La sessione server-authoritative (PR3 punto 2) affinerà il ciclo.
+ * di questa finestra vengono cancellate sia da un timer SCHEDULATO
+ * (`server/index.ts`, attivo anche con traffico nullo) sia opportunisticamente
+ * a ogni `reserve` (finestra scorrevole fra un tick e l'altro): bound
+ * sull'esposizione at-rest e anti-replay «una demo per email» che diventa una
+ * finestra scorrevole (dopo la scadenza l'email può rifirmare). La sessione
+ * server-authoritative (PR3 punto 2) affinerà il ciclo.
  */
 export const ROW_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 giorni
+
+/**
+ * Probabilità del cleanup OPPORTUNISTICO sul percorso caldo di `reserve`. La
+ * retention è già garantita dal timer schedulato (`server/index.ts`); qui il
+ * prune serve solo come finestra scorrevole fra un tick e l'altro, quindi non
+ * deve girare a ogni firma (un `DELETE` incondizionato per richiesta genera
+ * dead-tuple/autovacuum churn se il traffico cresce). Campionandolo a ~3% resta
+ * frequente sotto carico ma non pesa sul singolo `reserve`.
+ */
+export const OPPORTUNISTIC_CLEANUP_PROBABILITY = 0.03;
 
 const CREATE_TABLE = `
   CREATE TABLE IF NOT EXISTS nda_signatures (
@@ -79,6 +91,26 @@ async function selectByKey(
   return rows[0] ? rowToRecord(rows[0]) : undefined;
 }
 
+/**
+ * Cancella le righe oltre la retention (`created_at < now - ROW_RETENTION_MS`).
+ * BEST-EFFORT: logga e NON rilancia, così né una firma né il cleanup schedulato
+ * falliscono per un errore del DELETE. Usata sia opportunisticamente (in
+ * `reserve`) sia da un timer schedulato (in `server/index.ts`), così la
+ * `password` at-rest non sopravvive oltre la finestra anche con traffico nullo.
+ */
+export async function pruneExpired(pool: Pool): Promise<void> {
+  try {
+    await pool.query("DELETE FROM nda_signatures WHERE created_at < $1", [
+      new Date(Date.now() - ROW_RETENTION_MS),
+    ]);
+  } catch (err) {
+    console.error(
+      "[nda] cleanup retention fallito (non blocca la firma):",
+      err instanceof Error ? err.message : err
+    );
+  }
+}
+
 /** Crea tabella e indice se non esistono (migrazione idempotente, all'avvio). */
 export async function ensureSchema(pool: Pool): Promise<void> {
   await pool.query(CREATE_TABLE);
@@ -97,20 +129,14 @@ export function createPostgresSignatureStore(pool: Pool): SignatureStore {
 
     async reserve(entry): Promise<ReserveOutcome> {
       const email = normalizeEmail(entry.businessEmail);
-      // Cleanup opportunistico delle righe scadute (retention): niente cron,
-      // niente `password` at-rest oltre la finestra. Cutoff passato come
-      // parametro (evita dipendere dall'aritmetica `interval` del motore SQL).
-      // BEST-EFFORT: un fallimento del cleanup NON deve far fallire la firma →
-      // try/catch separato dall'INSERT (non nella stessa transazione).
-      try {
-        await pool.query("DELETE FROM nda_signatures WHERE created_at < $1", [
-          new Date(Date.now() - ROW_RETENTION_MS),
-        ]);
-      } catch (err) {
-        console.error(
-          "[nda] cleanup retention fallito (non blocca la firma):",
-          err instanceof Error ? err.message : err
-        );
+      // Cleanup opportunistico delle righe scadute (retention): la retention è
+      // già garantita dal timer schedulato (server/index.ts); qui campioniamo il
+      // prune a ~3% così la finestra anti-replay scorre anche fra un tick e
+      // l'altro SENZA un `DELETE` incondizionato per richiesta (dead-tuple churn
+      // sotto carico). BEST-EFFORT (vedi `pruneExpired`): un fallimento del
+      // cleanup NON fa fallire la firma, ed è separato dall'INSERT.
+      if (Math.random() < OPPORTUNISTIC_CLEANUP_PROBABILITY) {
+        await pruneExpired(pool);
       }
       // INSERT atomico: `ON CONFLICT DO NOTHING` copre SIA la PK
       // (`idempotency_key`) SIA la UNIQUE (`business_email`). Se ha inserito →

@@ -6,11 +6,12 @@
  * classificazione reserved/replay/duplicate_email. Stessi invarianti della
  * versione in-memory, ma sul motore SQL.
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { newDb, type IMemoryDb } from "pg-mem";
 import {
   createPostgresSignatureStore,
   ensureSchema,
+  pruneExpired,
   ROW_RETENTION_MS,
 } from "../server/nda/pgStore";
 import { IDEM_TTL_MS } from "../client/src/business/demoSession";
@@ -98,19 +99,82 @@ describe("NDA — store Postgres (pg-mem, SQL reale)", () => {
   });
 
   it("retention: una riga oltre la finestra viene cancellata al reserve successivo", async () => {
+    // Il prune opportunistico è campionato (~3%): forzo Math.random sotto soglia
+    // così il percorso è deterministico in test (la retention garantita resta
+    // comunque il timer schedulato / `pruneExpired` diretto, testati a parte).
+    const rnd = vi.spyOn(Math, "random").mockReturnValue(0);
+    try {
+      await store.reserve(
+        entry({ idempotencyKey: "old", businessEmail: "a@b.com" })
+      );
+      // invecchia la riga oltre i 30 giorni di retention
+      await pool.query("UPDATE nda_signatures SET created_at = $1", [
+        new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
+      ]);
+      // il reserve successivo pota le righe scadute → l'email è di nuovo prenotabile
+      const r = await store.reserve(
+        entry({ idempotencyKey: "new", businessEmail: "a@b.com" })
+      );
+      expect(r.status).toBe("reserved");
+      expect(await store.getByIdempotencyKey("old")).toBeUndefined();
+    } finally {
+      rnd.mockRestore();
+    }
+  });
+
+  it("il prune opportunistico è campionato: sopra soglia NON pota sul reserve", async () => {
+    // Con Math.random ≥ soglia il reserve NON esegue il DELETE (evita la
+    // scrittura per-richiesta): la riga scaduta resta finché non interviene il
+    // timer schedulato. Prova che il gate probabilistico è realmente attivo.
+    const rnd = vi.spyOn(Math, "random").mockReturnValue(0.99);
+    try {
+      await store.reserve(
+        entry({ idempotencyKey: "old", businessEmail: "a@b.com" })
+      );
+      await pool.query("UPDATE nda_signatures SET created_at = $1", [
+        new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
+      ]);
+      await store.reserve(
+        entry({ idempotencyKey: "k2", businessEmail: "c@d.com" })
+      );
+      // non potata dal reserve (gate sopra soglia)
+      expect(await store.getByIdempotencyKey("old")).toBeDefined();
+    } finally {
+      rnd.mockRestore();
+    }
+  });
+
+  it("pruneExpired (cleanup schedulato) pota le righe scadute anche senza reserve", async () => {
+    // Il timer schedulato (server/index.ts) chiama pruneExpired direttamente:
+    // deve cancellare le righe oltre la finestra SENZA passare da un reserve,
+    // così la password at-rest non sopravvive con traffico nullo.
     await store.reserve(
       entry({ idempotencyKey: "old", businessEmail: "a@b.com" })
     );
-    // invecchia la riga oltre i 30 giorni di retention
-    await pool.query("UPDATE nda_signatures SET created_at = $1", [
-      new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
-    ]);
-    // il reserve successivo pota le righe scadute → l'email è di nuovo prenotabile
-    const r = await store.reserve(
-      entry({ idempotencyKey: "new", businessEmail: "a@b.com" })
+    await store.reserve(
+      entry({
+        idempotencyKey: "fresh",
+        businessEmail: "c@d.com",
+        signatureId: "snz_nda_s2",
+      })
     );
-    expect(r.status).toBe("reserved");
+    // invecchia SOLO la prima riga oltre i 30 giorni
+    await pool.query(
+      "UPDATE nda_signatures SET created_at = $1 WHERE idempotency_key = 'old'",
+      [new Date(Date.now() - 40 * 24 * 60 * 60 * 1000)]
+    );
+    await pruneExpired(pool);
     expect(await store.getByIdempotencyKey("old")).toBeUndefined();
+    expect(await store.getByIdempotencyKey("fresh")).toBeDefined();
+  });
+
+  it("pruneExpired è best-effort: un errore del DELETE non rilancia", async () => {
+    // Se il pool query fallisce, pruneExpired logga e NON rilancia (né la firma
+    // né il timer schedulato devono cadere per un errore di cleanup).
+    const brokenPool = {
+      query: () => Promise.reject(new Error("db down")),
+    } as unknown as Pool;
+    await expect(pruneExpired(brokenPool)).resolves.toBeUndefined();
   });
 
   it("finalize aggiorna l'esito email persistito", async () => {

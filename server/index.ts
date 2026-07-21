@@ -33,9 +33,8 @@ async function createSignatureStore(): Promise<SignatureStore> {
   pool.on("error", err => {
     console.error("[nda] pool Postgres error (idle):", err.message);
   });
-  const { ensureSchema, createPostgresSignatureStore } = await import(
-    "./nda/pgStore"
-  );
+  const { ensureSchema, createPostgresSignatureStore, pruneExpired } =
+    await import("./nda/pgStore");
   // Retry con backoff: un'indisponibilità TRANSITORIA del DB all'avvio (deploy
   // concorrente, restart del DB su Railway) non deve crashare al primo colpo.
   // Dopo N tentativi falliti si propaga l'errore → lo startup fallisce (meglio
@@ -55,6 +54,17 @@ async function createSignatureStore(): Promise<SignatureStore> {
       await new Promise(r => setTimeout(r, backoffMs));
     }
   }
+  // Cleanup di retention SCHEDULATO: il prune opportunistico in `reserve` non
+  // scatta se non arrivano firme, così una `password` at-rest potrebbe restare
+  // oltre la finestra con traffico nullo. Un timer best-effort (unref: non
+  // tiene vivo il processo) pota comunque a intervalli regolari. Un prime
+  // iniziale al boot pota subito ciò che si è accumulato mentre era spento.
+  const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000; // ogni 6 ore
+  void pruneExpired(pool);
+  const cleanupTimer = setInterval(() => {
+    void pruneExpired(pool);
+  }, CLEANUP_INTERVAL_MS);
+  cleanupTimer.unref?.();
   console.log("[nda] store: Postgres (durevole)");
   return createPostgresSignatureStore(pool);
 }
