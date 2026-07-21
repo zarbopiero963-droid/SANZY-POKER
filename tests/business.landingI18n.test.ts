@@ -11,6 +11,7 @@ import {
   BIZ_LOCALES,
   BIZ_STRINGS,
   bizKeys,
+  detectBizLocale,
   tb,
 } from "../client/src/business/landingI18n";
 
@@ -80,5 +81,44 @@ describe("landingI18n — risoluzione e interpolazione di tb()", () => {
 
   it("usa l'italiano come lingua di default", () => {
     expect(tb("nda.submit")).toBe("Entra nel futuro");
+  });
+});
+
+describe("detectBizLocale — auto-riconoscimento lingua dal browser", () => {
+  it("italiano preferito → it (accetta regione e maiuscole)", () => {
+    expect(detectBizLocale(["it-IT", "en-US"])).toBe("it");
+    expect(detectBizLocale(["it"])).toBe("it");
+    expect(detectBizLocale("it-CH")).toBe("it");
+    expect(detectBizLocale("  IT-it  ")).toBe("it"); // trim + case-insensitive
+  });
+
+  it("inglese preferito → en", () => {
+    expect(detectBizLocale(["en-US"])).toBe("en");
+    expect(detectBizLocale("en-GB")).toBe("en");
+  });
+
+  it("rispetta l'ORDINE di preferenza (prima lingua riconosciuta vince)", () => {
+    // en prima di it → en; it prima di en → it
+    expect(detectBizLocale(["en-US", "it-IT"])).toBe("en");
+    expect(detectBizLocale(["it-IT", "en-US"])).toBe("it");
+  });
+
+  it("qualsiasi altra lingua nota (non IT) → en (target B2B estero)", () => {
+    expect(detectBizLocale(["fr-FR"])).toBe("en");
+    expect(detectBizLocale(["es"])).toBe("en");
+    expect(detectBizLocale(["de-DE", "it-IT"])).toBe("en"); // de viene prima
+  });
+
+  it("nessuna informazione → default business (it)", () => {
+    expect(detectBizLocale([])).toBe("it");
+    expect(detectBizLocale(undefined)).toBe("it");
+    expect(detectBizLocale(null)).toBe("it");
+    expect(detectBizLocale("")).toBe("it");
+  });
+
+  it("il risultato è sempre una BizLocale valida", () => {
+    for (const input of [["it"], ["en"], ["fr"], [], undefined, "xx"]) {
+      expect(BIZ_LOCALES).toContain(detectBizLocale(input as string[]));
+    }
   });
 });

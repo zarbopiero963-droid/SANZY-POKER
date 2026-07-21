@@ -12,6 +12,38 @@ export type BizLocale = "it" | "en";
 export const BIZ_LOCALES: BizLocale[] = ["it", "en"];
 export const DEFAULT_BIZ_LOCALE: BizLocale = "it";
 
+/**
+ * Auto-riconoscimento della lingua business dalle preferenze del browser
+ * (`navigator.languages` / `navigator.language`). Pura e deterministica per
+ * essere testabile senza un DOM.
+ *
+ * Regola: la sezione B2B è solo IT/EN. Si scorre l'elenco in ordine di
+ * preferenza dell'utente e si sceglie la PRIMA lingua riconosciuta —
+ * italiano → `it`, qualsiasi altra lingua nota → `en` (target esteri
+ * anglofoni). Se l'elenco è vuoto/indefinito (nessuna informazione) si torna
+ * a `DEFAULT_BIZ_LOCALE`. Il confronto è sul prefisso ISO (`it`, `it-IT`,
+ * `it-CH` → italiano) e case-insensitive.
+ */
+export function detectBizLocale(
+  languages?: readonly string[] | string | null
+): BizLocale {
+  const list =
+    typeof languages === "string"
+      ? [languages]
+      : Array.isArray(languages)
+        ? languages
+        : [];
+  for (const raw of list) {
+    if (typeof raw !== "string") continue;
+    const primary = raw.trim().toLowerCase().split("-")[0];
+    if (primary === "it") return "it";
+    if (primary === "en") return "en";
+    // Altra lingua nota (es. fr/es/de): per il funnel B2B estero → inglese.
+    if (primary.length >= 2) return "en";
+  }
+  return DEFAULT_BIZ_LOCALE;
+}
+
 type Entry = Record<BizLocale, string>;
 
 /**
@@ -47,14 +79,20 @@ export const BIZ_STRINGS = {
     it: "Accesso su firma NDA · 15 minuti di gioco reale",
     en: "Access on NDA signature · 15 minutes of real play",
   },
-  // Mostra la lingua di DESTINAZIONE del toggle (in IT il pulsante offre "EN").
-  "landing.localeToggle": {
-    it: "EN",
-    en: "IT",
+  // Selettore lingua a due pulsanti espliciti (IT | EN): quello attivo è
+  // evidenziato e cliccare una lingua la seleziona direttamente — niente più
+  // ambiguità «mostra la destinazione» del vecchio toggle.
+  "landing.langSelectAria": {
+    it: "Seleziona la lingua",
+    en: "Select language",
   },
-  "landing.localeToggleAria": {
-    it: "Cambia lingua in inglese",
-    en: "Switch language to Italian",
+  "landing.langItAria": {
+    it: "Passa all'italiano",
+    en: "Switch to Italian",
+  },
+  "landing.langEnAria": {
+    it: "Passa all'inglese",
+    en: "Switch to English",
   },
   // Marchio: valori costanti nelle due lingue (brand), ma passano da tb().
   "brand.name": { it: "Sanzy Poker", en: "Sanzy Poker" },
