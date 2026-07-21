@@ -17,6 +17,8 @@ import {
   NDA_VERSION,
   generateSessionPassword,
   isExpired,
+  clearIdempotencyKey,
+  idempotencyKeyFor,
   isNdaFormValid,
   isTimerAnnounceTick,
   isValidEmail,
@@ -269,6 +271,32 @@ describe("demoSession — persistenza minimale (no PII)", () => {
     ]) {
       expect(raw).not.toHaveProperty(pii);
     }
+  });
+
+  it("idempotencyKeyFor: mappa per email; «cambio email e ritorno» conserva la chiave", () => {
+    const kA = idempotencyKeyFor("John@Acme.com");
+    expect(kA).toMatch(/^[A-Za-z0-9_-]{8,64}$/);
+    // stessa email (case-insensitive) → stessa chiave persistita
+    expect(idempotencyKeyFor("john@acme.com")).toBe(kA);
+    // email diversa → chiave diversa (firma diversa)
+    const kB = idempotencyKeyFor("mary@other.com");
+    expect(kB).not.toBe(kA);
+    // REGRESSIONE lockout: provare un'altra email e TORNARE alla prima NON deve
+    // rigenerare la chiave della prima (altrimenti il retry → 409 already_signed).
+    expect(idempotencyKeyFor("John@Acme.com")).toBe(kA);
+    // entrambe restano recuperabili in parallelo
+    expect(idempotencyKeyFor("mary@other.com")).toBe(kB);
+    // clear (reset totale) → rigenera
+    clearIdempotencyKey();
+    expect(idempotencyKeyFor("John@Acme.com")).not.toBe(kA);
+  });
+
+  it("idempotencyKeyFor NON persiste l'email in chiaro (solo hash pseudonimo)", () => {
+    idempotencyKeyFor("secret.person@bigcorp.com");
+    const raw = localStorage.getItem("sanzy.nda.idem") ?? "";
+    // nello storage finisce solo l'hash + una chiave casuale, MAI l'email
+    expect(raw).not.toContain("secret.person@bigcorp.com");
+    expect(raw).not.toContain("bigcorp.com");
   });
 
   it("NON persiste companyCopyRequested (flag in-memory, non nello storage)", () => {

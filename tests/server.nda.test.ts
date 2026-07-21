@@ -56,7 +56,11 @@ const VALID_BODY = {
   accepted: true as const,
   ndaLocale: "en" as const,
   ndaVersion: NDA_VERSION,
+  idempotencyKey: "idem-aaaaaaaa",
 };
+
+/** VALID_BODY con una chiave d'idempotenza diversa (nuovo tentativo di firma). */
+const withKey = (idempotencyKey: string) => ({ ...VALID_BODY, idempotencyKey });
 
 const RECORD: SignedNdaRecord = {
   signatureId: "snz_nda_deadbeef",
@@ -245,31 +249,88 @@ describe("NDA — store anti-replay (async, atomico, rollback)", () => {
     expect(normalizeEmail("  A@B.COM ")).toBe("a@b.com");
   });
 
-  it("tryRecord registra e deduplica; release libera", async () => {
+  const rec = (over: Partial<Parameters<typeof mkEntry>[0]> = {}) =>
+    mkEntry(over);
+  function mkEntry(over: {
+    idempotencyKey?: string;
+    businessEmail?: string;
+    signatureId?: string;
+  }) {
+    return {
+      idempotencyKey: over.idempotencyKey ?? "k1",
+      businessEmail: over.businessEmail ?? "A@B.com",
+      signatureId: over.signatureId ?? "s1",
+      password: "SANZY-ABCD-EFGH",
+      startedAt: 1,
+      ndaVersion: NDA_VERSION,
+      serverAcknowledged: false,
+      companyCopyRequested: false,
+    };
+  }
+
+  it("reserve: prima volta registra; stessa email + chiave DIVERSA → duplicate_email", async () => {
     const store = createInMemorySignatureStore();
-    expect(await store.has("a@b.com")).toBe(false);
-    expect(
-      await store.tryRecord({
-        signatureId: "s1",
-        businessEmail: "A@B.com",
-        startedAt: 1,
-      })
-    ).toBe(true);
-    expect(await store.has("a@b.com")).toBe(true);
-    expect((await store.get("a@b.com"))?.signatureId).toBe("s1");
-    // duplicato → false (nessuna eccezione)
-    expect(
-      await store.tryRecord({
-        signatureId: "s2",
-        businessEmail: "a@b.com",
-        startedAt: 2,
-      })
-    ).toBe(false);
+    expect((await store.reserve(rec({ idempotencyKey: "k1" }))).status).toBe(
+      "reserved"
+    );
+    // stessa email, chiave diversa → «una demo per email»
+    const dup = await store.reserve(
+      rec({ idempotencyKey: "k2", signatureId: "s2" })
+    );
+    expect(dup.status).toBe("duplicate_email");
+    // email normalizzata (case-insensitive)
+    const dup2 = await store.reserve(
+      rec({ idempotencyKey: "k3", businessEmail: "a@b.com", signatureId: "s3" })
+    );
+    expect(dup2.status).toBe("duplicate_email");
+  });
+
+  it("reserve: stessa idempotencyKey → replay del record esistente (no 409)", async () => {
+    const store = createInMemorySignatureStore();
+    await store.reserve(rec({ idempotencyKey: "k1", signatureId: "s1" }));
+    // replay anche con case/spazi diversi dell'email (normalizzazione coerente)
+    const again = await store.reserve(
+      rec({ idempotencyKey: "k1", businessEmail: "  a@b.COM " })
+    );
+    expect(again.status).toBe("replay");
+    if (again.status === "replay") {
+      expect(again.record.signatureId).toBe("s1");
+      expect(again.record.password).toBe("SANZY-ABCD-EFGH");
+    }
+    expect((await store.getByIdempotencyKey("k1"))?.signatureId).toBe("s1");
+  });
+
+  it("reserve: stessa chiave ma email DIVERSA → NON fa replay (niente leak)", async () => {
+    const store = createInMemorySignatureStore();
+    await store.reserve(
+      rec({ idempotencyKey: "k1", businessEmail: "a@b.com" })
+    );
+    // collisione/riuso chiave con un'altra email: non deve restituire la sessione
+    const other = await store.reserve(
+      rec({ idempotencyKey: "k1", businessEmail: "evil@x.com" })
+    );
+    expect(other.status).toBe("duplicate_email"); // MAI "replay"
+  });
+
+  it("finalize aggiorna l'esito email; release libera solo col signatureId giusto", async () => {
+    const store = createInMemorySignatureStore();
+    await store.reserve(rec({ idempotencyKey: "k1", signatureId: "s1" }));
+    await store.finalize("k1", {
+      serverAcknowledged: true,
+      companyCopyRequested: true,
+    });
+    const r = await store.getByIdempotencyKey("k1");
+    expect(r?.serverAcknowledged).toBe(true);
+    expect(r?.companyCopyRequested).toBe(true);
     // release con signatureId SBAGLIATO non cancella; con quello giusto sì.
     await store.release("a@b.com", "wrong");
-    expect(await store.has("a@b.com")).toBe(true);
+    expect(await store.getByIdempotencyKey("k1")).toBeDefined();
     await store.release("a@b.com", "s1");
-    expect(await store.has("a@b.com")).toBe(false);
+    expect(await store.getByIdempotencyKey("k1")).toBeUndefined();
+    // dopo il release l'email è di nuovo prenotabile (con una nuova chiave)
+    expect((await store.reserve(rec({ idempotencyKey: "k9" }))).status).toBe(
+      "reserved"
+    );
   });
 });
 
@@ -380,7 +441,27 @@ describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
     // nessuna copia all'azienda in questo caso base
     expect(res.body.companyCopyRequested).toBe(false);
     // email inviata → prenotazione mantenuta (anti-replay attivo)
-    expect(await c.store.has(VALID_BODY.businessEmail)).toBe(true);
+    expect(
+      await c.store.getByIdempotencyKey(VALID_BODY.idempotencyKey)
+    ).toBeDefined();
+  });
+
+  it("idempotenza: retry con la STESSA chiave → 200 con la stessa sessione, nessuna seconda email", async () => {
+    let calls = 0;
+    const c = ctx(async () => {
+      calls++;
+      return { sent: true as const, id: "e1", companyCopyRequested: false };
+    });
+    const first = await processNdaSign(VALID_BODY, c);
+    const retry = await processNdaSign(VALID_BODY, c); // stessa idempotencyKey
+    expect(first.status).toBe(200);
+    expect(retry.status).toBe(200);
+    // stesse credenziali (recupero della sessione, non 409, non nuove creds)
+    expect(retry.body.signatureId).toBe(first.body.signatureId);
+    expect(retry.body.password).toBe(first.body.password);
+    expect(retry.body.startedAt).toBe(first.body.startedAt);
+    // la seconda volta NON si rigenera PDF/email
+    expect(calls).toBe(1);
   });
 
   it("processNdaSign propaga companyCopyRequested:true nella risposta", async () => {
@@ -402,8 +483,11 @@ describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
     expect(res.body.serverAcknowledged).toBe(false);
     // degrada l'EMAIL, non l'anti-replay: la prenotazione resta → «una demo per
     // email» tiene anche senza RESEND_API_KEY.
-    expect(await c.store.has(VALID_BODY.businessEmail)).toBe(true);
-    const res2 = await processNdaSign(VALID_BODY, c);
+    expect(
+      await c.store.getByIdempotencyKey(VALID_BODY.idempotencyKey)
+    ).toBeDefined();
+    // nuovo tentativo (chiave DIVERSA) sulla stessa email → 409
+    const res2 = await processNdaSign(withKey("idem-bbbbbbbb"), c);
     expect(res2.status).toBe(409);
   });
 
@@ -417,7 +501,9 @@ describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
     expect(res.status).toBe(503);
     expect(res.body.error).toBe("email_unavailable");
     // rilasciata: l'utente può ritentare (niente firma «persa» dietro un 409)
-    expect(await c.store.has(VALID_BODY.businessEmail)).toBe(false);
+    expect(
+      await c.store.getByIdempotencyKey(VALID_BODY.idempotencyKey)
+    ).toBeUndefined();
   });
 
   it("fail-closed (requireEmail): no-api-key → 503 e prenotazione rilasciata", async () => {
@@ -425,18 +511,20 @@ describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
     const res = await processNdaSign(VALID_BODY, c);
     expect(res.status).toBe(503);
     expect(res.body.error).toBe("email_unavailable");
-    expect(await c.store.has(VALID_BODY.businessEmail)).toBe(false);
+    expect(
+      await c.store.getByIdempotencyKey(VALID_BODY.idempotencyKey)
+    ).toBeUndefined();
   });
 
-  it("anti-replay: seconda firma stessa email (prima inviata) → 409", async () => {
+  it("anti-replay: nuova firma stessa email, chiave DIVERSA → 409", async () => {
     const c = ctx(emailSent);
     await processNdaSign(VALID_BODY, c);
-    const res2 = await processNdaSign(VALID_BODY, c);
+    const res2 = await processNdaSign(withKey("idem-cccccccc"), c);
     expect(res2.status).toBe(409);
     expect(res2.body.error).toBe("already_signed");
   });
 
-  it("concorrenza: due firme simultanee stessa email → una 200 e una 409", async () => {
+  it("concorrenza: due firme simultanee stessa email, chiavi DIVERSE → una 200 e una 409", async () => {
     const store = createInMemorySignatureStore();
     const mk = () => ({
       store,
@@ -447,8 +535,8 @@ describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
       sendEmail: emailSent,
     });
     const [r1, r2] = await Promise.all([
-      processNdaSign(VALID_BODY, mk()),
-      processNdaSign(VALID_BODY, mk()),
+      processNdaSign(withKey("idem-concur01"), mk()),
+      processNdaSign(withKey("idem-concur02"), mk()),
     ]);
     expect([r1.status, r2.status].sort()).toEqual([200, 409]);
   });

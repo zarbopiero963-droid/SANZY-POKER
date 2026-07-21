@@ -43,7 +43,7 @@ describe("submitNda — validazione risposta server", () => {
       startedAt: 8.64e15 + 1,
       serverAcknowledged: true,
     });
-    const r = await submitNda(FORM, "it");
+    const r = await submitNda(FORM, "it", "idem-testkey1");
     expect(r.ok).toBe(false);
     expect(r.error).toBe("bad_response");
     // Prova che il valore rifiutato avrebbe davvero rotto Date:
@@ -58,7 +58,7 @@ describe("submitNda — validazione risposta server", () => {
       startedAt: 1.5,
       serverAcknowledged: true,
     });
-    const r = await submitNda(FORM, "it");
+    const r = await submitNda(FORM, "it", "idem-testkey1");
     expect(r.ok).toBe(false);
     expect(r.error).toBe("bad_response");
   });
@@ -72,7 +72,7 @@ describe("submitNda — validazione risposta server", () => {
       startedAt: now,
       serverAcknowledged: true,
     });
-    const r = await submitNda(FORM, "en");
+    const r = await submitNda(FORM, "en", "idem-testkey1");
     expect(r).toEqual({
       ok: true,
       signatureId: "snz_nda_real",
@@ -94,14 +94,29 @@ describe("submitNda — validazione risposta server", () => {
       serverAcknowledged: true,
       companyCopyRequested: true,
     });
-    const r = await submitNda(FORM, "it");
+    const r = await submitNda(FORM, "it", "idem-testkey1");
     expect(r.ok).toBe(true);
     expect(r.companyCopyRequested).toBe(true);
   });
 
+  it("invia idempotencyKey nel body della richiesta", async () => {
+    mockFetchJson(200, {
+      ok: true,
+      signatureId: "snz_nda_real",
+      password: "SANZY-WXYZ-1234",
+      startedAt: 1_800_000_000_000,
+      serverAcknowledged: true,
+    });
+    await submitNda(FORM, "it", "idem-abcdef12");
+    const call = (global.fetch as unknown as { mock: { calls: unknown[][] } })
+      .mock.calls[0];
+    const body = JSON.parse((call[1] as { body: string }).body);
+    expect(body.idempotencyKey).toBe("idem-abcdef12");
+  });
+
   it("errore server (409) → propaga il codice d'errore", async () => {
     mockFetchJson(409, { ok: false, error: "already_signed" });
-    const r = await submitNda(FORM, "it");
+    const r = await submitNda(FORM, "it", "idem-testkey1");
     expect(r.ok).toBe(false);
     expect(r.error).toBe("already_signed");
   });
@@ -110,7 +125,7 @@ describe("submitNda — validazione risposta server", () => {
     global.fetch = vi
       .fn()
       .mockRejectedValue(new Error("offline")) as unknown as typeof fetch;
-    const r = await submitNda(FORM, "it");
+    const r = await submitNda(FORM, "it", "idem-testkey1");
     expect(r.error).toBe("network");
   });
 
@@ -127,7 +142,7 @@ describe("submitNda — validazione risposta server", () => {
         });
       });
     }) as unknown as typeof fetch;
-    const p = submitNda(FORM, "it");
+    const p = submitNda(FORM, "it", "idem-testkey1");
     await vi.advanceTimersByTimeAsync(20000); // oltre REQUEST_TIMEOUT_MS (15s)
     const r = await p;
     expect(aborted).toBe(true);

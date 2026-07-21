@@ -26,7 +26,7 @@ import {
   type SignedNdaRecord,
 } from "./signing";
 import { NDA_VERSION } from "./ndaText";
-import type { SignatureStore } from "./store";
+import type { SignatureStore, StoredSignature } from "./store";
 import { sendNdaEmail, type EmailResult, type NdaEmailInput } from "./email";
 import { createRateLimiter, type RateLimiter } from "./rateLimit";
 
@@ -82,15 +82,26 @@ export async function processNdaSign(
   const password = (deps.newPassword ?? generateSessionPassword)();
   const acceptedAt = new Date(deps.now).toISOString();
 
-  // Prenotazione ATOMICA prima di qualunque await: due richieste concorrenti con
-  // la stessa email non possono passare entrambe (niente 500 spurio, niente
-  // doppia email). La seconda ottiene 409.
-  const reserved = await deps.store.tryRecord({
-    signatureId,
+  // Prenotazione ATOMICA + idempotenza. `reserve` classifica l'esito:
+  //  - `replay`: stessa `idempotencyKey` già firmata → ritorna la sessione
+  //    esistente (una risposta persa NON esclude l'utente al retry);
+  //  - `duplicate_email`: email già firmata con un'altra chiave → 409;
+  //  - `reserved`: si procede. Fatto PRIMA di ogni await → niente race, niente
+  //    doppia email tra richieste concorrenti.
+  const outcome = await deps.store.reserve({
+    idempotencyKey: req.idempotencyKey,
     businessEmail: req.businessEmail,
+    signatureId,
+    password,
     startedAt: deps.now,
+    ndaVersion: req.ndaVersion,
+    serverAcknowledged: false,
+    companyCopyRequested: false,
   });
-  if (!reserved) {
+  if (outcome.status === "replay") {
+    return { status: 200, body: replayBody(outcome.record) };
+  }
+  if (outcome.status === "duplicate_email") {
     return { status: 409, body: { ok: false, error: "already_signed" } };
   }
 
@@ -149,6 +160,15 @@ export async function processNdaSign(
     // degrada l'EMAIL, non l'anti-replay — la prenotazione resta (una demo per
     // email tiene comunque) e la demo è concessa con `serverAcknowledged:false`.
 
+    // Persisti l'esito email così un futuro replay è fedele.
+    const companyCopyRequested = email.sent
+      ? email.companyCopyRequested
+      : false;
+    await deps.store.finalize(req.idempotencyKey, {
+      serverAcknowledged: email.sent,
+      companyCopyRequested,
+    });
+
     return {
       status: 200,
       body: {
@@ -157,7 +177,7 @@ export async function processNdaSign(
         password,
         startedAt: deps.now,
         serverAcknowledged: email.sent,
-        companyCopyRequested: email.sent ? email.companyCopyRequested : false,
+        companyCopyRequested,
       },
     };
   } catch (err) {
@@ -166,6 +186,22 @@ export async function processNdaSign(
     console.error("[nda] errore durante la firma:", err);
     return { status: 500, body: { ok: false, error: "internal_error" } };
   }
+}
+
+/**
+ * Ricostruisce la risposta 200 da una firma GIÀ registrata (retry idempotente):
+ * stessi signatureId/password/startedAt/esito email dell'invio originale, senza
+ * generare nuove credenziali né ri-inviare l'email.
+ */
+function replayBody(record: StoredSignature): NdaSignResponse {
+  return {
+    ok: true,
+    signatureId: record.signatureId,
+    password: record.password,
+    startedAt: record.startedAt,
+    serverAcknowledged: record.serverAcknowledged,
+    companyCopyRequested: record.companyCopyRequested,
+  };
 }
 
 /** Maschera l'email per l'audit log (GDPR): `j***@dominio.com`. Con local-part

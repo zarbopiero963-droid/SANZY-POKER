@@ -1,0 +1,189 @@
+/**
+ * Implementazione DUREVOLE di `SignatureStore` su Postgres (PR3, #30 punto 1).
+ *
+ * Dietro la stessa interfaccia dell'in-memory: si attiva quando `DATABASE_URL`
+ * è configurata (vedi `server/index.ts`); altrimenti si degrada all'in-memory,
+ * come l'email senza `RESEND_API_KEY`. L'atomicità di `reserve` è garantita dai
+ * vincoli PRIMARY KEY (`idempotency_key`) e UNIQUE (`business_email`): un unico
+ * `INSERT ... ON CONFLICT DO NOTHING` decide reserved/replay/duplicate senza race.
+ *
+ * NB: la `password` è persistita perché è ciò che permette il replay della
+ * sessione dopo una risposta persa (è un token di sessione a bassa sensibilità,
+ * non una credenziale d'account). La verifica dell'email del firmatario è il
+ * punto 3 di #30.
+ */
+import type { Pool } from "pg";
+import {
+  normalizeEmail,
+  type ReserveOutcome,
+  type SignatureStore,
+  type StoredSignature,
+} from "./store";
+
+/**
+ * Retention delle righe: la `password` di sessione è persistita per il replay,
+ * ma non deve restare a tempo indefinito nel DB durevole. Le righe più vecchie
+ * di questa finestra vengono cancellate sia da un timer SCHEDULATO
+ * (`server/index.ts`, attivo anche con traffico nullo) sia opportunisticamente
+ * a ogni `reserve` (finestra scorrevole fra un tick e l'altro): bound
+ * sull'esposizione at-rest e anti-replay «una demo per email» che diventa una
+ * finestra scorrevole (dopo la scadenza l'email può rifirmare). La sessione
+ * server-authoritative (PR3 punto 2) affinerà il ciclo.
+ */
+export const ROW_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 giorni
+
+/**
+ * Probabilità del cleanup OPPORTUNISTICO sul percorso caldo di `reserve`. La
+ * retention è già garantita dal timer schedulato (`server/index.ts`); qui il
+ * prune serve solo come finestra scorrevole fra un tick e l'altro, quindi non
+ * deve girare a ogni firma (un `DELETE` incondizionato per richiesta genera
+ * dead-tuple/autovacuum churn se il traffico cresce). Campionandolo a ~3% resta
+ * frequente sotto carico ma non pesa sul singolo `reserve`.
+ */
+export const OPPORTUNISTIC_CLEANUP_PROBABILITY = 0.03;
+
+const CREATE_TABLE = `
+  CREATE TABLE IF NOT EXISTS nda_signatures (
+    idempotency_key TEXT PRIMARY KEY,
+    business_email TEXT NOT NULL UNIQUE,
+    signature_id TEXT NOT NULL,
+    password TEXT NOT NULL,
+    started_at BIGINT NOT NULL,
+    nda_version TEXT NOT NULL,
+    server_acknowledged BOOLEAN NOT NULL DEFAULT false,
+    company_copy_requested BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+`;
+
+type Row = {
+  idempotency_key: string;
+  business_email: string;
+  signature_id: string;
+  password: string;
+  started_at: string | number | bigint;
+  nda_version: string;
+  server_acknowledged: boolean;
+  company_copy_requested: boolean;
+};
+
+function rowToRecord(r: Row): StoredSignature {
+  return {
+    idempotencyKey: r.idempotency_key,
+    businessEmail: r.business_email,
+    signatureId: r.signature_id,
+    password: r.password,
+    startedAt: Number(r.started_at), // BIGINT arriva come stringa da node-postgres
+    ndaVersion: r.nda_version,
+    serverAcknowledged: r.server_acknowledged,
+    companyCopyRequested: r.company_copy_requested,
+  };
+}
+
+async function selectByKey(
+  pool: Pool,
+  idempotencyKey: string
+): Promise<StoredSignature | undefined> {
+  const { rows } = await pool.query<Row>(
+    "SELECT * FROM nda_signatures WHERE idempotency_key = $1",
+    [idempotencyKey]
+  );
+  return rows[0] ? rowToRecord(rows[0]) : undefined;
+}
+
+/**
+ * Cancella le righe oltre la retention (`created_at < now - ROW_RETENTION_MS`).
+ * BEST-EFFORT: logga e NON rilancia, così né una firma né il cleanup schedulato
+ * falliscono per un errore del DELETE. Usata sia opportunisticamente (in
+ * `reserve`) sia da un timer schedulato (in `server/index.ts`), così la
+ * `password` at-rest non sopravvive oltre la finestra anche con traffico nullo.
+ */
+export async function pruneExpired(pool: Pool): Promise<void> {
+  try {
+    await pool.query("DELETE FROM nda_signatures WHERE created_at < $1", [
+      new Date(Date.now() - ROW_RETENTION_MS),
+    ]);
+  } catch (err) {
+    console.error(
+      "[nda] cleanup retention fallito (non blocca la firma):",
+      err instanceof Error ? err.message : err
+    );
+  }
+}
+
+/** Crea tabella e indice se non esistono (migrazione idempotente, all'avvio). */
+export async function ensureSchema(pool: Pool): Promise<void> {
+  await pool.query(CREATE_TABLE);
+  // Indice per il cleanup di retention (`DELETE ... WHERE created_at < …`): senza
+  // sarebbe un full-scan a ogni `reserve`.
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_nda_signatures_created_at ON nda_signatures (created_at)"
+  );
+}
+
+export function createPostgresSignatureStore(pool: Pool): SignatureStore {
+  return {
+    getByIdempotencyKey(idempotencyKey) {
+      return selectByKey(pool, idempotencyKey);
+    },
+
+    async reserve(entry): Promise<ReserveOutcome> {
+      const email = normalizeEmail(entry.businessEmail);
+      // Cleanup opportunistico delle righe scadute (retention): la retention è
+      // già garantita dal timer schedulato (server/index.ts); qui campioniamo il
+      // prune a ~3% così la finestra anti-replay scorre anche fra un tick e
+      // l'altro SENZA un `DELETE` incondizionato per richiesta (dead-tuple churn
+      // sotto carico). BEST-EFFORT (vedi `pruneExpired`): un fallimento del
+      // cleanup NON fa fallire la firma, ed è separato dall'INSERT.
+      if (Math.random() < OPPORTUNISTIC_CLEANUP_PROBABILITY) {
+        await pruneExpired(pool);
+      }
+      // INSERT atomico: `ON CONFLICT DO NOTHING` copre SIA la PK
+      // (`idempotency_key`) SIA la UNIQUE (`business_email`). Se ha inserito →
+      // reserved; altrimenti classifico il conflitto con una lettura per chiave.
+      const ins = await pool.query(
+        `INSERT INTO nda_signatures
+           (idempotency_key, business_email, signature_id, password,
+            started_at, nda_version, server_acknowledged, company_copy_requested)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT DO NOTHING
+         RETURNING idempotency_key`,
+        [
+          entry.idempotencyKey,
+          email,
+          entry.signatureId,
+          entry.password,
+          entry.startedAt,
+          entry.ndaVersion,
+          entry.serverAcknowledged,
+          entry.companyCopyRequested,
+        ]
+      );
+      if ((ins.rowCount ?? 0) > 0) return { status: "reserved" };
+      // Conflitto: replay SOLO se combaciano chiave E email normalizzata (una
+      // collisione di chiave o il riuso con un'altra email non deve restituire
+      // la sessione di un altro); altrimenti è un conflitto (409).
+      const existing = await selectByKey(pool, entry.idempotencyKey);
+      if (existing && existing.businessEmail === email) {
+        return { status: "replay", record: existing };
+      }
+      return { status: "duplicate_email" };
+    },
+
+    async finalize(idempotencyKey, patch) {
+      await pool.query(
+        `UPDATE nda_signatures
+           SET server_acknowledged = $2, company_copy_requested = $3
+         WHERE idempotency_key = $1`,
+        [idempotencyKey, patch.serverAcknowledged, patch.companyCopyRequested]
+      );
+    },
+
+    async release(businessEmail, signatureId) {
+      await pool.query(
+        "DELETE FROM nda_signatures WHERE business_email = $1 AND signature_id = $2",
+        [normalizeEmail(businessEmail), signatureId]
+      );
+    },
+  };
+}
