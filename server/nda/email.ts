@@ -108,8 +108,11 @@ export async function sendNdaEmail(
         detail: String(error.message ?? error),
       };
     }
-    // Copia al firmatario: invio SEPARATO (non `to:[owner,prospect]`) per non
-    // rivelargli l'indirizzo dell'owner. FIRE-AND-FORGET: NON è nel percorso
+    // Copia al firmatario: invio SEPARATO (non `to:[owner,prospect]`) così il
+    // prospect riceve un'email a lui dedicata e non è messo in copia con l'owner
+    // nel campo `To`. NB: il `replyTo` sotto instrada VOLUTAMENTE le risposte
+    // all'owner (contatto commerciale del funnel B2B), quindi l'email dell'owner
+    // È visibile negli header della copia — è desiderato, non un leak. FIRE-AND-FORGET: NON è nel percorso
     // critico della risposta — attenderla in serie porterebbe il budget server a
     // ~30s contro il timeout client di 15s (owner ok + copia lenta →
     // `FAIL("network")` sul client mentre la firma è registrata → retry 409 e
@@ -128,7 +131,9 @@ export async function sendNdaEmail(
               // Reply del prospect → owner (il testo dice «rispondi a questa
               // email»); il `from` è un dominio forse non presidiato.
               replyTo: OWNER_EMAIL,
-              subject,
+              // Subject dedicato al firmatario e localizzato per `ndaLocale`
+              // (quello dell'owner è italiano e orientato all'owner).
+              subject: buildCompanyEmailSubject(input),
               text: buildCompanyEmailText(input),
               attachments,
             }),
@@ -136,11 +141,16 @@ export async function sendNdaEmail(
           );
           if (copy.error) {
             // Log SENZA PII: solo signatureId, mai il messaggio grezzo del
-            // provider (può contenere l'email del destinatario).
-            console.error(`[nda] company copy failed ${input.signatureId}`);
+            // provider (può contenere l'email del destinatario). Ramo distinto
+            // per diagnosi: errore del provider vs eccezione lanciata.
+            console.error(
+              `[nda] company copy failed (provider-error) ${input.signatureId}`
+            );
           }
         } catch {
-          console.error(`[nda] company copy failed ${input.signatureId}`);
+          console.error(
+            `[nda] company copy failed (exception) ${input.signatureId}`
+          );
         }
       })();
     }
@@ -198,6 +208,18 @@ export function buildEmailText(input: NdaEmailInput): string {
     "",
     "Il PDF dell'NDA firmato è in allegato.",
   ].join("\n");
+}
+
+/**
+ * Subject dell'email di COPIA al firmatario, localizzato per `ndaLocale` (IT/EN)
+ * e rivolto all'utente (quello dell'owner è italiano e orientato all'owner).
+ * Sanitizzato (niente header injection).
+ */
+export function buildCompanyEmailSubject(input: NdaEmailInput): string {
+  const company = stripControl(input.companyName);
+  return input.ndaLocale === "en"
+    ? `Your signed NDA — Sanzy Poker (${company})`
+    : `La tua copia dell'NDA firmato — Sanzy Poker (${company})`;
 }
 
 /**

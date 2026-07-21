@@ -18,6 +18,7 @@ vi.mock("resend", () => ({
 import {
   sendNdaEmail,
   buildCompanyEmailText,
+  buildCompanyEmailSubject,
   type NdaEmailInput,
 } from "../server/nda/email";
 
@@ -127,5 +128,20 @@ describe("NDA — copia all'azienda (sendNdaEmail)", () => {
     expect(t.startsWith("Dear John Doe,")).toBe(true);
     expect(t).toContain("Signature ID: snz_nda_abcd1234");
     expect(t).not.toContain("Gentile");
+  });
+
+  it("buildCompanyEmailSubject: localizzato IT/EN, rivolto al firmatario, sanitizzato", () => {
+    expect(buildCompanyEmailSubject({ ...INPUT, ndaLocale: "it" })).toBe(
+      "La tua copia dell'NDA firmato — Sanzy Poker (Acme)"
+    );
+    expect(buildCompanyEmailSubject({ ...INPUT, ndaLocale: "en" })).toBe(
+      "Your signed NDA — Sanzy Poker (Acme)"
+    );
+    // niente header injection dal companyName
+    const s = buildCompanyEmailSubject({
+      ...INPUT,
+      companyName: "Acme\r\nBcc: x@y.com",
+    });
+    expect(s).not.toMatch(/[\r\n]/);
   });
 });
