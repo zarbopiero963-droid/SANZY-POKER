@@ -79,9 +79,14 @@ async function selectByKey(
   return rows[0] ? rowToRecord(rows[0]) : undefined;
 }
 
-/** Crea la tabella se non esiste (migrazione idempotente, da chiamare all'avvio). */
+/** Crea tabella e indice se non esistono (migrazione idempotente, all'avvio). */
 export async function ensureSchema(pool: Pool): Promise<void> {
   await pool.query(CREATE_TABLE);
+  // Indice per il cleanup di retention (`DELETE ... WHERE created_at < …`): senza
+  // sarebbe un full-scan a ogni `reserve`.
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_nda_signatures_created_at ON nda_signatures (created_at)"
+  );
 }
 
 export function createPostgresSignatureStore(pool: Pool): SignatureStore {
@@ -95,9 +100,18 @@ export function createPostgresSignatureStore(pool: Pool): SignatureStore {
       // Cleanup opportunistico delle righe scadute (retention): niente cron,
       // niente `password` at-rest oltre la finestra. Cutoff passato come
       // parametro (evita dipendere dall'aritmetica `interval` del motore SQL).
-      await pool.query("DELETE FROM nda_signatures WHERE created_at < $1", [
-        new Date(Date.now() - ROW_RETENTION_MS),
-      ]);
+      // BEST-EFFORT: un fallimento del cleanup NON deve far fallire la firma →
+      // try/catch separato dall'INSERT (non nella stessa transazione).
+      try {
+        await pool.query("DELETE FROM nda_signatures WHERE created_at < $1", [
+          new Date(Date.now() - ROW_RETENTION_MS),
+        ]);
+      } catch (err) {
+        console.error(
+          "[nda] cleanup retention fallito (non blocca la firma):",
+          err instanceof Error ? err.message : err
+        );
+      }
       // INSERT atomico: `ON CONFLICT DO NOTHING` copre SIA la PK
       // (`idempotency_key`) SIA la UNIQUE (`business_email`). Se ha inserito →
       // reserved; altrimenti classifico il conflitto con una lettura per chiave.
