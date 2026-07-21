@@ -57,7 +57,7 @@ export type DemoSession = {
    * sulla schermata di sblocco l'avviso informativo semplicemente non ricompare
    * (password e timer restano intatti).
    */
-  companyCopySent?: boolean;
+  companyCopyRequested?: boolean;
 };
 
 /**

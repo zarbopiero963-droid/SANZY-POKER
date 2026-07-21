@@ -271,6 +271,21 @@ describe("demoSession — persistenza minimale (no PII)", () => {
     }
   });
 
+  it("NON persiste companyCopyRequested (flag in-memory, non nello storage)", () => {
+    const session = {
+      ...createDemoSession(VALID_FORM, 1_800_000_000_000, "it"),
+      companyCopyRequested: true,
+    };
+    saveDemoSession(session);
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    expect(raw).not.toHaveProperty("companyCopyRequested");
+    expect(Object.keys(raw).sort()).toEqual([
+      "password",
+      "signatureId",
+      "startedAt",
+    ]);
+  });
+
   it("round-trip: loadDemoSession rilegge esattamente ciò che è stato salvato", () => {
     // startedAt nel passato: il guard rifiuta i timestamp futuri manomessi.
     const session = createDemoSession(VALID_FORM, Date.now() - 60_000, "it");

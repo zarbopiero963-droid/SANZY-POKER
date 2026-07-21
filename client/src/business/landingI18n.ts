@@ -169,9 +169,9 @@ export const BIZ_STRINGS = {
     it: "Questo prototipo è mostrato a partner in grado di valutare l'acquisizione dell'asset o licenze di distribuzione. Le basi di trattativa prevedono buyout totale (valutazione a partire da 500.000€) o licenza B2B con minimo garantito e royalty sul GGR.",
     en: "This prototype is shown to partners able to evaluate asset acquisition or distribution licensing. Negotiation baselines include a total buyout (valuation from €500,000) or a B2B license with a minimum guarantee and GGR royalties.",
   },
-  "unlock.companyCopySent": {
-    it: "Una copia dell'NDA firmato è stata inviata alla tua email aziendale:",
-    en: "A copy of the signed NDA has been sent to your business email:",
+  "unlock.companyCopyRequested": {
+    it: "Una copia dell'NDA firmato viene inviata alla tua email aziendale:",
+    en: "A copy of the signed NDA is being sent to your business email:",
   },
   "unlock.passwordLabel": {
     it: "La tua password di sessione temporanea è:",

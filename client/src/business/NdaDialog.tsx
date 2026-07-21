@@ -128,7 +128,7 @@ export default function NdaDialog({
           acceptedAt: new Date(result.startedAt).toISOString(),
           ndaLocale: locale,
         }),
-        companyCopySent: result.companyCopySent,
+        companyCopyRequested: result.companyCopyRequested,
       };
       // Persistiamo SUBITO alla firma: un refresh sulla schermata di sblocco non
       // perde la sessione (prima la persistenza avveniva solo al "Avvia").
@@ -194,7 +194,7 @@ export default function NdaDialog({
             locale={locale}
             password={session.password}
             businessEmail={form.businessEmail}
-            companyCopySent={session.companyCopySent === true}
+            companyCopyRequested={session.companyCopyRequested === true}
             copied={copied}
             onCopy={copyPassword}
             onLaunch={() => onSigned(session)}
@@ -412,7 +412,7 @@ function UnlockPanel({
   locale,
   password,
   businessEmail,
-  companyCopySent,
+  companyCopyRequested,
   copied,
   onCopy,
   onLaunch,
@@ -420,7 +420,7 @@ function UnlockPanel({
   locale: BizLocale;
   password: string;
   businessEmail: string;
-  companyCopySent: boolean;
+  companyCopyRequested: boolean;
   copied: boolean;
   onCopy: () => void;
   onLaunch: () => void;
@@ -438,9 +438,9 @@ function UnlockPanel({
         {tb("unlock.title", locale)}
       </h2>
       <p className="sanzy-unlock__body">{tb("unlock.body", locale)}</p>
-      {companyCopySent && (
+      {companyCopyRequested && (
         <p className="sanzy-unlock__copy">
-          {tb("unlock.companyCopySent", locale)}{" "}
+          {tb("unlock.companyCopyRequested", locale)}{" "}
           <strong>{businessEmail}</strong>
         </p>
       )}

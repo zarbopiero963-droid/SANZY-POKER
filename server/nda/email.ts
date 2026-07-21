@@ -10,8 +10,13 @@
  * verificato su Resend; finché non c'è, in test mode Resend consegna solo
  * all'email dell'account — che è quella dell'owner, quindi funziona.
  */
+import type { NdaLocale } from "./ndaText";
+
 export type EmailResult =
-  | { sent: true; id: string; companyCopySent: boolean }
+  // `companyCopyRequested`: la copia al firmatario è stata AVVIATA (flag on +
+  // invio owner riuscito). NON è una conferma di consegna: la copia parte in
+  // background (fire-and-forget) per non aggiungere latenza al percorso critico.
+  | { sent: true; id: string; companyCopyRequested: boolean }
   | { sent: false; reason: "no-api-key" | "error"; detail?: string };
 
 export type NdaEmailInput = {
@@ -23,6 +28,7 @@ export type NdaEmailInput = {
   ip: string;
   acceptedAt: string;
   ndaVersion: string;
+  ndaLocale: NdaLocale;
   pdf: Uint8Array;
 };
 
@@ -103,38 +109,42 @@ export async function sendNdaEmail(
       };
     }
     // Copia al firmatario: invio SEPARATO (non `to:[owner,prospect]`) per non
-    // rivelargli l'indirizzo dell'owner. BEST-EFFORT: un errore qui NON invalida
-    // la firma né blocca la demo — l'artefatto autorevole è già arrivato all'owner.
-    let companyCopySent = false;
+    // rivelargli l'indirizzo dell'owner. FIRE-AND-FORGET: NON è nel percorso
+    // critico della risposta — attenderla in serie porterebbe il budget server a
+    // ~30s contro il timeout client di 15s (owner ok + copia lenta →
+    // `FAIL("network")` sul client mentre la firma è registrata → retry 409 e
+    // utente escluso). Kickando la copia in background la latenza resta quella
+    // del solo invio owner. Best-effort: gli errori sono solo loggati (senza PII:
+    // no messaggio grezzo del provider, solo `signatureId`).
+    let companyCopyRequested = false;
     if (copyToCompany) {
-      try {
-        const copy = await withTimeout(
-          resend.emails.send({
-            from,
-            to: [stripControl(input.businessEmail)],
-            subject,
-            text: buildCompanyEmailText(input),
-            attachments,
-          }),
-          SEND_TIMEOUT_MS
-        );
-        companyCopySent = !copy.error;
-        if (copy.error) {
-          console.error(
-            `[nda] company copy error ${input.signatureId}: ${String(
-              copy.error.message ?? copy.error
-            )}`
+      companyCopyRequested = true;
+      void (async () => {
+        try {
+          const copy = await withTimeout(
+            resend.emails.send({
+              from,
+              to: [stripControl(input.businessEmail)],
+              // Reply del prospect → owner (il testo dice «rispondi a questa
+              // email»); il `from` è un dominio forse non presidiato.
+              replyTo: OWNER_EMAIL,
+              subject,
+              text: buildCompanyEmailText(input),
+              attachments,
+            }),
+            SEND_TIMEOUT_MS
           );
+          if (copy.error) {
+            // Log SENZA PII: solo signatureId, mai il messaggio grezzo del
+            // provider (può contenere l'email del destinatario).
+            console.error(`[nda] company copy failed ${input.signatureId}`);
+          }
+        } catch {
+          console.error(`[nda] company copy failed ${input.signatureId}`);
         }
-      } catch (err) {
-        console.error(
-          `[nda] company copy error ${input.signatureId}: ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-      }
+      })();
     }
-    return { sent: true, id: data?.id ?? "", companyCopySent };
+    return { sent: true, id: data?.id ?? "", companyCopyRequested };
   } catch (err) {
     return {
       sent: false,
@@ -193,10 +203,25 @@ export function buildEmailText(input: NdaEmailInput): string {
 /**
  * Corpo dell'email di COPIA al firmatario (il prospect che ha firmato). Diverso
  * dalla notifica all'owner: è rivolto all'utente e allega la stessa copia PDF.
- * Sanitizzato come il resto (difesa in profondità contro header injection).
+ * Localizzato per `ndaLocale` (IT/EN, come il funnel B2B) — un firmatario che ha
+ * letto l'NDA in inglese riceve la copia in inglese. Sanitizzato come il resto
+ * (difesa in profondità contro header injection).
  */
 export function buildCompanyEmailText(input: NdaEmailInput): string {
   const s = stripControl;
+  if (input.ndaLocale === "en") {
+    return [
+      `Dear ${s(input.fullName)},`,
+      "",
+      `attached is the copy of the NDA you signed to access the Sanzy Poker demo, on behalf of ${s(input.companyName)}.`,
+      "",
+      `Signature ID: ${s(input.signatureId)}`,
+      `Timestamp (UTC): ${s(input.acceptedAt)}`,
+      `NDA version: ${s(input.ndaVersion)}`,
+      "",
+      "This is a copy for your records. For an extended trial or a negotiation, reply to this email.",
+    ].join("\n");
+  }
   return [
     `Gentile ${s(input.fullName)},`,
     "",

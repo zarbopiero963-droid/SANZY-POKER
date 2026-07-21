@@ -73,7 +73,7 @@ const RECORD: SignedNdaRecord = {
 const emailSent = async () => ({
   sent: true as const,
   id: "e1",
-  companyCopySent: false,
+  companyCopyRequested: false,
 });
 const emailDegraded = async () => ({
   sent: false as const,
@@ -378,21 +378,21 @@ describe("NDA — processNdaSign (orchestrazione server-authoritative)", () => {
     expect(res.body.startedAt).toBe(1_800_000_000_000);
     expect(res.body.serverAcknowledged).toBe(true);
     // nessuna copia all'azienda in questo caso base
-    expect(res.body.companyCopySent).toBe(false);
+    expect(res.body.companyCopyRequested).toBe(false);
     // email inviata → prenotazione mantenuta (anti-replay attivo)
     expect(await c.store.has(VALID_BODY.businessEmail)).toBe(true);
   });
 
-  it("processNdaSign propaga companyCopySent:true nella risposta", async () => {
+  it("processNdaSign propaga companyCopyRequested:true nella risposta", async () => {
     const withCopy = async () => ({
       sent: true as const,
       id: "e1",
-      companyCopySent: true,
+      companyCopyRequested: true,
     });
     const res = await processNdaSign(VALID_BODY, ctx(withCopy));
     expect(res.status).toBe(200);
     expect(res.body.serverAcknowledged).toBe(true);
-    expect(res.body.companyCopySent).toBe(true);
+    expect(res.body.companyCopyRequested).toBe(true);
   });
 
   it("email degradata (no-api-key) → 200 serverAcknowledged:false ma anti-replay MANTENUTO", async () => {
