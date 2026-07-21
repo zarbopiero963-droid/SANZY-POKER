@@ -17,6 +17,8 @@ import {
   NDA_VERSION,
   generateSessionPassword,
   isExpired,
+  clearIdempotencyKey,
+  idempotencyKeyFor,
   isNdaFormValid,
   isTimerAnnounceTick,
   isValidEmail,
@@ -269,6 +271,20 @@ describe("demoSession — persistenza minimale (no PII)", () => {
     ]) {
       expect(raw).not.toHaveProperty(pii);
     }
+  });
+
+  it("idempotencyKeyFor: stessa email → stessa chiave (persistita); clear la rigenera", () => {
+    const k1 = idempotencyKeyFor("John@Acme.com");
+    expect(k1).toMatch(/^[A-Za-z0-9_-]{8,64}$/);
+    // stessa email (case-insensitive) → stessa chiave persistita
+    expect(idempotencyKeyFor("john@acme.com")).toBe(k1);
+    // email diversa → chiave diversa (firma diversa)
+    const k2 = idempotencyKeyFor("mary@other.com");
+    expect(k2).not.toBe(k1);
+    // dopo clear si rigenera
+    clearIdempotencyKey();
+    const k3 = idempotencyKeyFor("mary@other.com");
+    expect(k3).not.toBe(k2);
   });
 
   it("NON persiste companyCopyRequested (flag in-memory, non nello storage)", () => {

@@ -3,10 +3,41 @@ import { createServer } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createNdaRouter } from "./nda/router";
-import { createInMemorySignatureStore } from "./nda/store";
+import { createInMemorySignatureStore, type SignatureStore } from "./nda/store";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/**
+ * Sceglie lo store delle firme: **Postgres durevole** se `DATABASE_URL` è
+ * configurata (import dinamico di `pg`, così non è richiesto a runtime quando
+ * non serve), altrimenti **in-memory** effimero (dev/CI, o produzione non ancora
+ * provisionata — come l'email senza `RESEND_API_KEY`). Se l'init Postgres
+ * fallisce si degrada all'in-memory invece di impedire l'avvio del server.
+ */
+async function createSignatureStore(): Promise<SignatureStore> {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    console.log("[nda] store: in-memory (DATABASE_URL assente → effimero)");
+    return createInMemorySignatureStore();
+  }
+  try {
+    const { Pool } = await import("pg");
+    const pool = new Pool({ connectionString: url });
+    const { ensureSchema, createPostgresSignatureStore } = await import(
+      "./nda/pgStore"
+    );
+    await ensureSchema(pool);
+    console.log("[nda] store: Postgres (durevole)");
+    return createPostgresSignatureStore(pool);
+  } catch (err) {
+    console.error(
+      "[nda] store: init Postgres fallita → fallback in-memory:",
+      err instanceof Error ? err.message : err
+    );
+    return createInMemorySignatureStore();
+  }
+}
 
 async function startServer() {
   const app = express();
@@ -31,9 +62,10 @@ async function startServer() {
     res.status(200).json({ status: "ok" });
   });
 
-  // API NDA (PR2 #26): firma server-authoritative + PDF + log IP + email Resend.
-  // Store anti-replay in-memory (Railway effimero: si azzera al redeploy).
-  const signatureStore = createInMemorySignatureStore();
+  // API NDA (#26/#30): firma server-authoritative + PDF + log IP + email Resend.
+  // Store anti-replay + idempotenza: Postgres durevole se `DATABASE_URL`, altrimenti
+  // in-memory effimero (si azzera al redeploy).
+  const signatureStore = await createSignatureStore();
   app.use("/api/nda", createNdaRouter({ store: signatureStore }));
 
   // Rotte API sconosciute → 404 JSON (NON la SPA): un client API che sbaglia

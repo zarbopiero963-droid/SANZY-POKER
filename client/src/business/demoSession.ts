@@ -335,6 +335,57 @@ export function clearDemoSession(): void {
   }
 }
 
+// --- Chiave di idempotenza della firma (PR3 #30) --------------------------
+
+const IDEM_KEY = "sanzy.nda.idem";
+const IDEM_FORMAT = /^[A-Za-z0-9_-]{8,64}$/;
+
+/**
+ * Ritorna la chiave d'idempotenza per la firma di questa email, generandola e
+ * persistendola alla prima chiamata. Persistita PRIMA dell'invio (in
+ * `localStorage`, legata all'email normalizzata) così un retry — anche dopo un
+ * reload — riusa la STESSA chiave e il server ricapitalizza la sessione
+ * (signatureId + password) invece di rispondere 409. Se l'email cambia, la
+ * chiave si rigenera (è una firma diversa). Best-effort: senza `localStorage`
+ * ritorna comunque una chiave valida (senza persistenza cross-reload).
+ */
+export function idempotencyKeyFor(businessEmail: string): string {
+  const email = businessEmail.trim().toLowerCase();
+  try {
+    const raw = localStorage.getItem(IDEM_KEY);
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        (parsed as { email?: unknown }).email === email &&
+        typeof (parsed as { key?: unknown }).key === "string" &&
+        IDEM_FORMAT.test((parsed as { key: string }).key)
+      ) {
+        return (parsed as { key: string }).key;
+      }
+    }
+  } catch {
+    // storage/JSON non disponibile: si genera una chiave nuova sotto.
+  }
+  const key = nanoid(); // 21 char, charset [A-Za-z0-9_-] → rispetta IDEM_FORMAT
+  try {
+    localStorage.setItem(IDEM_KEY, JSON.stringify({ email, key }));
+  } catch {
+    // no-op: chiave valida ma non persistita (nessun recupero cross-reload)
+  }
+  return key;
+}
+
+/** Elimina la chiave d'idempotenza (a firma completata con successo). */
+export function clearIdempotencyKey(): void {
+  try {
+    localStorage.removeItem(IDEM_KEY);
+  } catch {
+    // no-op
+  }
+}
+
 // --- Consenso cookie (GDPR) -----------------------------------------------
 
 const COOKIE_CONSENT_KEY = "sanzy.cookies.accepted";

@@ -44,7 +44,8 @@ const FAIL = (error: string): NdaSignResult => ({
  */
 export async function submitNda(
   form: NdaForm,
-  locale: BizLocale
+  locale: BizLocale,
+  idempotencyKey: string
 ): Promise<NdaSignResult> {
   // Timeout finito: senza, una connessione appesa lascerebbe il dialog bloccato
   // su "Registrazione…" all'infinito (durante `submitting` Esc/chiudi sono
@@ -66,6 +67,7 @@ export async function submitNda(
         accepted: form.accepted,
         ndaLocale: locale,
         ndaVersion: NDA_VERSION,
+        idempotencyKey,
       }),
     });
   } catch {

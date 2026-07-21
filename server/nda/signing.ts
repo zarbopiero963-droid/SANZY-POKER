@@ -29,6 +29,14 @@ export const ndaSignRequestSchema = z.object({
   ndaLocale: z.enum(["it", "en"]),
   // versione del testo mostrata al client: deve combaciare con quella del server.
   ndaVersion: z.string().min(1).max(64),
+  // Chiave di idempotenza generata dal client e persistita PRIMA dell'invio: un
+  // retry con la stessa chiave recupera la stessa sessione (signatureId +
+  // password) invece di ricevere 409, così una risposta persa non esclude
+  // l'utente. Charset ristretto (safe come `signatureId`/filename).
+  idempotencyKey: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9_-]{8,64}$/),
 });
 
 export type NdaSignRequest = z.infer<typeof ndaSignRequestSchema>;

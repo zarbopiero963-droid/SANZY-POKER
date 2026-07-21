@@ -12,6 +12,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   buildNdaPayload,
+  clearIdempotencyKey,
+  idempotencyKeyFor,
   isNdaFormValid,
   saveDemoSession,
   validateNdaForm,
@@ -96,8 +98,15 @@ export default function NdaDialog({
     setSubmitting(true);
     try {
       // Il server è autorevole: genera signatureId/password, fissa startedAt,
-      // rileva l'IP, produce PDF/email. Il client USA la risposta.
-      const result = await submitNda(form, locale);
+      // rileva l'IP, produce PDF/email. Il client USA la risposta. La chiave di
+      // idempotenza (persistita per email) rende il retry sicuro: se la risposta
+      // si perde, un nuovo invio con la stessa chiave recupera la sessione (il
+      // server risponde 200 con le stesse credenziali, non 409).
+      const result = await submitNda(
+        form,
+        locale,
+        idempotencyKeyFor(form.businessEmail)
+      );
       if (!result.ok) {
         setSubmitError(
           result.error === "already_signed"
@@ -133,6 +142,9 @@ export default function NdaDialog({
       // Persistiamo SUBITO alla firma: un refresh sulla schermata di sblocco non
       // perde la sessione (prima la persistenza avveniva solo al "Avvia").
       saveDemoSession(finalized);
+      // Firma completata: la chiave d'idempotenza non serve più (una nuova firma
+      // — es. altra email — ne genererà una fresca).
+      clearIdempotencyKey();
       setSession(finalized);
     } catch {
       // Il finally garantisce che il pulsante non resti bloccato su
