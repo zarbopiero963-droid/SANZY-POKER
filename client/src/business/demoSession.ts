@@ -51,6 +51,13 @@ export type DemoSession = {
   password: string;
   startedAt: number; // epoch ms: fissato alla firma, NON al refresh
   payload: NdaPayload;
+  /**
+   * true se il server ha recapitato una COPIA dell'NDA all'email aziendale.
+   * In-memory (dalla risposta di firma): NON persistito, quindi dopo un refresh
+   * sulla schermata di sblocco l'avviso informativo semplicemente non ricompare
+   * (password e timer restano intatti).
+   */
+  companyCopySent?: boolean;
 };
 
 /**

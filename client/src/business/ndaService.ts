@@ -18,6 +18,8 @@ export type NdaSignResult = {
   startedAt: number;
   /** true quando email/PDF/log server sono andati a buon fine. */
   serverAcknowledged: boolean;
+  /** true quando una COPIA dell'NDA è stata recapitata all'email aziendale. */
+  companyCopySent: boolean;
   /** Codice d'errore server (`already_signed`, `unsupported_nda_version`, …). */
   error?: string;
 };
@@ -31,6 +33,7 @@ const FAIL = (error: string): NdaSignResult => ({
   password: "",
   startedAt: 0,
   serverAcknowledged: false,
+  companyCopySent: false,
   error,
 });
 
@@ -103,5 +106,6 @@ export async function submitNda(
     password: data.password,
     startedAt: data.startedAt,
     serverAcknowledged: Boolean(data.serverAcknowledged),
+    companyCopySent: data.companyCopySent === true,
   };
 }

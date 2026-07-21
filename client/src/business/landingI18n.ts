@@ -60,6 +60,7 @@ export const BIZ_STRINGS = {
   "brand.name": { it: "Sanzy Poker", en: "Sanzy Poker" },
   "brand.sanzy": { it: "SANZY", en: "SANZY" },
   "brand.poker": { it: "POKER", en: "POKER" },
+  "brand.tag": { it: "B2B DEMO", en: "B2B DEMO" },
   // --- Popup NDA (3 slide) ---
   "nda.dialogTitle": {
     it: "Accordo di riservatezza",
@@ -167,6 +168,10 @@ export const BIZ_STRINGS = {
   "unlock.notice": {
     it: "Questo prototipo è mostrato a partner in grado di valutare l'acquisizione dell'asset o licenze di distribuzione. Le basi di trattativa prevedono buyout totale (valutazione a partire da 500.000€) o licenza B2B con minimo garantito e royalty sul GGR.",
     en: "This prototype is shown to partners able to evaluate asset acquisition or distribution licensing. Negotiation baselines include a total buyout (valuation from €500,000) or a B2B license with a minimum guarantee and GGR royalties.",
+  },
+  "unlock.companyCopySent": {
+    it: "Una copia dell'NDA firmato è stata inviata alla tua email aziendale:",
+    en: "A copy of the signed NDA has been sent to your business email:",
   },
   "unlock.passwordLabel": {
     it: "La tua password di sessione temporanea è:",

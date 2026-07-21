@@ -128,6 +128,7 @@ export default function NdaDialog({
           acceptedAt: new Date(result.startedAt).toISOString(),
           ndaLocale: locale,
         }),
+        companyCopySent: result.companyCopySent,
       };
       // Persistiamo SUBITO alla firma: un refresh sulla schermata di sblocco non
       // perde la sessione (prima la persistenza avveniva solo al "Avvia").
@@ -192,6 +193,8 @@ export default function NdaDialog({
           <UnlockPanel
             locale={locale}
             password={session.password}
+            businessEmail={form.businessEmail}
+            companyCopySent={session.companyCopySent === true}
             copied={copied}
             onCopy={copyPassword}
             onLaunch={() => onSigned(session)}
@@ -408,12 +411,16 @@ function Field({
 function UnlockPanel({
   locale,
   password,
+  businessEmail,
+  companyCopySent,
   copied,
   onCopy,
   onLaunch,
 }: {
   locale: BizLocale;
   password: string;
+  businessEmail: string;
+  companyCopySent: boolean;
   copied: boolean;
   onCopy: () => void;
   onLaunch: () => void;
@@ -431,6 +438,12 @@ function UnlockPanel({
         {tb("unlock.title", locale)}
       </h2>
       <p className="sanzy-unlock__body">{tb("unlock.body", locale)}</p>
+      {companyCopySent && (
+        <p className="sanzy-unlock__copy">
+          {tb("unlock.companyCopySent", locale)}{" "}
+          <strong>{businessEmail}</strong>
+        </p>
+      )}
       <p className="sanzy-unlock__notice">{tb("unlock.notice", locale)}</p>
       <div className="sanzy-unlock__pwbox">
         <span className="sanzy-unlock__pwlabel">
@@ -530,6 +543,8 @@ const NDA_CSS = `
 .sanzy-unlock__title:focus { outline: none; }
 .sanzy-unlock__body { margin: 0; font-size: 14px; line-height: 1.5; color: #eaf2ec; }
 .sanzy-unlock__notice { margin: 0; font-size: 12.5px; line-height: 1.5; color: #bfd2c6; background: rgba(6, 24, 17, 0.6); border-radius: 10px; padding: 12px 14px; }
+.sanzy-unlock__copy { margin: 0; font-size: 13px; line-height: 1.5; color: #cfe8d6; }
+.sanzy-unlock__copy strong { color: #f4efe4; word-break: break-all; }
 .sanzy-unlock__pwbox { display: flex; flex-direction: column; gap: 8px; }
 .sanzy-unlock__pwlabel { font-size: 12px; font-weight: 700; color: #cfe0d6; }
 .sanzy-unlock__pwrow { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }

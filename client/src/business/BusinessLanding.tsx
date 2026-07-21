@@ -40,6 +40,9 @@ export default function BusinessLanding({
           >
             <span className="sanzy-biz__wm-s">{tb("brand.sanzy", locale)}</span>
             <span className="sanzy-biz__wm-p">{tb("brand.poker", locale)}</span>
+            <span className="sanzy-biz__wm-tag" aria-hidden>
+              {tb("brand.tag", locale)}
+            </span>
           </div>
           <button
             type="button"
@@ -159,6 +162,11 @@ const LANDING_CSS = `
 .sanzy-biz__wordmark { display: flex; flex-direction: column; line-height: .9; }
 .sanzy-biz__wm-s { font-size: 26px; font-weight: 900; letter-spacing: 4px; color: #f7f4ec; }
 .sanzy-biz__wm-p { font-size: 15px; font-weight: 900; letter-spacing: 8px; margin-left: 3px; color: #d6342c; }
+.sanzy-biz__wm-tag {
+  align-self: flex-start; margin-top: 4px; padding: 1px 6px; border-radius: 4px;
+  font-size: 9px; font-weight: 700; letter-spacing: 2px; color: #9fb0a6;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(159, 176, 166, 0.35);
+}
 .sanzy-biz__lang {
   padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(214,178,102,.4);
   background: rgba(6,32,22,.5); color: #f4efe4; font-size: 13px; font-weight: 800;

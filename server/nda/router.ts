@@ -36,6 +36,7 @@ export type NdaSignResponse = {
   password?: string;
   startedAt?: number;
   serverAcknowledged?: boolean;
+  companyCopySent?: boolean;
   error?: string;
   issues?: unknown;
 };
@@ -155,6 +156,7 @@ export async function processNdaSign(
         password,
         startedAt: deps.now,
         serverAcknowledged: email.sent,
+        companyCopySent: email.sent ? email.companyCopySent : false,
       },
     };
   } catch (err) {
