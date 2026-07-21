@@ -339,13 +339,15 @@ export function clearDemoSession(): void {
 
 const IDEM_KEY = "sanzy.nda.idem";
 const IDEM_FORMAT = /^[A-Za-z0-9_-]{8,64}$/;
-// TTL della chiave client. DEVE essere ≥ della retention delle righe server
-// (`ROW_RETENTION_MS` in `pgStore.ts`, 30 giorni): se fosse più corto, un retry
-// dopo la scadenza client ma prima di quella server rigenererebbe la chiave e il
-// server risponderebbe `duplicate_email` (409) → lockout, proprio il bug che
-// l'idempotenza risolve. Allineato a 30 giorni; dà comunque una scadenza alla
-// mappa (niente crescita illimitata).
-const IDEM_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 giorni (= retention server)
+// TTL della chiave client. DEVE essere STRETTAMENTE MAGGIORE della retention
+// delle righe server (`ROW_RETENTION_MS` in `pgStore.ts`, 30 giorni), con
+// margine: il TTL client parte alla generazione della chiave, la retention
+// server alla creazione della riga — clock skew, invii ritardati o retry
+// potrebbero far scadere la chiave client PRIMA della riga server, rigenerando
+// la chiave → `duplicate_email` (409) → lockout, proprio il bug che
+// l'idempotenza risolve. 45 giorni = 30 (server) + 15 di margine. Dà comunque
+// una scadenza alla mappa (niente crescita illimitata).
+export const IDEM_TTL_MS = 45 * 24 * 60 * 60 * 1000; // 45 giorni (> retention server 30gg)
 
 type IdemEntry = { key: string; ts: number };
 
@@ -355,17 +357,26 @@ type IdemEntry = { key: string; ts: number };
 const idemMemCache = new Map<string, string>();
 
 /**
- * Hash NON crittografico (FNV-1a 32-bit) dell'email: nello storage finisce solo
- * questo pseudonimo, MAI l'email in chiaro (privacy: nessuna PII persistita). Le
- * collisioni sono trascurabili per il numero di email in gioco.
+ * Identificatore NON crittografico a **64 bit** derivato dall'email (due passate
+ * FNV-1a con seed diversi): nello storage finisce solo questo pseudonimo, MAI
+ * l'email in chiaro (privacy: nessuna PII persistita). 64 bit rendono le
+ * collisioni ~0 anche come indice (una collisione rifiuterebbe una firma
+ * legittima). Sincrono di proposito (niente Web Crypto async): un digest non
+ * salato di un'email resta comunque attaccabile a dizionario, quindi SHA-256 non
+ * darebbe pseudonimizzazione più forte — serve solo a non tenere l'email in chiaro.
  */
 function hashEmail(email: string): string {
-  let h = 0x811c9dc5;
+  let h1 = 0x811c9dc5;
+  let h2 = (0x811c9dc5 ^ 0x9e3779b9) >>> 0;
   for (let i = 0; i < email.length; i++) {
-    h ^= email.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
+    const c = email.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193);
+    h2 = Math.imul(h2 ^ c, 0x01000193);
   }
-  return (h >>> 0).toString(16);
+  return (
+    (h1 >>> 0).toString(16).padStart(8, "0") +
+    (h2 >>> 0).toString(16).padStart(8, "0")
+  );
 }
 
 /** Legge la mappa `{ hash → {key, ts} }` persistita (o `{}` se illeggibile). */

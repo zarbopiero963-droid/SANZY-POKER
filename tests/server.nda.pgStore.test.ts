@@ -11,7 +11,9 @@ import { newDb, type IMemoryDb } from "pg-mem";
 import {
   createPostgresSignatureStore,
   ensureSchema,
+  ROW_RETENTION_MS,
 } from "../server/nda/pgStore";
+import { IDEM_TTL_MS } from "../client/src/business/demoSession";
 import type { SignatureStore, StoredSignature } from "../server/nda/store";
 import type { Pool } from "pg";
 
@@ -40,6 +42,13 @@ beforeEach(async () => {
 });
 
 describe("NDA — store Postgres (pg-mem, SQL reale)", () => {
+  it("INVARIANTE: TTL chiave client > retention righe server (anti-lockout)", () => {
+    // Il TTL client DEVE superare la retention server (che è una soglia
+    // opportunistica = minimo, non massimo): se fosse ≤, un retry al margine
+    // rigenererebbe la chiave mentre la riga server esiste ancora → 409 lockout.
+    expect(IDEM_TTL_MS).toBeGreaterThan(ROW_RETENTION_MS);
+  });
+
   it("reserve prima volta → reserved e recuperabile per chiave", async () => {
     expect((await store.reserve(entry())).status).toBe("reserved");
     const r = await store.getByIdempotencyKey("k1");

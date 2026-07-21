@@ -28,7 +28,7 @@ import {
  * email» che diventa una finestra scorrevole (dopo la scadenza l'email può
  * rifirmare). La sessione server-authoritative (PR3 punto 2) affinerà il ciclo.
  */
-const ROW_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 giorni
+export const ROW_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 giorni
 
 const CREATE_TABLE = `
   CREATE TABLE IF NOT EXISTS nda_signatures (
