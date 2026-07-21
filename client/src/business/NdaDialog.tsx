@@ -12,7 +12,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
   buildNdaPayload,
-  clearIdempotencyKey,
   idempotencyKeyFor,
   isNdaFormValid,
   saveDemoSession,
@@ -140,11 +139,11 @@ export default function NdaDialog({
         companyCopyRequested: result.companyCopyRequested,
       };
       // Persistiamo SUBITO alla firma: un refresh sulla schermata di sblocco non
-      // perde la sessione (prima la persistenza avveniva solo al "Avvia").
+      // perde la sessione (prima la persistenza avveniva solo al "Avvia"). La
+      // chiave d'idempotenza NON viene cancellata: se `saveDemoSession` fallisse
+      // (quota/storage) o la pagina crashasse, la chiave resta e un retry
+      // recupera comunque la stessa sessione (evita il lockout con 409).
       saveDemoSession(finalized);
-      // Firma completata: la chiave d'idempotenza non serve più (una nuova firma
-      // — es. altra email — ne genererà una fresca).
-      clearIdempotencyKey();
       setSession(finalized);
     } catch {
       // Il finally garantisce che il pulsante non resti bloccato su

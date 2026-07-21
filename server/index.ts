@@ -24,6 +24,13 @@ async function createSignatureStore(): Promise<SignatureStore> {
   try {
     const { Pool } = await import("pg");
     const pool = new Pool({ connectionString: url });
+    // Un errore su una connessione IDLE del pool emette 'error': senza handler
+    // sarebbe un uncaught exception → crash del processo. Lo logghiamo (senza la
+    // connection string, che contiene credenziali) e lasciamo che il pool si
+    // riprenda ricreando le connessioni.
+    pool.on("error", err => {
+      console.error("[nda] pool Postgres error (idle):", err.message);
+    });
     const { ensureSchema, createPostgresSignatureStore } = await import(
       "./nda/pgStore"
     );

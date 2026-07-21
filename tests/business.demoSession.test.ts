@@ -273,18 +273,22 @@ describe("demoSession — persistenza minimale (no PII)", () => {
     }
   });
 
-  it("idempotencyKeyFor: stessa email → stessa chiave (persistita); clear la rigenera", () => {
-    const k1 = idempotencyKeyFor("John@Acme.com");
-    expect(k1).toMatch(/^[A-Za-z0-9_-]{8,64}$/);
+  it("idempotencyKeyFor: mappa per email; «cambio email e ritorno» conserva la chiave", () => {
+    const kA = idempotencyKeyFor("John@Acme.com");
+    expect(kA).toMatch(/^[A-Za-z0-9_-]{8,64}$/);
     // stessa email (case-insensitive) → stessa chiave persistita
-    expect(idempotencyKeyFor("john@acme.com")).toBe(k1);
+    expect(idempotencyKeyFor("john@acme.com")).toBe(kA);
     // email diversa → chiave diversa (firma diversa)
-    const k2 = idempotencyKeyFor("mary@other.com");
-    expect(k2).not.toBe(k1);
-    // dopo clear si rigenera
+    const kB = idempotencyKeyFor("mary@other.com");
+    expect(kB).not.toBe(kA);
+    // REGRESSIONE lockout: provare un'altra email e TORNARE alla prima NON deve
+    // rigenerare la chiave della prima (altrimenti il retry → 409 already_signed).
+    expect(idempotencyKeyFor("John@Acme.com")).toBe(kA);
+    // entrambe restano recuperabili in parallelo
+    expect(idempotencyKeyFor("mary@other.com")).toBe(kB);
+    // clear (reset totale) → rigenera
     clearIdempotencyKey();
-    const k3 = idempotencyKeyFor("mary@other.com");
-    expect(k3).not.toBe(k2);
+    expect(idempotencyKeyFor("John@Acme.com")).not.toBe(kA);
   });
 
   it("NON persiste companyCopyRequested (flag in-memory, non nello storage)", () => {

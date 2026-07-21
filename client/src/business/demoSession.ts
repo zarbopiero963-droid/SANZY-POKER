@@ -340,44 +340,56 @@ export function clearDemoSession(): void {
 const IDEM_KEY = "sanzy.nda.idem";
 const IDEM_FORMAT = /^[A-Za-z0-9_-]{8,64}$/;
 
-/**
- * Ritorna la chiave d'idempotenza per la firma di questa email, generandola e
- * persistendola alla prima chiamata. Persistita PRIMA dell'invio (in
- * `localStorage`, legata all'email normalizzata) così un retry — anche dopo un
- * reload — riusa la STESSA chiave e il server ricapitalizza la sessione
- * (signatureId + password) invece di rispondere 409. Se l'email cambia, la
- * chiave si rigenera (è una firma diversa). Best-effort: senza `localStorage`
- * ritorna comunque una chiave valida (senza persistenza cross-reload).
- */
-export function idempotencyKeyFor(businessEmail: string): string {
-  const email = businessEmail.trim().toLowerCase();
+/** Legge la MAPPA `{ email → key }` persistita (o `{}` se assente/illeggibile). */
+function readIdemMap(): Record<string, string> {
   try {
     const raw = localStorage.getItem(IDEM_KEY);
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
-      if (
-        parsed &&
-        typeof parsed === "object" &&
-        (parsed as { email?: unknown }).email === email &&
-        typeof (parsed as { key?: unknown }).key === "string" &&
-        IDEM_FORMAT.test((parsed as { key: string }).key)
-      ) {
-        return (parsed as { key: string }).key;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, string>;
       }
     }
   } catch {
-    // storage/JSON non disponibile: si genera una chiave nuova sotto.
+    // storage/JSON non disponibile
+  }
+  return {};
+}
+
+/**
+ * Ritorna la chiave d'idempotenza per la firma di questa email, generandola e
+ * persistendola alla prima chiamata. Persistita PRIMA dell'invio in una MAPPA
+ * `{ email → key }` (in `localStorage`, per email normalizzata) così un retry —
+ * anche dopo un reload, o dopo aver provato un'ALTRA email e essere tornati a
+ * questa — riusa la STESSA chiave e il server recupera la sessione (signatureId
+ * + password) invece di rispondere 409. Una mappa (non un singolo record) evita
+ * che digitare un'altra email sovrascriva la chiave della prima (lockout). La
+ * chiave NON viene cancellata al successo: può restare, così un retry tardivo
+ * ricapitalizza comunque la stessa sessione. Best-effort: senza `localStorage`
+ * ritorna comunque una chiave valida (senza persistenza cross-reload).
+ */
+export function idempotencyKeyFor(businessEmail: string): string {
+  const email = businessEmail.trim().toLowerCase();
+  const map = readIdemMap();
+  const existing = map[email];
+  if (typeof existing === "string" && IDEM_FORMAT.test(existing)) {
+    return existing;
   }
   const key = nanoid(); // 21 char, charset [A-Za-z0-9_-] → rispetta IDEM_FORMAT
+  map[email] = key;
   try {
-    localStorage.setItem(IDEM_KEY, JSON.stringify({ email, key }));
+    localStorage.setItem(IDEM_KEY, JSON.stringify(map));
   } catch {
     // no-op: chiave valida ma non persistita (nessun recupero cross-reload)
   }
   return key;
 }
 
-/** Elimina la chiave d'idempotenza (a firma completata con successo). */
+/**
+ * Elimina TUTTE le chiavi d'idempotenza (utility di reset). NON è chiamata al
+ * successo: le chiavi persistono così un retry tardivo recupera la sessione, e
+ * non c'è rischio che una scheda cancelli la chiave necessaria a un'altra.
+ */
 export function clearIdempotencyKey(): void {
   try {
     localStorage.removeItem(IDEM_KEY);
