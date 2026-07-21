@@ -339,15 +339,39 @@ export function clearDemoSession(): void {
 
 const IDEM_KEY = "sanzy.nda.idem";
 const IDEM_FORMAT = /^[A-Za-z0-9_-]{8,64}$/;
+// TTL abbondante per un retry (un recupero avviene in secondi/minuti) ma che
+// dà una scadenza alla mappa: niente crescita illimitata dello storage.
+const IDEM_TTL_MS = 60 * 60 * 1000; // 1h
 
-/** Legge la MAPPA `{ email → key }` persistita (o `{}` se assente/illeggibile). */
-function readIdemMap(): Record<string, string> {
+type IdemEntry = { key: string; ts: number };
+
+// Cache in-memory (per la durata della pagina): garantisce l'idempotenza dei
+// retry nella STESSA sessione anche se `localStorage` è indisponibile/pieno, e
+// riduce la finestra di race del read-modify-write tra schede.
+const idemMemCache = new Map<string, string>();
+
+/**
+ * Hash NON crittografico (FNV-1a 32-bit) dell'email: nello storage finisce solo
+ * questo pseudonimo, MAI l'email in chiaro (privacy: nessuna PII persistita). Le
+ * collisioni sono trascurabili per il numero di email in gioco.
+ */
+function hashEmail(email: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < email.length; i++) {
+    h ^= email.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16);
+}
+
+/** Legge la mappa `{ hash → {key, ts} }` persistita (o `{}` se illeggibile). */
+function readIdemMap(): Record<string, IdemEntry> {
   try {
     const raw = localStorage.getItem(IDEM_KEY);
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        return parsed as Record<string, string>;
+        return parsed as Record<string, IdemEntry>;
       }
     }
   } catch {
@@ -358,39 +382,56 @@ function readIdemMap(): Record<string, string> {
 
 /**
  * Ritorna la chiave d'idempotenza per la firma di questa email, generandola e
- * persistendola alla prima chiamata. Persistita PRIMA dell'invio in una MAPPA
- * `{ email → key }` (in `localStorage`, per email normalizzata) così un retry —
- * anche dopo un reload, o dopo aver provato un'ALTRA email e essere tornati a
- * questa — riusa la STESSA chiave e il server recupera la sessione (signatureId
- * + password) invece di rispondere 409. Una mappa (non un singolo record) evita
- * che digitare un'altra email sovrascriva la chiave della prima (lockout). La
- * chiave NON viene cancellata al successo: può restare, così un retry tardivo
- * ricapitalizza comunque la stessa sessione. Best-effort: senza `localStorage`
- * ritorna comunque una chiave valida (senza persistenza cross-reload).
+ * persistendola alla prima chiamata. È indicizzata per **hash** dell'email
+ * normalizzata (pseudonimo: nessuna email in chiaro nello storage) così un
+ * retry — anche dopo un reload, o dopo aver provato un'ALTRA email e essere
+ * tornati a questa — riusa la STESSA chiave e il server recupera la sessione
+ * (signatureId + password) invece di 409. La chiave NON viene cancellata al
+ * successo: un retry tardivo recupera comunque la sessione. Una cache in-memory
+ * copre il caso `localStorage` indisponibile (idempotenza nella stessa pagina).
+ *
+ * Limite noto (accettato): il read-modify-write della mappa non è atomico tra
+ * schede diverse — due schede che firmano in parallelo la stessa email nello
+ * stesso istante possono divergere; caso estremo per un funnel demo, non vale
+ * la complessità di `navigator.locks`.
  */
 export function idempotencyKeyFor(businessEmail: string): string {
   const email = businessEmail.trim().toLowerCase();
-  const map = readIdemMap();
-  const existing = map[email];
-  if (typeof existing === "string" && IDEM_FORMAT.test(existing)) {
-    return existing;
+  const id = hashEmail(email);
+  const cached = idemMemCache.get(id);
+  if (cached) return cached;
+
+  const now = Date.now();
+  const entry = readIdemMap()[id];
+  if (entry && IDEM_FORMAT.test(entry.key) && now - entry.ts < IDEM_TTL_MS) {
+    idemMemCache.set(id, entry.key);
+    return entry.key;
   }
+
   const key = nanoid(); // 21 char, charset [A-Za-z0-9_-] → rispetta IDEM_FORMAT
-  map[email] = key;
+  idemMemCache.set(id, key);
+  // Ri-leggo la mappa PIÙ recente (riduce la finestra di race), poto le entry
+  // scadute e scrivo la nuova.
+  const fresh = readIdemMap();
+  for (const k of Object.keys(fresh)) {
+    if (!fresh[k] || now - fresh[k].ts >= IDEM_TTL_MS) delete fresh[k];
+  }
+  fresh[id] = { key, ts: now };
   try {
-    localStorage.setItem(IDEM_KEY, JSON.stringify(map));
+    localStorage.setItem(IDEM_KEY, JSON.stringify(fresh));
   } catch {
-    // no-op: chiave valida ma non persistita (nessun recupero cross-reload)
+    // no-op: la cache in-memory garantisce l'idempotenza nella pagina corrente
   }
   return key;
 }
 
 /**
- * Elimina TUTTE le chiavi d'idempotenza (utility di reset). NON è chiamata al
- * successo: le chiavi persistono così un retry tardivo recupera la sessione, e
- * non c'è rischio che una scheda cancelli la chiave necessaria a un'altra.
+ * Elimina TUTTE le chiavi d'idempotenza (utility di reset: storage + cache).
+ * NON è chiamata al successo: le chiavi persistono così un retry tardivo
+ * recupera la sessione, e nessuna scheda cancella la chiave necessaria a un'altra.
  */
 export function clearIdempotencyKey(): void {
+  idemMemCache.clear();
   try {
     localStorage.removeItem(IDEM_KEY);
   } catch {

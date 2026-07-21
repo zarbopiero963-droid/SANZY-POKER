@@ -291,6 +291,14 @@ describe("demoSession — persistenza minimale (no PII)", () => {
     expect(idempotencyKeyFor("John@Acme.com")).not.toBe(kA);
   });
 
+  it("idempotencyKeyFor NON persiste l'email in chiaro (solo hash pseudonimo)", () => {
+    idempotencyKeyFor("secret.person@bigcorp.com");
+    const raw = localStorage.getItem("sanzy.nda.idem") ?? "";
+    // nello storage finisce solo l'hash + una chiave casuale, MAI l'email
+    expect(raw).not.toContain("secret.person@bigcorp.com");
+    expect(raw).not.toContain("bigcorp.com");
+  });
+
   it("NON persiste companyCopyRequested (flag in-memory, non nello storage)", () => {
     const session = {
       ...createDemoSession(VALID_FORM, 1_800_000_000_000, "it"),
