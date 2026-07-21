@@ -11,7 +11,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import {
-  createDemoSession,
+  buildNdaPayload,
   isNdaFormValid,
   saveDemoSession,
   validateNdaForm,
@@ -21,6 +21,7 @@ import {
 import { submitNda } from "./ndaService";
 import { tb, type BizLocale } from "./landingI18n";
 import { useFocusTrap } from "./useFocusTrap";
+import { fillNdaText } from "@shared/ndaText";
 
 type NdaDialogProps = {
   locale: BizLocale;
@@ -46,7 +47,10 @@ export default function NdaDialog({
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [session, setSession] = useState<DemoSession | null>(null);
-  const [submitError, setSubmitError] = useState(false);
+  // null = nessun errore; altrimenti la chiave i18n del messaggio da mostrare.
+  const [submitError, setSubmitError] = useState<
+    null | "submit" | "alreadySigned" | "outdated" | "rateLimited"
+  >(null);
   const [copied, setCopied] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const copyTimeoutRef = useRef<number | null>(null);
@@ -75,6 +79,7 @@ export default function NdaDialog({
 
   const goBack = () => {
     setShowErrors(false);
+    setSubmitError(null); // non trascinare un errore d'invio tra gli step
     setStep(prev => (prev === 1 ? 1 : ((prev - 1) as 1 | 2)));
   };
 
@@ -87,33 +92,51 @@ export default function NdaDialog({
       return;
     }
     setShowErrors(false);
-    setSubmitError(false);
+    setSubmitError(null);
     setSubmitting(true);
     try {
-      const created = createDemoSession(form, Date.now(), locale);
-      // PR1: stub locale. PR2 userà la risposta autorevole del server (fetch).
-      const result = await submitNda(created);
+      // Il server è autorevole: genera signatureId/password, fissa startedAt,
+      // rileva l'IP, produce PDF/email. Il client USA la risposta.
+      const result = await submitNda(form, locale);
       if (!result.ok) {
-        setSubmitError(true);
+        setSubmitError(
+          result.error === "already_signed"
+            ? "alreadySigned"
+            : result.error === "unsupported_nda_version"
+              ? "outdated"
+              : result.error === "rate_limited"
+                ? "rateLimited"
+                : "submit"
+        );
         return;
       }
-      // Onora il contratto: usa signatureId/password dalla RISPOSTA (nel PR2
-      // arriveranno dal server), non quelli generati solo dal client.
+      // Il countdown demo è lato client: lo ancoriamo al clock del CLIENT
+      // (`Date.now()` alla firma), NON al timestamp server. Così è coerente in
+      // entrambe le direzioni di skew — un client indietro non fa scartare la
+      // sessione al refresh (guard `startedAt <= now`), e uno avanti non la fa
+      // risultare già scaduta. Il tempo AUTOREVOLE della firma resta comunque
+      // registrato lato server (acceptedAt nel record/PDF).
+      const startedAt = Date.now();
       const finalized: DemoSession = {
-        ...created,
         signatureId: result.signatureId,
         password: result.password,
-        payload: { ...created.payload, signatureId: result.signatureId },
+        startedAt,
+        payload: buildNdaPayload(form, {
+          signatureId: result.signatureId,
+          // Istante di accettazione = quello AUTOREVOLE del server (nel PDF/log),
+          // NON il clock locale usato per il countdown.
+          acceptedAt: new Date(result.startedAt).toISOString(),
+          ndaLocale: locale,
+        }),
       };
       // Persistiamo SUBITO alla firma: un refresh sulla schermata di sblocco non
       // perde la sessione (prima la persistenza avveniva solo al "Avvia").
       saveDemoSession(finalized);
       setSession(finalized);
     } catch {
-      // Il PR2 sostituirà submitNda con una fetch: qui il finally garantisce
-      // che il pulsante non resti bloccato su "Registrazione…" se la promise
-      // rigetta (rete/500), e l'utente vede un messaggio d'errore.
-      setSubmitError(true);
+      // Il finally garantisce che il pulsante non resti bloccato su
+      // "Registrazione…" se qualcosa rigetta; l'utente vede un messaggio.
+      setSubmitError("submit");
     } finally {
       setSubmitting(false);
     }
@@ -243,8 +266,19 @@ export default function NdaDialog({
                   <p className="sanzy-nda__text sanzy-nda__text--green">
                     {tb("nda.slide3.text", locale)}
                   </p>
+                  {/* Testo NDA CANONICO (fonte condivisa col PDF del server):
+                      riempito coi dati dell'utente; IP/timestamp/ID mostrati come
+                      "registrati all'invio". È lo STESSO testo che finirà nel PDF
+                      firmato — accettato = registrato. */}
                   <div className="sanzy-nda__ndabox">
-                    {tb("nda.body", locale)}
+                    {fillNdaText(locale, {
+                      NOME: form.fullName.trim() || "—",
+                      AZIENDA: form.companyName.trim() || "—",
+                      EMAIL: form.businessEmail.trim() || "—",
+                      IP: tb("nda.recordedOnSubmit", locale),
+                      TIMESTAMP: tb("nda.recordedOnSubmit", locale),
+                      SIGNATURE_ID: tb("nda.recordedOnSubmit", locale),
+                    })}
                   </div>
                   <label className="sanzy-nda__check">
                     <input
@@ -271,7 +305,7 @@ export default function NdaDialog({
                   )}
                   {submitError && (
                     <p className="sanzy-nda__err" role="alert">
-                      {tb("nda.error.submit", locale)}
+                      {tb(`nda.error.${submitError}`, locale)}
                     </p>
                   )}
                 </>
@@ -476,6 +510,7 @@ const NDA_CSS = `
   max-height: 168px; overflow-y: auto; padding: 12px 14px; border-radius: 10px;
   background: rgba(6, 24, 17, 0.7); border: 1px solid rgba(214, 178, 102, 0.25);
   font-size: 12.5px; line-height: 1.55; color: #cfe0d6;
+  white-space: pre-line;
 }
 .sanzy-nda__check { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.4; cursor: pointer; }
 .sanzy-nda__check input { margin-top: 3px; width: 18px; height: 18px; accent-color: #d6b466; flex: 0 0 auto; }

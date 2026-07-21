@@ -2,6 +2,8 @@ import express from "express";
 import { createServer } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createNdaRouter } from "./nda/router";
+import { createInMemorySignatureStore } from "./nda/store";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,6 +11,12 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // Dietro l'edge proxy Railway (1 hop): con `trust proxy: 1` `req.ip` è l'IP
+  // reale del client e NON è spoofabile (il primo elemento di X-Forwarded-For,
+  // controllabile dal client, viene ignorato). Se la topologia avesse più hop,
+  // adeguare questo numero.
+  app.set("trust proxy", 1);
 
   // Serve static files from dist/public in production
   const staticPath =
@@ -21,6 +29,18 @@ async function startServer() {
   // Health check per Railway (e qualsiasi altro monitor esterno).
   app.get("/healthz", (_req, res) => {
     res.status(200).json({ status: "ok" });
+  });
+
+  // API NDA (PR2 #26): firma server-authoritative + PDF + log IP + email Resend.
+  // Store anti-replay in-memory (Railway effimero: si azzera al redeploy).
+  const signatureStore = createInMemorySignatureStore();
+  app.use("/api/nda", createNdaRouter({ store: signatureStore }));
+
+  // Rotte API sconosciute → 404 JSON (NON la SPA): un client API che sbaglia
+  // path deve ricevere un errore macchina-leggibile, non l'index.html con 200.
+  // Deve stare PRIMA del catch-all che serve la SPA.
+  app.use("/api", (_req, res) => {
+    res.status(404).json({ ok: false, error: "not_found" });
   });
 
   // Handle client-side routing - serve index.html for all routes

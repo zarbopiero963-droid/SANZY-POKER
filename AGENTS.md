@@ -262,6 +262,15 @@ On this repo the reviewers that appear on PRs are **CodeRabbit**, **Sourcery**, 
 
 Each push costs CI minutes. Batch review fixes into a single push per round; never push for cosmetic-only cleanups or to chase per-push-range false positives (a reviewer that only saw the last commit and thinks an earlier-commit implementation is "missing") — answer those in-thread with evidence, not a commit.
 
+### Convergence — chase real bugs, do not loop on by-design (required)
+
+AI reviewers re-review on every commit and will re-raise the **same by-design items forever**; treating each round as new work is an infinite loop that never converges and burns CI. Split every finding into two buckets and act differently:
+
+- **Real logical/functional bug** — wrong output, data-integrity break, crash/hang, resource leak, security hole, spec violation (chip conservation, 50/50, §5 hierarchy, deck, phases, variants). **Chase it:** write a regression test that fails on the old code, fix it, one batched push per round. This is never "looping" — it is the job.
+- **By-design decision or documented exception** — e.g. the business-module IT/EN i18n exception, the PR3 boundary (durable store / idempotency / server-authoritative session), the deliberately fail-open-without-`RESEND_API_KEY` degraded mode for dev/CI, `trust proxy: 1` on Railway, in-memory anti-replay/rate-limit. These are **not bugs**. Do NOT patch them round after round: answer once in-thread with the rationale/evidence and move on. If a reviewer re-raises the same by-design point on a later head, point to the prior answer — do not re-patch.
+
+Litmus test before pushing a "fix": does it change observable behavior to correct a wrong result, or is it re-litigating a choice already made and documented? Only the former earns a commit. When a by-design item recurs enough to be worth recording, annotate it here and in `CLAUDE.md` (as the owner requested) so future rounds skip it fast. Do not declare an endless review loop "DONE" by exhaustion — converge by classifying, fixing the real bugs, and handing the by-design set to the owner for the manual merge decision.
+
 ### Two-model AI review — mandatory labels
 
 This repo has two AI code-review workflows (`.github/workflows/ai-review-fable.yml` → Anthropic Fable 5; `.github/workflows/ai-review-gpt.yml` → OpenAI). They run **only when triggered by a label** and comment the PR on every commit; they are **not blocking checks** and the merge stays manual (owner).

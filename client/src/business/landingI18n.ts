@@ -121,9 +121,11 @@ export const BIZ_STRINGS = {
     it: "Stai per entrare in un tavolo che cambierà le regole del gioco. Questo software è protetto da copyright internazionale. Per sbloccare il motore 3D in Babylon.js, accetta l'accordo di riservatezza.",
     en: "You are about to step onto a table that changes the rules of the game. This software is protected by international copyright. To unlock the Babylon.js 3D core, please accept the confidentiality agreement.",
   },
-  "nda.body": {
-    it: "Accordo di riservatezza (NDA). Le informazioni, il gameplay e il codice mostrati nella demo di Sanzy Poker sono riservati e di proprietà dell'autore. Il destinatario si impegna a non divulgare, copiare o riprodurre quanto mostrato senza consenso scritto. L'accordo si intende accettato digitalmente tramite selezione della casella e invio del modulo.",
-    en: "Confidentiality agreement (NDA). The information, gameplay and code shown in the Sanzy Poker demo are confidential and owned by the author. The recipient agrees not to disclose, copy or reproduce anything shown without written consent. This agreement is deemed accepted digitally by ticking the checkbox and submitting the form.",
+  // Segnaposto mostrato al posto di IP/timestamp/ID nel testo NDA prima della
+  // firma: sul PDF del server questi campi portano i valori reali.
+  "nda.recordedOnSubmit": {
+    it: "(registrato all'invio)",
+    en: "(recorded upon submission)",
   },
   "nda.checkbox": {
     it: "Accetto i termini dell'accordo di non divulgazione (NDA) sopra riportato.",
@@ -140,6 +142,18 @@ export const BIZ_STRINGS = {
   "nda.error.submit": {
     it: "Registrazione non riuscita. Riprova.",
     en: "Signature failed. Please try again.",
+  },
+  "nda.error.alreadySigned": {
+    it: "Questa email aziendale ha già firmato l'NDA e avviato una demo. Contatta l'autore per una prova estesa.",
+    en: "This business email has already signed the NDA and started a demo. Contact the author for an extended trial.",
+  },
+  "nda.error.outdated": {
+    it: "La versione dell'accordo è cambiata. Ricarica la pagina per continuare.",
+    en: "The agreement version has changed. Please reload the page to continue.",
+  },
+  "nda.error.rateLimited": {
+    it: "Troppi tentativi da questa rete. Riprova tra qualche minuto.",
+    en: "Too many attempts from this network. Please try again in a few minutes.",
   },
   // --- Schermata di sblocco ---
   "unlock.title": {
@@ -243,8 +257,8 @@ export const BIZ_STRINGS = {
     en: "Privacy Policy",
   },
   "legal.privacy.body": {
-    it: "Titolare del trattamento: Piero Zambo (pier.zar69@gmail.com).\n\nDati raccolti. Nel modulo NDA raccogliamo nome e cognome, email aziendale, nome dell'azienda e ruolo. Alla firma vengono associati un identificativo di firma e la data/ora; l'indirizzo IP viene registrato lato server al momento dell'invio (fase backend).\n\nFinalità. I dati sono trattati per gestire l'accordo di riservatezza, dare accesso alla demo e per contatti commerciali conseguenti.\n\nBase giuridica. Esecuzione di misure precontrattuali e legittimo interesse dell'azienda.\n\nConservazione. I dati sono conservati per il tempo necessario alla trattativa e agli obblighi legali connessi all'NDA.\n\nDiritti. Puoi chiedere accesso, rettifica o cancellazione dei tuoi dati scrivendo a pier.zar69@gmail.com.\n\nNota. In questa fase (frontend) i dati NON vengono inviati ad alcun server: restano nel tuo browser per la durata della sessione. L'invio via email e la registrazione dell'IP avvengono nella fase backend successiva.",
-    en: "Data controller: Piero Zambo (pier.zar69@gmail.com).\n\nData collected. In the NDA form we collect full name, business email, company name and job title. On signature a signature ID and a timestamp are associated; the IP address is logged server-side at submission time (backend phase).\n\nPurpose. Data is processed to manage the confidentiality agreement, grant demo access and for the resulting business contact.\n\nLegal basis. Performance of pre-contractual measures and the company's legitimate interest.\n\nRetention. Data is kept for as long as needed for the negotiation and the legal obligations tied to the NDA.\n\nRights. You may request access, rectification or erasure of your data by writing to pier.zar69@gmail.com.\n\nNote. In this (frontend) phase data is NOT sent to any server: it stays in your browser for the duration of the session. Email delivery and IP logging happen in the later backend phase.",
+    it: "Titolare del trattamento: Piero Zambo (pier.zar69@gmail.com).\n\nDati raccolti. Nel modulo NDA raccogliamo nome e cognome, email aziendale, nome dell'azienda e ruolo. Alla firma il server genera un identificativo di firma e la data/ora e registra il tuo indirizzo IP.\n\nFinalità. I dati sono trattati per gestire l'accordo di riservatezza, dare accesso alla demo e per contatti commerciali conseguenti.\n\nBase giuridica. Esecuzione di misure precontrattuali e legittimo interesse dell'azienda.\n\nDestinatari. Alla firma i dati vengono inviati al nostro server; un PDF dell'NDA firmato (con i dati sopra indicati, indirizzo IP, data/ora e identificativo di firma) viene recapitato via email al titolare tramite il fornitore di posta transazionale Resend. Il consenso ai cookie, la lingua scelta e l'avvio della demo restano invece nel tuo browser (localStorage).\n\nConservazione. I dati sono conservati per il tempo necessario alla trattativa e agli obblighi legali connessi all'NDA.\n\nDiritti. Puoi chiedere accesso, rettifica o cancellazione dei tuoi dati scrivendo a pier.zar69@gmail.com.",
+    en: "Data controller: Piero Zambo (pier.zar69@gmail.com).\n\nData collected. In the NDA form we collect full name, business email, company name and job title. On signature the server generates a signature ID and a timestamp and logs your IP address.\n\nPurpose. Data is processed to manage the confidentiality agreement, grant demo access and for the resulting business contact.\n\nLegal basis. Performance of pre-contractual measures and the company's legitimate interest.\n\nRecipients. On signature the data is sent to our server; a PDF of the signed NDA (including the data above, IP address, timestamp and signature ID) is delivered by email to the controller through the transactional email provider Resend. Your cookie consent, chosen language and demo start instead remain in your browser (localStorage).\n\nRetention. Data is kept for as long as needed for the negotiation and the legal obligations tied to the NDA.\n\nRights. You may request access, rectification or erasure of your data by writing to pier.zar69@gmail.com.",
   },
   "legal.cookie.title": {
     it: "Cookie Policy",

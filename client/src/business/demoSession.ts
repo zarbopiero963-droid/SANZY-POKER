@@ -11,19 +11,18 @@
  * arriva nel PR backend (vedi #26).
  */
 import { nanoid } from "nanoid";
+import { NDA_VERSION } from "@shared/ndaText";
 import type { BizLocale } from "./landingI18n";
 
 /** Durata della demo: 15 minuti, come richiesto nell'idea #12. */
 export const DEMO_DURATION_MS = 15 * 60 * 1000;
 
 /**
- * Versione del testo NDA presentato all'utente. Fa parte del payload firmato:
- * un click-wrap è verificabile solo se registra QUALE testo è stato accettato.
- * Va incrementata a ogni modifica sostanziale del testo dell'NDA. Nel PR1 il
- * testo è ammorbidito (nulla è ancora registrato lato server); il PR2 (#26)
- * ripristina il testo legale pieno e alza questa versione.
+ * Versione del testo NDA: FONTE UNICA in `shared/ndaText.ts`, importata anche
+ * dal server. Client e server usano la stessa costante e lo stesso testo, quindi
+ * non possono divergere (il backend rifiuta comunque con 422 versioni diverse).
  */
-export const NDA_VERSION = "pr1-draft-1";
+export { NDA_VERSION };
 
 /** Dati raccolti dal manager nelle 3 slide del popup NDA. */
 export type NdaForm = {
