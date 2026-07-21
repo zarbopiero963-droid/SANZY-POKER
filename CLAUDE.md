@@ -115,6 +115,15 @@ Su questo repository i reviewer che compaiono sulle PR sono **CodeRabbit**, **So
 
 Ogni push consuma minuti CI. Sii parsimonioso: accorpa i fix di review in un solo push per giro; non pushare per cleanup puramente cosmetici o per rincorrere falsi positivi da diff-per-push (un reviewer che ha visto solo l'ultimo commit e crede «mancante» un'implementazione che sta in un commit precedente della stessa PR) — a quelli rispondi nel thread con l'evidenza, mai con un commit.
 
+## CONVERGENZA — inseguire i bug veri, non ciclare all'infinito sul by-design
+
+I reviewer AI ri-revisionano a ogni commit e ri-sollevano **all'infinito gli stessi punti «per design»**: trattarli come lavoro nuovo a ogni giro è un loop che non converge e brucia CI. Classifica ogni finding in due categorie e agisci diversamente:
+
+- **Bug logico/funzionale reale** — risultato sbagliato, rottura d'integrità dei dati, crash/hang, leak di risorse, falla di sicurezza, violazione di spec (conservazione gettoni, 50/50, gerarchia §5, mazzo, fasi, varianti). **Inseguilo:** scrivi PRIMA il test di regressione che fallisce sul vecchio codice, poi la patch, un solo push accorpato per giro. Questo NON è «ciclare»: è il lavoro.
+- **Decisione by-design o eccezione documentata** — es. l'eccezione i18n IT/EN del modulo business, il confine del PR3 (store durevole / idempotenza / sessione server-authoritative), la modalità degradata volutamente fail-open senza `RESEND_API_KEY` per dev/CI, `trust proxy: 1` su Railway, anti-replay/rate-limit in-memory. Questi **non sono bug**. NON patcharli giro dopo giro: rispondi UNA volta nel thread con la motivazione/evidenza e vai avanti. Se un reviewer ri-solleva lo stesso punto by-design su un head successivo, rimanda alla risposta precedente — non ri-patchare.
+
+Prova del nove prima di pushare un «fix»: cambia il comportamento osservabile per correggere un risultato sbagliato, oppure sta ri-discutendo una scelta già presa e documentata? Solo il primo caso merita un commit. Quando un punto by-design ricorre abbastanza da valere la pena, annotalo qui e in `AGENTS.md` (come richiesto dall'owner) così i giri futuri lo saltano subito. Non dichiarare «DONE» un loop di review infinito per sfinimento: converge classificando, correggendo i bug veri e lasciando all'owner la decisione di merge manuale sui punti by-design.
+
 ## AI REVIEW A DUE MODELLI — LABEL OBBLIGATORIE
 
 Su questo repository esistono due workflow di code review AI (`.github/workflows/ai-review-fable.yml` → Anthropic Fable 5; `.github/workflows/ai-review-gpt.yml` → OpenAI). Si attivano **solo tramite label** e commentano la PR a ogni commit; **non sono check bloccanti** e il merge resta manuale del proprietario.

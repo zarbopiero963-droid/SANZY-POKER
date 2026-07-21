@@ -22,6 +22,9 @@ export type NdaSignResult = {
   error?: string;
 };
 
+/** Timeout della richiesta di firma (ms): oltre, si annulla e si segnala rete. */
+const REQUEST_TIMEOUT_MS = 15000;
+
 const FAIL = (error: string): NdaSignResult => ({
   ok: false,
   signatureId: "",
@@ -39,11 +42,18 @@ export async function submitNda(
   form: NdaForm,
   locale: BizLocale
 ): Promise<NdaSignResult> {
+  // Timeout finito: senza, una connessione appesa lascerebbe il dialog bloccato
+  // su "Registrazione…" all'infinito (durante `submitting` Esc/chiudi sono
+  // disabilitati). All'abort si segue il normale percorso FAIL("network"); il
+  // timer viene sempre ripulito così lo stato di invio si sblocca.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let res: Response;
   try {
     res = await fetch("/api/nda/sign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
       body: JSON.stringify({
         fullName: form.fullName,
         businessEmail: form.businessEmail,
@@ -56,6 +66,8 @@ export async function submitNda(
     });
   } catch {
     return FAIL("network");
+  } finally {
+    clearTimeout(timer);
   }
 
   let data: Partial<NdaSignResult> & { error?: string };

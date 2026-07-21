@@ -75,15 +75,21 @@ export function ndaTemplate(locale: NdaLocale): string {
   return TEMPLATES[locale] ?? TEMPLATES.it;
 }
 
+/** Segnaposto ammessi nel testo NDA (chiavi di `NdaFillValues`). */
+const NDA_PLACEHOLDER = /\{(NOME|AZIENDA|EMAIL|IP|TIMESTAMP|SIGNATURE_ID)\}/g;
+
 /**
- * Riempie i segnaposto del testo NDA. Replacement a funzione: i valori sono
- * trattati letteralmente (nessun pattern regex interpretato dal valore).
+ * Riempie i segnaposto del testo NDA in UNA SOLA passata sul template originale.
+ * È deliberato: una sostituzione sequenziale non funziona qui — se un valore utente
+ * contenesse a sua volta un segnaposto (es. azienda = "Foo {SIGNATURE_ID}"),
+ * una serie di `.replace()` lo ri-espanderebbe, alterando il testo legale
+ * canonico usato sia per l'anteprima sia per il PDF firmato (rottura del
+ * principio «accettato == registrato»). Con la passata unica i valori sostituiti
+ * restano letterali e non possono innescare ulteriori espansioni. Il regex è
+ * statico (nessuna costruzione da input → nessun rischio ReDoS).
  */
 export function fillNdaText(locale: NdaLocale, values: NdaFillValues): string {
-  let text = ndaTemplate(locale);
-  for (const [key, value] of Object.entries(values)) {
-    const stringValue = String(value);
-    text = text.replace(new RegExp(`\\{${key}\\}`, "g"), () => stringValue);
-  }
-  return text;
+  return ndaTemplate(locale).replace(NDA_PLACEHOLDER, (_match, key: string) =>
+    String(values[key as keyof NdaFillValues])
+  );
 }

@@ -29,6 +29,7 @@ function mockFetchJson(status: number, body: unknown) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("submitNda — validazione risposta server", () => {
@@ -95,6 +96,27 @@ describe("submitNda — validazione risposta server", () => {
       .fn()
       .mockRejectedValue(new Error("offline")) as unknown as typeof fetch;
     const r = await submitNda(FORM, "it");
+    expect(r.error).toBe("network");
+  });
+
+  it("fetch appesa oltre il timeout → abort → network (dialog si sblocca)", async () => {
+    // Regressione: senza timeout una connessione appesa lascerebbe `submitting`
+    // a true per sempre. Il timer interno deve abortire e cadere su network.
+    vi.useFakeTimers();
+    let aborted = false;
+    global.fetch = vi.fn((_url: string, opts: RequestInit) => {
+      return new Promise<Response>((_resolve, reject) => {
+        opts.signal?.addEventListener("abort", () => {
+          aborted = true;
+          reject(new DOMException("Aborted", "AbortError"));
+        });
+      });
+    }) as unknown as typeof fetch;
+    const p = submitNda(FORM, "it");
+    await vi.advanceTimersByTimeAsync(20000); // oltre REQUEST_TIMEOUT_MS (15s)
+    const r = await p;
+    expect(aborted).toBe(true);
+    expect(r.ok).toBe(false);
     expect(r.error).toBe("network");
   });
 });

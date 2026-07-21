@@ -18,7 +18,11 @@ import {
   type SignedNdaRecord,
 } from "../server/nda/signing";
 import { NDA_VERSION } from "../server/nda/ndaText";
-import { NDA_VERSION as SHARED_VERSION, ndaTemplate } from "../shared/ndaText";
+import {
+  NDA_VERSION as SHARED_VERSION,
+  ndaTemplate,
+  fillNdaText,
+} from "../shared/ndaText";
 import { NDA_VERSION as CLIENT_VERSION } from "../client/src/business/demoSession";
 import {
   createInMemorySignatureStore,
@@ -40,6 +44,8 @@ import {
   buildEmailText,
   buildEmailSubject,
   stripControl,
+  safeAttachmentId,
+  withTimeout,
 } from "../server/nda/email";
 
 const VALID_BODY = {
@@ -194,6 +200,26 @@ describe("NDA — testo e PDF", () => {
     expect(paras.join("\n")).toContain("203.0.113.7"); // IP firmato
   });
 
+  it("fillNdaText: un valore che contiene un segnaposto NON viene ri-espanso", () => {
+    // Regressione (integrità testo legale): con sostituzione sequenziale, un
+    // valore utente come azienda="Foo {SIGNATURE_ID}" verrebbe ri-scansionato e
+    // {SIGNATURE_ID} sostituito → testo canonico alterato dall'input utente.
+    const filled = fillNdaText("en", {
+      NOME: "Mario Rossi",
+      AZIENDA: "Foo {SIGNATURE_ID}",
+      EMAIL: "m@r.com",
+      IP: "1.2.3.4",
+      TIMESTAMP: "2026-07-20T10:00:00.000Z",
+      SIGNATURE_ID: "snz_nda_REAL",
+    });
+    // Il {SIGNATURE_ID} iniettato nel nome azienda resta LETTERALE (non espanso).
+    expect(filled).toContain("Foo {SIGNATURE_ID}");
+    // Il vero segnaposto SIGNATURE_ID (nella clausola 4) è riempito col valore reale.
+    expect(filled).toContain("snz_nda_REAL");
+    // Nessun segnaposto canonico residuo non sostituito.
+    expect(filled).not.toMatch(/\{(NOME|AZIENDA|EMAIL|IP|TIMESTAMP)\}/);
+  });
+
   it("renderNdaPdf produce un PDF valido (header %PDF) e non vuoto", async () => {
     const pdf = await renderNdaPdf(RECORD);
     expect(pdf.byteLength).toBeGreaterThan(500);
@@ -270,11 +296,21 @@ describe("NDA — email (degradazione senza chiave)", () => {
     expect(text).toContain("1.2.3.4");
   });
 
-  it("stripControl rimuove CR/LF/TAB e altri caratteri di controllo", () => {
-    // Difesa anti header-injection: nessun \r \n \t o C0/DEL può sopravvivere.
+  it("stripControl rimuove CR/LF/TAB, C0/DEL, C1 e separatori Unicode", () => {
+    // Difesa anti header-injection: nessun \r \n \t, C0/DEL, C1 (0x80-0x9f) o
+    // separatore di riga Unicode (U+2028/U+2029) può sopravvivere.
     expect(stripControl("ACME\r\nBcc: evil@x.com")).toBe("ACMEBcc: evil@x.com");
     expect(stripControl("a\tb\x00c\x1fd\x7fe")).toBe("abcde");
+    expect(stripControl("x\x85y\x9fz")).toBe("xyz"); // C1: NEL, APC
+    expect(stripControl("p\u2028q\u2029r")).toBe("pqr"); // LINE/PARAGRAPH SEP
+    // I caratteri Latin-1 stampabili (accentate) NON vanno rimossi:
+    expect(stripControl("José Peña")).toBe("José Peña");
     expect(stripControl("pulita")).toBe("pulita");
+  });
+
+  it("safeAttachmentId tiene solo [A-Za-z0-9_-] (Content-Disposition sicuro)", () => {
+    expect(safeAttachmentId("snz_nda_abc-123")).toBe("snz_nda_abc-123");
+    expect(safeAttachmentId('a/b\\c"d\r\ne')).toBe("abcde");
   });
 
   it("buildEmailSubject è a riga singola anche con input malevolo", () => {
@@ -296,6 +332,21 @@ describe("NDA — email (degradazione senza chiave)", () => {
     const nameLines = text.split("\n").filter(l => l.startsWith("Nome:"));
     expect(nameLines).toHaveLength(1);
     expect(nameLines[0]).toBe("Nome: JohnX-Injected: 1");
+  });
+
+  it("withTimeout: risolve se la promise è veloce", async () => {
+    await expect(withTimeout(Promise.resolve("ok"), 1000)).resolves.toBe("ok");
+  });
+
+  it("withTimeout: rigetta se la promise supera il timeout", async () => {
+    // Una send Resend appesa non deve tenere bloccata la prenotazione: allo
+    // scadere il race rigetta e il chiamante rilascia la firma (503).
+    const hung = new Promise<string>(() => {}); // non si risolve mai
+    await expect(withTimeout(hung, 10)).rejects.toThrow(/timeout/);
+  });
+
+  it("safeAttachmentId neutralizza un signatureId ostile nel filename", () => {
+    expect(safeAttachmentId('x"; evil')).toBe("xevil");
   });
 });
 
