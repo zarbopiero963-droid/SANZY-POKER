@@ -147,9 +147,16 @@ export async function sendNdaEmail(
               `[nda] company copy failed (provider-error) ${input.signatureId}`
             );
           }
-        } catch {
+        } catch (err) {
+          // Distinguo il timeout (`withTimeout` rigetta con «timeout …») dagli
+          // altri throw: «Resend lento» vs «Resend rotto» in diagnosi. Nessuna
+          // PII: solo signatureId e la categoria.
+          const kind =
+            err instanceof Error && err.message.startsWith("timeout")
+              ? "timeout"
+              : "exception";
           console.error(
-            `[nda] company copy failed (exception) ${input.signatureId}`
+            `[nda] company copy failed (${kind}) ${input.signatureId}`
           );
         }
       })();

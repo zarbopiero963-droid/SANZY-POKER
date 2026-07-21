@@ -193,6 +193,9 @@ export default function NdaDialog({
           <UnlockPanel
             locale={locale}
             password={session.password}
+            // `form.businessEmail` è valido qui: l'avviso copia si mostra solo
+            // se `companyCopyRequested` è true, che arriva SOLO dalla firma
+            // appena fatta (flag non persistito) → il form è sempre popolato.
             businessEmail={form.businessEmail}
             companyCopyRequested={session.companyCopyRequested === true}
             copied={copied}
