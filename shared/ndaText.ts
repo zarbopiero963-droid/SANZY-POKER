@@ -11,7 +11,10 @@
  * A ogni modifica sostanziale del testo va incrementata `NDA_VERSION` (il
  * backend rifiuta con 422 le firme con versione diversa da quella del server).
  */
-export const NDA_VERSION = "1.0-clickwrap";
+// Storico: 1.0-clickwrap → 1.1-clickwrap = correzione del nome del Divulgante
+// («Piero Zambo» → «Piero Zarbo»): identità di una parte dell'NDA = testo
+// materiale, quindi la versione va incrementata (invariante «versione == testo»).
+export const NDA_VERSION = "1.1-clickwrap";
 
 export type NdaLocale = "it" | "en";
 
@@ -27,7 +30,7 @@ export type NdaFillValues = {
 const NDA_IT = `ACCORDO DI RISERVATEZZA E NON DIVULGAZIONE (NDA)
 
 TRA:
-Il Divulgante: Piero Zambo, ideatore e proprietario del software e della variante di gioco denominata "Sanzy Poker" (di seguito: "Divulgante" o "Proprietario").
+Il Divulgante: Piero Zarbo, ideatore e proprietario del software e della variante di gioco denominata "Sanzy Poker" (di seguito: "Divulgante" o "Proprietario").
 E
 Il Ricevente: {NOME}, per conto dell'azienda {AZIENDA} (Email aziendale: {EMAIL}), che accede alla demo software (di seguito: "Ricevente").
 
@@ -49,7 +52,7 @@ Le Parti concordano espressamente che il presente Accordo viene stipulato e divi
 const NDA_EN = `MUTUAL NON-DISCLOSURE AGREEMENT (NDA)
 
 BY AND BETWEEN:
-The Disclosing Party: Piero Zambo, creator and sole owner of the software and game variant known as "Sanzy Poker" (hereinafter: "Disclosing Party").
+The Disclosing Party: Piero Zarbo, creator and sole owner of the software and game variant known as "Sanzy Poker" (hereinafter: "Disclosing Party").
 AND
 The Receiving Party: {NOME}, acting on behalf of the company {AZIENDA} (Business Email: {EMAIL}), accessing the software demo (hereinafter: "Receiving Party").
 

@@ -189,6 +189,17 @@ describe("NDA — testo e PDF", () => {
     );
   });
 
+  it("il Divulgante nel template è «Piero Zarbo», mai il refuso «Zambo» (IT+EN)", () => {
+    // Regressione del refuso segnalato dall'owner: il nome del Divulgante era
+    // «Piero Zambo». Il template condiviso alimenta SIA l'anteprima client SIA
+    // il PDF server, quindi un solo controllo blinda entrambi.
+    for (const locale of ["it", "en"] as const) {
+      const template = ndaTemplate(locale);
+      expect(template).toContain("Piero Zarbo");
+      expect(template).not.toMatch(/Zambo/);
+    }
+  });
+
   it("toWinAnsiSafe: Latin-1 OK; C1/CJK/emoji/newline → ?", () => {
     expect(toWinAnsiSafe("Café Zürich")).toBe("Café Zürich");
     expect(toWinAnsiSafe("株式会社")).toBe("????");
