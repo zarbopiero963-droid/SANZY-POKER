@@ -28,7 +28,7 @@ import {
 } from "@/business/demoSession";
 import {
   BIZ_LOCALES,
-  DEFAULT_BIZ_LOCALE,
+  detectBizLocale,
   type BizLocale,
 } from "@/business/landingI18n";
 
@@ -41,12 +41,18 @@ const BIZ_LOCALE_KEY = "sanzy.business.locale";
 function readBizLocale(): BizLocale {
   try {
     const stored = localStorage.getItem(BIZ_LOCALE_KEY);
+    // Una scelta esplicita dell'utente ha SEMPRE la precedenza sull'auto-rilevamento.
     if (stored && (BIZ_LOCALES as string[]).includes(stored))
       return stored as BizLocale;
   } catch {
-    // storage off: default IT
+    // storage off: si passa comunque all'auto-rilevamento sotto.
   }
-  return DEFAULT_BIZ_LOCALE;
+  // Prima visita (nessuna scelta salvata): rileva la lingua dal browser
+  // (italiano → it, qualsiasi altra → en). Guardie per SSR/ambienti senza navigator.
+  if (typeof navigator !== "undefined") {
+    return detectBizLocale(navigator.languages ?? navigator.language);
+  }
+  return detectBizLocale();
 }
 
 export default function Home() {
@@ -84,8 +90,8 @@ export default function Home() {
     }
   }, [bizLocale]);
 
-  const toggleLocale = useCallback(() => {
-    setBizLocale(prev => (prev === "it" ? "en" : "it"));
+  const selectLocale = useCallback((next: BizLocale) => {
+    setBizLocale(next);
   }, []);
 
   const onSigned = useCallback((signed: DemoSession) => {
@@ -129,7 +135,7 @@ export default function Home() {
     return (
       <BusinessLanding
         locale={bizLocale}
-        onToggleLocale={toggleLocale}
+        onSelectLocale={selectLocale}
         onTryDemo={() => setStage("nda")}
       />
     );
@@ -144,7 +150,7 @@ export default function Home() {
         <div inert>
           <BusinessLanding
             locale={bizLocale}
-            onToggleLocale={toggleLocale}
+            onSelectLocale={selectLocale}
             onTryDemo={() => setStage("nda")}
           />
         </div>

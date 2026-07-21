@@ -3,24 +3,25 @@
  *
  * Vetrina B2B: slogan, pitch del doppio piatto, marchio tipografico (segnaposto,
  * come nella StartScreen), tre "scatti" mock del tavolo e la CTA "For Business /
- * Prova la demo" che apre il popup NDA. Toggle lingua IT/EN. Include il footer
+ * Prova la demo" che apre il popup NDA. Selettore lingua IT/EN a due pulsanti
+ * espliciti (l'attivo è evidenziato; cliccare una lingua la seleziona). Include il footer
  * legale (T&C / Privacy / Cookie) e il banner cookie GDPR. Ogni testo passa da
  * `tb()`; nessun testo hardcoded.
  */
 import { useState } from "react";
-import { tb, type BizLocale } from "./landingI18n";
+import { BIZ_LOCALES, tb, type BizLocale } from "./landingI18n";
 import CookieBanner from "./CookieBanner";
 import LegalModal, { type LegalDoc } from "./LegalModal";
 
 type BusinessLandingProps = {
   locale: BizLocale;
-  onToggleLocale: () => void;
+  onSelectLocale: (next: BizLocale) => void;
   onTryDemo: () => void;
 };
 
 export default function BusinessLanding({
   locale,
-  onToggleLocale,
+  onSelectLocale,
   onTryDemo,
 }: BusinessLandingProps) {
   const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null);
@@ -44,14 +45,27 @@ export default function BusinessLanding({
               {tb("brand.tag", locale)}
             </span>
           </div>
-          <button
-            type="button"
-            className="sanzy-biz__lang"
-            onClick={onToggleLocale}
-            aria-label={tb("landing.localeToggleAria", locale)}
+          <div
+            className="sanzy-biz__langs"
+            role="group"
+            aria-label={tb("landing.langSelectAria", locale)}
           >
-            {tb("landing.localeToggle", locale)}
-          </button>
+            {BIZ_LOCALES.map(code => (
+              <button
+                key={code}
+                type="button"
+                className={`sanzy-biz__lang${code === locale ? " is-active" : ""}`}
+                onClick={() => onSelectLocale(code)}
+                aria-pressed={code === locale}
+                aria-label={tb(
+                  code === "it" ? "landing.langItAria" : "landing.langEnAria",
+                  locale
+                )}
+              >
+                {code.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </header>
 
         <section className="sanzy-biz__hero">
@@ -167,12 +181,20 @@ const LANDING_CSS = `
   font-size: 9px; font-weight: 700; letter-spacing: 2px; color: #9fb0a6;
   background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(159, 176, 166, 0.35);
 }
-.sanzy-biz__lang {
-  padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(214,178,102,.4);
-  background: rgba(6,32,22,.5); color: #f4efe4; font-size: 13px; font-weight: 800;
-  cursor: pointer; font-family: inherit;
+.sanzy-biz__langs {
+  display: inline-flex; gap: 4px; padding: 3px; border-radius: 999px;
+  border: 1px solid rgba(214,178,102,.4); background: rgba(6,32,22,.5);
 }
-.sanzy-biz__lang:hover { border-color: #d6b466; }
+.sanzy-biz__lang {
+  padding: 5px 12px; border-radius: 999px; border: 1px solid transparent;
+  background: transparent; color: rgba(244,239,228,.6); font-size: 13px;
+  font-weight: 800; cursor: pointer; font-family: inherit; line-height: 1;
+}
+.sanzy-biz__lang:hover { color: #f4efe4; }
+.sanzy-biz__lang.is-active {
+  background: rgba(214,178,102,.18); border-color: rgba(214,178,102,.6);
+  color: #f4efe4; cursor: default;
+}
 .sanzy-biz__hero {
   position: relative; z-index: 1; margin: auto; width: 100%; max-width: 720px;
   box-sizing: border-box; text-align: center; display: flex; flex-direction: column;
