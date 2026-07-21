@@ -79,9 +79,24 @@ describe("submitNda — validazione risposta server", () => {
       password: "SANZY-WXYZ-1234",
       startedAt: now,
       serverAcknowledged: true,
+      companyCopyRequested: false, // assente nella risposta → default false
     });
     // startedAt accettato è rappresentabile da Date (nessun throw a valle).
     expect(() => new Date(r.startedAt).toISOString()).not.toThrow();
+  });
+
+  it("companyCopyRequested:true nella risposta viene esposto al client", async () => {
+    mockFetchJson(200, {
+      ok: true,
+      signatureId: "snz_nda_real",
+      password: "SANZY-WXYZ-1234",
+      startedAt: 1_800_000_000_000,
+      serverAcknowledged: true,
+      companyCopyRequested: true,
+    });
+    const r = await submitNda(FORM, "it");
+    expect(r.ok).toBe(true);
+    expect(r.companyCopyRequested).toBe(true);
   });
 
   it("errore server (409) → propaga il codice d'errore", async () => {
