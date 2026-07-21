@@ -179,7 +179,7 @@ export async function renderNdaPdf(
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle(`Sanzy Poker NDA — ${record.signatureId}`);
-  doc.setAuthor("Piero Zambo");
+  doc.setAuthor("Piero Zarbo");
   doc.setSubject(`NDA ${record.ndaVersion}`);
   // Date fisse: PDF riproducibile (utile ai test e all'audit).
   const epoch = new Date(0);

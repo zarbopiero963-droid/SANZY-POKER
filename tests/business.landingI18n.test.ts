@@ -39,6 +39,23 @@ describe("landingI18n — completezza IT/EN", () => {
     }
   });
 
+  it("il nome del proprietario è «Piero Zarbo», mai il refuso «Zambo» (footer/T&C/privacy, IT+EN)", () => {
+    // Regressione del refuso segnalato dall'owner nel nome del proprietario.
+    for (const key of [
+      "footer.rights",
+      "legal.terms.body",
+      "legal.privacy.body",
+    ] as const) {
+      for (const locale of BIZ_LOCALES) {
+        const value = tb(key, locale);
+        expect(value, `${key}:${locale}`).not.toMatch(/Zambo/);
+      }
+    }
+    expect(tb("footer.rights", "it")).toContain("Piero Zarbo");
+    expect(tb("legal.terms.body", "en")).toContain("Piero Zarbo");
+    expect(tb("legal.privacy.body", "it")).toContain("Piero Zarbo");
+  });
+
   it("la privacy NON afferma più che i dati restano nel browser (backend attivo)", () => {
     // Regressione: con il backend PR2 i dati VENGONO inviati al server; la vecchia
     // nota «i dati non lasciano il browser» sarebbe materialmente falsa.
