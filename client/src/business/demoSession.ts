@@ -339,9 +339,13 @@ export function clearDemoSession(): void {
 
 const IDEM_KEY = "sanzy.nda.idem";
 const IDEM_FORMAT = /^[A-Za-z0-9_-]{8,64}$/;
-// TTL abbondante per un retry (un recupero avviene in secondi/minuti) ma che
-// dà una scadenza alla mappa: niente crescita illimitata dello storage.
-const IDEM_TTL_MS = 60 * 60 * 1000; // 1h
+// TTL della chiave client. DEVE essere ≥ della retention delle righe server
+// (`ROW_RETENTION_MS` in `pgStore.ts`, 30 giorni): se fosse più corto, un retry
+// dopo la scadenza client ma prima di quella server rigenererebbe la chiave e il
+// server risponderebbe `duplicate_email` (409) → lockout, proprio il bug che
+// l'idempotenza risolve. Allineato a 30 giorni; dà comunque una scadenza alla
+// mappa (niente crescita illimitata).
+const IDEM_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 giorni (= retention server)
 
 type IdemEntry = { key: string; ts: number };
 

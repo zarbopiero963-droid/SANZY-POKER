@@ -36,9 +36,25 @@ async function createSignatureStore(): Promise<SignatureStore> {
   const { ensureSchema, createPostgresSignatureStore } = await import(
     "./nda/pgStore"
   );
-  // Se `ensureSchema` lancia (DB irraggiungibile / config errata) l'errore si
-  // propaga: la durabilità era ATTESA, meglio fallire l'avvio che degradare muti.
-  await ensureSchema(pool);
+  // Retry con backoff: un'indisponibilità TRANSITORIA del DB all'avvio (deploy
+  // concorrente, restart del DB su Railway) non deve crashare al primo colpo.
+  // Dopo N tentativi falliti si propaga l'errore → lo startup fallisce (meglio
+  // che degradare muti su una config davvero rotta).
+  const maxAttempts = 5;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await ensureSchema(pool);
+      break;
+    } catch (err) {
+      if (attempt >= maxAttempts) throw err;
+      const backoffMs = Math.min(1000 * 2 ** (attempt - 1), 10000);
+      console.error(
+        `[nda] init Postgres tentativo ${attempt}/${maxAttempts} fallito, retry tra ${backoffMs}ms:`,
+        err instanceof Error ? err.message : err
+      );
+      await new Promise(r => setTimeout(r, backoffMs));
+    }
+  }
   console.log("[nda] store: Postgres (durevole)");
   return createPostgresSignatureStore(pool);
 }
