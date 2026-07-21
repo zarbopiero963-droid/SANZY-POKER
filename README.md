@@ -216,3 +216,96 @@ Nel caso di due o più coppie uguali e di due o più doppie coppie uguali si gua
 **Autore del gioco Sanzy Poker: Piero Zarbo.**
 
 **Regolamento dell'11 aprile 2018 — Versione 1.0.**
+
+---
+
+## Regolamento aggiornato — Versione 2.0
+
+_Questa versione aggiorna e sostituisce la Versione 1.0 dell'11 aprile 2018. Recepisce due modifiche fondamentali: (a) la **fase di scarto** — ogni giocatore riceve 6 carte, ne scarta 1 e **gioca con 5 carte personali**; (b) la **divisione 50/50 per piatto**, che sostituisce definitivamente la vecchia regola 75/25. In caso di divergenza tra i due testi, vale questa Versione 2.0._
+
+### 1) I valori delle carte
+
+Si gioca con un mazzo di **32 carte** (carte da Poker anglofrancesi senza jolly), composto da quattro semi — cuori, quadri, fiori e picche. Ogni seme ha lo stesso valore degli altri: nella variante Standard nessun seme vale più di un altro. I valori, dal più alto al più basso, sono: Asso, Re, Donna, Jack, 10, 9, 8, 7. La carta più alta è l'Asso, la più bassa il 7.
+
+L'Asso può essere usato anche come carta più bassa nella scala minima: **10-9-8-7-A**, di valore pari alla scala massima **A-K-Q-J-10**. Le scale (dello stesso seme, per la scala colore) sono: massima **A-K-Q-J-10**; medie **K-Q-J-10-9**, **Q-J-10-9-8**, **J-10-9-8-7**; minima **10-9-8-7-A**.
+
+### 2) Il numero dei giocatori
+
+Da un minimo di 2 (heads-up) a un massimo di 4 giocatori. Il bottone del dealer si sposta in senso orario dopo ogni mano e indica il riferimento per l'ordine di parola.
+
+### 3) Ante, bui, distribuzione, scarto e i cinque giri di puntata
+
+Prima della distribuzione ogni giocatore versa un **ante** pari al piccolo buio, così da formare il piatto iniziale.
+
+Il mazziere distribuisce **6 carte coperte a ciascun giocatore** e **8 carte coperte sul tavolo (Board)**: **6 carte in verticale** che formano il **Piatto 1** (piatto sotto: flop 3 + turn 2 + river 1) e **2 carte in orizzontale** che formano il **Piatto 2** (piatto sopra). Le 2 carte del Piatto 2 non si combinano mai con le carte del Piatto 1.
+
+**Fase di scarto (obbligatoria).** Dopo aver ricevuto le 6 carte, ogni giocatore **scarta 1 carta** e prosegue la mano con **5 carte personali**. Tutte le combinazioni successive si formano con queste 5 carte.
+
+I giri di puntata sono **cinque**, nell'ordine seguente; in ognuno si inizia dal giocatore alla sinistra del mazziere e si può puntare (bet), passare (check), vedere (call), rilanciare (raise) o lasciare (fold), con puntata minima pari al grande buio:
+
+1. **Pre-board** — puntata prima di scoprire il flop;
+2. **Flop** — si scoprono le prime 3 carte del Piatto 1;
+3. **Turn** — si scoprono le 2 carte successive del Piatto 1;
+4. **River** — si scopre l'ultima carta, completando il Piatto 1 (piatto sotto);
+5. **Piatto 2** — si scoprono le 2 carte in orizzontale che formano il Piatto 2 (piatto sopra); segue lo **Showdown**.
+
+Se un giocatore punta e tutti gli altri lasciano, vince i piatti senza mostrare le carte.
+
+### 4) Showdown: composizione dei due piatti
+
+Ogni giocatore dichiara la migliore combinazione da **5 carte** per ciascun piatto, in modo indipendente. I due piatti **non si mischiano mai** (non si possono usare insieme carte del Piatto 1 e del Piatto 2).
+
+**Piatto 1 (piatto sotto — le 6 carte in verticale):** la combinazione usa **da 1 a 5 carte personali** più le restanti dal Piatto 1 (quindi **al massimo 4 carte dal tavolo**; non è mai consentito formarla con 5 carte del tavolo). Con **5 carte personali** (0 dal tavolo) si ha il **punto in mano**.
+
+**Piatto 2 (piatto sopra — le 2 carte in orizzontale):** la combinazione usa **almeno 3 carte personali** (3, 4 o 5) più le restanti dal Piatto 2. Anche qui, con 5 carte personali si ha il **punto in mano**.
+
+### 5) I punteggi in ordine gerarchico (variante Standard)
+
+Dalla più forte alla più debole:
+
+1. **Scala colore** (minima, media e massima): fra loro **hanno lo stesso valore e dividono** (non si guarda seme né carta più alta), ma battono tutto il resto;
+2. **Poker** (quattro carte uguali);
+3. **Colore** (cinque carte dello stesso seme) — _nel Sanzy il colore batte il full_;
+4. **Full** (tris + coppia);
+5. **Scala** (cinque carte in sequenza, semi misti);
+6. **Tris** (tre carte uguali);
+7. **Doppia coppia**;
+8. **Coppia**;
+9. **Carta alta** (nessuna combinazione).
+
+**Parità nella variante Standard: si divide.** In caso di combinazioni dello stesso rango non si guarda il seme né la carta più alta: il piatto si divide (così nessuna combinazione è vincente "in assoluto"). Esempi: due colori uguali (KQ87A di picche contro 98AKJ di cuori) → **parità, si divide**; due full uguali → si divide, ma un full di AAA+JJ batte un full di KKK+QQ (conta il valore del tris); fra scale (non di colore) vince quella formata dalle carte maggiori, fra scale uguali si divide; fra tris diversi vince quello di rango maggiore, fra tris uguali si divide.
+
+### 6) Divisione del piatto: la regola 50/50 per piatto
+
+Il totale dei due piatti vale **100**: il **Piatto 1 vale 50** e il **Piatto 2 vale 50**. Ogni piatto è assegnato **in modo indipendente** e viene **diviso in parti uguali tra i suoi vincitori** (o pareggianti). Chi vince entrambi i piatti da solo prende il **100%**. I gettoni indivisibili (resti) **non si perdono mai**: sono assegnati per eccesso, così la somma dei pagamenti è sempre esattamente uguale al piatto (conservazione dei gettoni). _La vecchia regola 75/25 non si applica più._
+
+Esempi con un piatto totale di **1000 gettoni** (Piatto 1 = 500, Piatto 2 = 500):
+
+**Con 2 giocatori:**
+
+- Un giocatore ha la migliore combinazione in entrambi i piatti → **1000** (100%).
+- Un giocatore vince il Piatto 1, l'altro il Piatto 2 → **500 / 500**.
+- I due pareggiano un piatto e uno solo vince l'altro: chi vince un piatto intero (500) e pareggia l'altro (250) prende **750**, l'altro **250** → **750 / 250** (risultato naturale della regola 50/50, non un caso speciale).
+
+**Con 3 giocatori:**
+
+- Un giocatore ha la migliore combinazione in entrambi i piatti → **1000**.
+- A vince un piatto intero (500); B e C pareggiano l'altro (250 ciascuno) → **500 / 250 / 250**.
+- Tutti e tre pareggiano un piatto e A vince l'altro da solo: A prende il piatto intero (500) più la sua quota del piatto pareggiato (≈166); B e C prendono solo la loro quota → **≈666 / 167 / 167** (i resti assegnati per eccesso).
+
+**Con 4 giocatori:**
+
+- Un giocatore ha la migliore combinazione in entrambi i piatti → **1000**.
+- A vince un piatto intero (500); B, C e D pareggiano l'altro → **500 / 167 / 167 / 166**.
+- Tutti e quattro pareggiano un piatto e A vince l'altro da solo: A prende 500 + 125, gli altri 125 ciascuno → **625 / 125 / 125 / 125**.
+- Due giocatori pareggiano il Piatto 1 e gli altri due pareggiano il Piatto 2 → **250 / 250 / 250 / 250**.
+
+### 7) Variante "Hi/Low" (Alto/Basso)
+
+Si applicano tutte le regole del Sanzy Poker Standard, **eccetto gli spareggi**: in Hi/Low le parità **non dividono**, ma si risolvono guardando prima il **valore** e poi, a parità di valore, il **seme della carta più alta della combinazione**, nell'ordine **cuori > quadri > fiori > picche** (i kicker non contano).
+
+Esempi: fra due colori, **98AKJ di cuori batte KQ87A di picche** (prevale il seme cuori); fra full uguali conta il seme della carta più alta, ma un full di AAA+JJ batte comunque un full di KKK+QQ (prima il valore del tris); fra scale colore uguali (es. entrambe medie) si guarda il seme della carta più alta; per tris/coppie/doppie coppie di pari valore si guarda il seme.
+
+---
+
+**Autore del gioco Sanzy Poker: Piero Zarbo.**
